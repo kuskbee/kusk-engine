@@ -6,8 +6,8 @@
 #include <iterator>
 #include <vector>
 
-// imgui_impl_win32.cpp¿¡ Á¤ÀÇµÈ ¸Ş½ÃÁö Ã³¸® ÇÔ¼ö¿¡ ´ëÇÑ Àü¹æ ¼±¾ğ
-// VCPKG¸¦ ÅëÇØ IMGUI¸¦ »ç¿ëÇÒ °æ¿ì »¡°£ÁÙ·Î °æ°í°¡ ¶ã ¼ö ÀÖÀ½
+// imgui_impl_win32.cppì— ì •ì˜ëœ ë©”ì‹œì§€ ì²˜ë¦¬ í•¨ìˆ˜ì— ëŒ€í•œ ì „ë°© ì„ ì–¸
+// VCPKGë¥¼ í†µí•´ IMGUIë¥¼ ì‚¬ìš©í•  ê²½ìš° ë¹¨ê°„ì¤„ë¡œ ê²½ê³ ê°€ ëœ° ìˆ˜ ìˆìŒ
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, 
                                                              UINT msg, 
                                                              WPARAM wParam,
@@ -17,21 +17,21 @@ namespace kusk {
 
 using namespace std;
 
-// RegisterClassEx() ¿¡¼­ ¸â¹ö ÇÔ¼ö¸¦ Á÷Á¢ µî·ÏÇÒ ¼ö ¾ø±â ¶§¹®¿¡
-// Å¬·¡½ºÀÇ ¸â¹ö ÇÔ¼ö¿¡¼­ °£Á¢ÀûÀ¸·Î ¸Ş½ÃÁö¸¦ Ã³¸®ÇÒ ¼ö ÀÖµµ·Ï Àü¿ªº¯¼ö·Î ´Ù·ë.
+// RegisterClassEx() ì—ì„œ ë©¤ë²„ í•¨ìˆ˜ë¥¼ ì§ì ‘ ë“±ë¡í•  ìˆ˜ ì—†ê¸° ë•Œë¬¸ì—
+// í´ë˜ìŠ¤ì˜ ë©¤ë²„ í•¨ìˆ˜ì—ì„œ ê°„ì ‘ì ìœ¼ë¡œ ë©”ì‹œì§€ë¥¼ ì²˜ë¦¬í•  ìˆ˜ ìˆë„ë¡ ì „ì—­ë³€ìˆ˜ë¡œ ë‹¤ë£¸.
 AppBase* g_appBase = nullptr;
 
-// RegisterclassEx() ¿¡¼­ ½ÇÁ¦ µî·ÏµÉ Äİ¹é ÇÔ¼ö
+// RegisterclassEx() ì—ì„œ ì‹¤ì œ ë“±ë¡ë  ì½œë°± í•¨ìˆ˜
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     
     if (g_appBase) {
-        // g_appBase¸¦ ÀÌ¿ëÇØ¼­ °£Á¢ÀûÀ¸·Î ¸â¹ö ÇÔ¼ö È£Ãâ
+        // g_appBaseë¥¼ ì´ìš©í•´ì„œ ê°„ì ‘ì ìœ¼ë¡œ ë©¤ë²„ í•¨ìˆ˜ í˜¸ì¶œ
         return g_appBase->MsgProc(hWnd, msg, wParam, lParam);
     }
     return S_OK;
 }
 
-// »ı¼ºÀÚ
+// ìƒì„±ì
 AppBase::AppBase()
     : m_screenWidth(1280), m_screenHeight(960), m_mainWindow(0),
       m_screenViewport(D3D11_VIEWPORT())
@@ -49,9 +49,9 @@ AppBase::~AppBase() {
 
     DestroyWindow(m_mainWindow);
 
-    // dx°ü·Ã ¸®¼Ò½ºµéÀº ComPtr¿¡¼­ ¾Ë¾Æ¼­ release
+    // dxê´€ë ¨ ë¦¬ì†ŒìŠ¤ë“¤ì€ ComPtrì—ì„œ ì•Œì•„ì„œ release
     // https:learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class?view=msvc-170
-    // m_device.Reset() »ı·«
+    // m_device.Reset() ìƒëµ
 }
 
 float AppBase::GetAspectRatio() const {
@@ -68,18 +68,18 @@ int AppBase::Run() {
             DispatchMessage(&msg);
         }
         else {
-            ImGui_ImplDX11_NewFrame(); // GUI ÇÁ·¹ÀÓ ½ÃÀÛ
+            ImGui_ImplDX11_NewFrame(); // GUI í”„ë ˆì„ ì‹œì‘
             ImGui_ImplWin32_NewFrame();
 
             ImGui::NewFrame();
             ImGui::Begin("Scene Control");
 
-            // ImGui°¡ ÃøÁ¤ÇØÁÖ´Â Framerate Ãâ·Â
+            // ImGuiê°€ ì¸¡ì •í•´ì£¼ëŠ” Framerate ì¶œë ¥
             ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 
                         1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
 
-            UpdateGUI(); // Ãß°¡ÀûÀ¸·Î »ç¿ëÇÒ GUI
+            UpdateGUI(); // ì¶”ê°€ì ìœ¼ë¡œ ì‚¬ìš©í•  GUI
             
             ImGui::End();
             ImGui::Render();
@@ -88,10 +88,10 @@ int AppBase::Run() {
 
             Render();
 
-            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI ·»´õ¸µ
+            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI ë Œë”ë§
 
             // Switch the back buffer and the front buffer
-            // ÁÖÀÇ : ImGui RenderDrawData() ´ÙÀ½¿¡ Present() È£Ãâ
+            // ì£¼ì˜ : ImGui RenderDrawData() ë‹¤ìŒì— Present() í˜¸ì¶œ
             m_swapChain->Present(1, 0);
             
         }
@@ -167,17 +167,17 @@ bool AppBase::InitMainWindow() {
         return false;
     }
 
-    // Åø¹Ù±îÁö Æ÷ÇÔÇÑ À©µµ¿ì ÀüÃ¼ ÇØ»óµµ°¡ ¾Æ´Ï¶ó
-    // ½ÇÁ¦·Î ±×¸®´Â ÇØ»óµµ°¡ width x height°¡ µÇµµ·Ï
-    // À©µµ¿ì¸¦ ¸¸µé ÇØ»óµµ¸¦ ´Ù½Ã °è»êÇØ¼­ CreateWindow()¿¡¼­ »ç¿ë
+    // íˆ´ë°”ê¹Œì§€ í¬í•¨í•œ ìœˆë„ìš° ì „ì²´ í•´ìƒë„ê°€ ì•„ë‹ˆë¼
+    // ì‹¤ì œë¡œ ê·¸ë¦¬ëŠ” í•´ìƒë„ê°€ width x heightê°€ ë˜ë„ë¡
+    // ìœˆë„ìš°ë¥¼ ë§Œë“¤ í•´ìƒë„ë¥¼ ë‹¤ì‹œ ê³„ì‚°í•´ì„œ CreateWindow()ì—ì„œ ì‚¬ìš©
 
     RECT wr = { 0, 0, m_screenWidth, m_screenHeight };
 
-    // ÇÊ¿äÇÑ À©µµ¿ì Å©±â(ÇØ»óµµ) °è»ê
-    // wr °ªÀÌ ¹Ù²ñ
+    // í•„ìš”í•œ ìœˆë„ìš° í¬ê¸°(í•´ìƒë„) ê³„ì‚°
+    // wr ê°’ì´ ë°”ë€œ
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
-    // À§¿¡¼­ °è»êÇÑ wrÀ» ÀÌ¿ëÇÏ¿© À©µµ¿ì¸¦ ¸¸µê.
+    // ìœ„ì—ì„œ ê³„ì‚°í•œ wrì„ ì´ìš©í•˜ì—¬ ìœˆë„ìš°ë¥¼ ë§Œë“¦.
     m_mainWindow = CreateWindow(wc.lpszClassName, L"KuskEngine Window",
                                 WS_OVERLAPPEDWINDOW,
                                 100,
@@ -199,7 +199,7 @@ bool AppBase::InitMainWindow() {
 
 bool AppBase::InitDirect3D() {
 
-    // ±×·¡ÇÈÄ«µå È£È¯¼º ¹®Á¦·Î ½ÇÆĞ ½Ã ¾Æ·¡·Î ½Ãµµ
+    // ê·¸ë˜í”½ì¹´ë“œ í˜¸í™˜ì„± ë¬¸ì œë¡œ ì‹¤íŒ¨ ì‹œ ì•„ë˜ë¡œ ì‹œë„
     // const D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_WRAP; 
     const D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_HARDWARE;
 
@@ -238,7 +238,7 @@ bool AppBase::InitDirect3D() {
         return false;
     }
 
-    // 4X MSAA Áö¿øÇÏ´Â Áö È®ÀÎ
+    // 4X MSAA ì§€ì›í•˜ëŠ” ì§€ í™•ì¸
     UINT numQualityLevels;
     device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &numQualityLevels);
     if (numQualityLevels <= 0) {
@@ -316,7 +316,7 @@ bool AppBase::InitDirect3D() {
     // rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
     rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
     rastDesc.FrontCounterClockwise = false;
-    rastDesc.DepthClipEnable = true; // <- zNear, zFar È®ÀÎ¿¡ ÇÊ¿ä
+    rastDesc.DepthClipEnable = true; // <- zNear, zFar í™•ì¸ì— í•„ìš”
 
     m_device->CreateRasterizerState(&rastDesc, m_rasterizerState.GetAddressOf());
 
@@ -388,12 +388,12 @@ bool AppBase::InitGUI() {
 
 void CheckResult(HRESULT hr, ID3DBlob* errorBlob) {
     if (FAILED(hr)) {
-        // ÆÄÀÏÀÌ ¾øÀ» °æ¿ì
+        // íŒŒì¼ì´ ì—†ì„ ê²½ìš°
         if ((hr & D3D11_ERROR_FILE_NOT_FOUND) != 0) {
             cout << "File not found." << endl;
         }
 
-        // ¿¡·¯ ¸Ş½ÃÁö°¡ ÀÖÀ¸¸é Ãâ·Â
+        // ì—ëŸ¬ ë©”ì‹œì§€ê°€ ìˆìœ¼ë©´ ì¶œë ¥
         if (errorBlob) {
             cout << "Shader compiler error\n" << (char*)errorBlob->GetBufferPointer() << endl;
         }
@@ -414,7 +414,7 @@ void AppBase::CreateVertexShaderAndInputLayout(
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
     
-    // ÁÖÀÇ : ½¦ÀÌ´õÀÇ ½ÃÀÛÁ¡ÀÇ ÀÌ¸§ÀÌ "main"ÀÎ ÇÔ¼ö·Î ÁöÁ¤
+    // ì£¼ì˜ : ì‰ì´ë”ì˜ ì‹œì‘ì ì˜ ì´ë¦„ì´ "main"ì¸ í•¨ìˆ˜ë¡œ ì§€ì •
     HRESULT hr =
         D3DCompileFromFile(filename.c_str(), 0, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
     
@@ -437,7 +437,7 @@ void AppBase::CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShade
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-    // ÁÖÀÇ : ½¦ÀÌ´õÀÇ ½ÃÀÛÁ¡ÀÇ ÀÌ¸§ÀÌ "main"ÀÎ ÇÔ¼ö·Î ÁöÁ¤
+    // ì£¼ì˜ : ì‰ì´ë”ì˜ ì‹œì‘ì ì˜ ì´ë¦„ì´ "main"ì¸ í•¨ìˆ˜ë¡œ ì§€ì •
     HRESULT hr =
         D3DCompileFromFile(filename.c_str(), 0, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 

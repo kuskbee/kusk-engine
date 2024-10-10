@@ -31,7 +31,7 @@ public :
 
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	// ¸¶¿ì½º¸¦ ´Ù·ç±â À§ÇÑ ÆíÀÇ¼º ÀçÁ¤ÀÇ
+	// ë§ˆìš°ìŠ¤ë¥¼ ë‹¤ë£¨ê¸° ìœ„í•œ í¸ì˜ì„± ì¬ì •ì˜
 	virtual void OnMouseDown(WPARAM btnState, int x, int y) {};
 	virtual void OnMouseUp(WPARAM btnState, int x, int y) {};
 	virtual void OnMouseMove(WPARAM btnState, int x, int y) {};
@@ -59,7 +59,7 @@ protected:
 
 		D3D11_BUFFER_DESC bufferDesc;
 		ZeroMemory(&bufferDesc, sizeof(bufferDesc));
-		bufferDesc.Usage = D3D11_USAGE_IMMUTABLE; // ÃÊ±âÈ­ ÈÄ º¯°æ X
+		bufferDesc.Usage = D3D11_USAGE_IMMUTABLE; // ì´ˆê¸°í™” í›„ ë³€ê²½ X
 		bufferDesc.ByteWidth = UINT(sizeof(T_VERTEX) * vertices.size());
 		bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bufferDesc.CPUAccessFlags = 0; // 0 if no CPU access is necessary.
@@ -116,7 +116,7 @@ protected:
 	}
 
 public:
-	int m_screenWidth; // ·»´õ¸µÇÒ ÃÖÁ¾ È­¸éÀÇ ÇØ»óµµ
+	int m_screenWidth; // ë Œë”ë§í•  ìµœì¢… í™”ë©´ì˜ í•´ìƒë„
 	int m_screenHeight;
 	HWND m_mainWindow;
 

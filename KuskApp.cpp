@@ -10,7 +10,7 @@ auto MakeSquare() {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
-	vector<Vector2> texcoords; // ÅØ½ºÃÄ ÁÂÇ¥
+	vector<Vector2> texcoords; // í…ìŠ¤ì³ ì¢Œí‘œ
 
 	const float scale = 1.0f;
 
@@ -64,7 +64,7 @@ auto MakeBox() {
 	const Vector3 v6 = Vector3(1.0f, -1.0f, 1.0f);
 	const Vector3 v7 = Vector3(1.0f, -1.0f, -1.0f);
 
-	// À­¸é
+	// ìœ—ë©´
 	positions.push_back(v0 * scale);
 	positions.push_back(v1 * scale);
 	positions.push_back(v2 * scale);
@@ -78,7 +78,7 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
 
-	// ¾Æ·§¸é
+	// ì•„ë«ë©´
 	positions.push_back(v4 * scale);
 	positions.push_back(v7 * scale);
 	positions.push_back(v6 * scale);
@@ -92,7 +92,7 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 
-	// ¾Õ¸é
+	// ì•ë©´
 	positions.push_back(v4 * scale);
 	positions.push_back(v0 * scale);
 	positions.push_back(v3 * scale);
@@ -106,7 +106,7 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 
-	// µŞ¸é
+	// ë’·ë©´
 	positions.push_back(v5 * scale);
 	positions.push_back(v6 * scale);
 	positions.push_back(v2 * scale);
@@ -120,7 +120,7 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 
-	// ¿ŞÂÊ
+	// ì™¼ìª½
 	positions.push_back(v5 * scale);
 	positions.push_back(v1 * scale);
 	positions.push_back(v0 * scale);
@@ -134,7 +134,7 @@ auto MakeBox() {
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 
-	// ¿À¸¥ÂÊ
+	// ì˜¤ë¥¸ìª½
 	positions.push_back(v6 * scale);
 	positions.push_back(v7 * scale);
 	positions.push_back(v3 * scale);
@@ -157,12 +157,12 @@ auto MakeBox() {
 	}
 
 	vector<uint16_t> indices = {
-		0, 1, 2, 0, 2, 3, // À­¸é
-		4, 5, 6, 4, 6, 7, // ¾Æ·§¸é
-		8, 9, 10, 8, 10, 11, // ¾Õ¸é
-		12, 13, 14, 12, 14, 15, // µŞ¸é
-		16, 17, 18, 16, 18, 19, // ¿ŞÂÊ
-		20, 21, 22, 20, 22, 23 // ¿À¸¥ÂÊ
+		0, 1, 2, 0, 2, 3, // ìœ—ë©´
+		4, 5, 6, 4, 6, 7, // ì•„ë«ë©´
+		8, 9, 10, 8, 10, 11, // ì•ë©´
+		12, 13, 14, 12, 14, 15, // ë’·ë©´
+		16, 17, 18, 16, 18, 19, // ì™¼ìª½
+		20, 21, 22, 20, 22, 23 // ì˜¤ë¥¸ìª½
 	};
 
 	return tuple{ vertices, indices };
@@ -175,7 +175,7 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
-	// Geometry Á¤ÀÇ
+	// Geometry ì •ì˜
 	auto [vertices, indices] = MakeSquare();
 
 	// Vertex Buffer
@@ -214,7 +214,7 @@ void KuskApp::Update(float dt) {
 	
 	using namespace DirectX;
 	
-	// ¸ğµ¨ÀÇ º¯È¯
+	// ëª¨ë¸ì˜ ë³€í™˜
 	m_vsConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
 								 Matrix::CreateRotationY(m_modelRotation.y) *
 								 Matrix::CreateRotationX(m_modelRotation.x) *
@@ -222,12 +222,12 @@ void KuskApp::Update(float dt) {
 								 Matrix::CreateTranslation(m_modelTranslation);
 	m_vsConstantBufferData.model = m_vsConstantBufferData.model.Transpose();
 
-	// ½ÃÁ¡ º¯È¯
+	// ì‹œì  ë³€í™˜
 	m_vsConstantBufferData.view =
 		XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
 	m_vsConstantBufferData.view = m_vsConstantBufferData.view.Transpose();
 
-	// ÇÁ·ÎÁ§¼Ç
+	// í”„ë¡œì ì…˜
 	if (m_usePerspectiveProjection) {
 		m_vsConstantBufferData.proj =
 			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspect, m_nearZ, m_farZ);
@@ -238,7 +238,7 @@ void KuskApp::Update(float dt) {
 	}
 	m_vsConstantBufferData.proj = m_vsConstantBufferData.proj.Transpose();
 
-	// Constant¸¦ CPU¿¡¼­ GPU·Îº¹»ç
+	// Constantë¥¼ CPUì—ì„œ GPUë¡œë³µì‚¬
 	AppBase::UpdateBuffer(m_vsConstantBufferData, m_vsConstantBuffer);
 	AppBase::UpdateBuffer(m_psConstantBufferData, m_psConstantBuffer);
 }

@@ -37,4 +37,7 @@
     <FxCompile Include="ColorPixelShader.hlsl" />
     <FxCompile Include="ColorVertexShader.hlsl" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include=".editorconfig" />
+  </ItemGroup>
 </Project>

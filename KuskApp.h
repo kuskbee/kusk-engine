@@ -27,7 +27,7 @@ struct ModelViewProjectionConstantBuffer {
 	Matrix proj;
 };
 
-// ¡÷¿«:
+// Ï£ºÏùò:
 // For a constant buffer (BindFlags of D3D11_BUFFER_DESC set to
 // D3D11_BIND_CONSTANT_BUFFER), you must set the ByteWidth value of
 // D3D11_BUFFER_DESC in multiples of 16, and less than or equal to
