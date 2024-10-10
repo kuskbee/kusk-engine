@@ -18,7 +18,7 @@ using DirectX::SimpleMath::Vector3;
 struct Vertex {
 	Vector3 position;
 	Vector3 color;
-	Vector2 uv;
+	Vector2 texcoord;
 };
 
 struct ModelViewProjectionConstantBuffer {
@@ -65,6 +65,13 @@ protected:
 	ComPtr<ID3D11Buffer> m_vsConstantBuffer;
 	UINT m_indexCount;
 	ComPtr<ID3D11Buffer> m_psConstantBuffer;
+
+	// Texturing
+	ComPtr<ID3D11Texture2D> m_texture;
+	ComPtr<ID3D11ShaderResourceView> m_textureResourceView;
+	ComPtr<ID3D11Texture2D> m_texture2;
+	ComPtr<ID3D11ShaderResourceView> m_textureResourceView2;
+	ComPtr<ID3D11SamplerState> m_samplerState;
 
 	ModelViewProjectionConstantBuffer m_vsConstantBufferData;
 	PixelShaderConstatntBuffer m_psConstantBufferData;

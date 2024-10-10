@@ -115,6 +115,10 @@ protected:
 		m_context->Unmap(buffer.Get(), NULL);
 	}
 
+	void CreateTexture(const std::string filename,
+					   ComPtr<ID3D11Texture2D>& texture,
+					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
+	
 public:
 	int m_screenWidth; // 렌더링할 최종 화면의 해상도
 	int m_screenHeight;

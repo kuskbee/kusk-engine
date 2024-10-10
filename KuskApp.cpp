@@ -37,7 +37,7 @@ auto MakeSquare() {
 		Vertex v;
 		v.position = positions[i];
 		v.color = colors[i];
-		v.uv = texcoords[i];
+		v.texcoord = texcoords[i];
 		vertices.push_back(v);
 	}
 
@@ -175,6 +175,24 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
+	// Texture 만들기
+	AppBase::CreateTexture("crate2_diffuse.png", m_texture, m_textureResourceView);
+	AppBase::CreateTexture("wall.jpg", m_texture2, m_textureResourceView2);
+
+	// Texture sampler 만들기
+	D3D11_SAMPLER_DESC sampDesc;
+	ZeroMemory(&sampDesc, sizeof(sampDesc));
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	// Create the Sample State
+	m_device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
+
 	// Geometry 정의
 	auto [vertices, indices] = MakeSquare();
 
@@ -199,7 +217,7 @@ bool KuskApp::Initialize() {
 	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 * 2, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
 	AppBase::CreateVertexShaderAndInputLayout(L"ColorVertexShader.hlsl", inputElements,
@@ -259,8 +277,16 @@ void KuskApp::Render() {
 	// Shader setting
 	m_context->VSSetShader(m_colorVertexShader.Get(), 0, 0);
 	m_context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
+
+	ID3D11ShaderResourceView* pixelResources[ 2 ] = {
+		m_textureResourceView.Get( ),
+		m_textureResourceView2.Get( ),
+	};
+	m_context->PSSetShaderResources(0, 2, pixelResources);
+	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	m_context->PSSetConstantBuffers(0, 1, m_psConstantBuffer.GetAddressOf( ));
 	m_context->PSSetShader(m_colorPixelShader.Get(), 0, 0);
-	m_context->PSSetConstantBuffers(0, 1, m_psConstantBuffer.GetAddressOf());
+	
 	m_context->RSSetState(m_rasterizerState.Get());
 
 	// Vertex/Index Buffer setting
