@@ -216,9 +216,9 @@ bool AppBase::InitDirect3D() {
         featureLevels,
         ARRAYSIZE(featureLevels),
         D3D11_SDK_VERSION,
-        &device,
+        device.GetAddressOf(),
         &featureLevel,
-        &context
+        context.GetAddressOf()
     ))) {
         cout << "D3D11CreateDevice() failed." << endl;
         return false;
@@ -234,6 +234,16 @@ bool AppBase::InitDirect3D() {
     device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &numQualityLevels);
     if (numQualityLevels <= 0) {
         cout << "MSAA not supported." << endl;
+    }
+
+    if (FAILED(device.As(&m_device))) {
+        cout << "device.As() failed." << endl;
+        return false;
+    }
+
+    if (FAILED(context.As(&m_context))) {
+        cout << "context.As() failed." << endl;
+        return false;
     }
 
     DXGI_SWAP_CHAIN_DESC sd;
@@ -258,32 +268,20 @@ bool AppBase::InitDirect3D() {
         sd.SampleDesc.Quality = 0;
     }
 
-    if (FAILED(device.As(&m_device))) {
-        cout << "device.As() failed." << endl;
-        return false;
-    }
-
-    if (FAILED(context.As(&m_context))) {
-        cout << "context.As() failed." << endl;
-        return false;
-    }
-    
-    if (FAILED(D3D11CreateDeviceAndSwapChain(0,
+    if (FAILED(D3D11CreateDeviceAndSwapChain(0, // Default adapter
                                              driverType,
                                              0, // No Software device
-                                             createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION,
-                                             &sd, &m_swapChain, &m_device, &featureLevel,
-                                             &m_context))) {
+                                             createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION, &sd, m_swapChain.GetAddressOf(),
+                                             m_device.GetAddressOf(), &featureLevel, m_context.GetAddressOf()))) {
         cout << "D3D11CreateDeviceAndSwapChain() failed." << endl;
         return false;
     }
 
     // CreateRenderTarget
-    ID3D11Texture2D* pBackBuffer;
-    m_swapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-    if (pBackBuffer) {
-        m_device->CreateRenderTargetView(pBackBuffer, NULL, &m_renderTargetView);
-        pBackBuffer->Release();
+    ComPtr<ID3D11Texture2D> backBuffer;
+    m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
+    if (backBuffer) {
+        m_device->CreateRenderTargetView(backBuffer.Get(), NULL, m_renderTargetView.GetAddressOf());
     }
     else {
         cout << "CreateRenderTargetView() failed." << endl;
@@ -308,8 +306,9 @@ bool AppBase::InitDirect3D() {
     // rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
     rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
     rastDesc.FrontCounterClockwise = false;
+    rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
-    m_device->CreateRasterizerState(&rastDesc, &m_rasterizerState);
+    m_device->CreateRasterizerState(&rastDesc, m_rasterizerState.GetAddressOf());
 
     // Create depth buffer
     D3D11_TEXTURE2D_DESC depthStencilBufferDesc;

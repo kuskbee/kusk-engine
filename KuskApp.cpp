@@ -41,10 +41,10 @@ auto MakeBox() {
 	positions.push_back(v7 * scale);
 	positions.push_back(v6 * scale);
 	positions.push_back(v5 * scale);
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
@@ -55,10 +55,10 @@ auto MakeBox() {
 	positions.push_back(v0 * scale);
 	positions.push_back(v3 * scale);
 	positions.push_back(v7 * scale);
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
@@ -69,10 +69,10 @@ auto MakeBox() {
 	positions.push_back(v6 * scale);
 	positions.push_back(v2 * scale);
 	positions.push_back(v1 * scale);
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
+	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
@@ -83,10 +83,10 @@ auto MakeBox() {
 	positions.push_back(v1 * scale);
 	positions.push_back(v0 * scale);
 	positions.push_back(v4 * scale);
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
+	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
@@ -97,10 +97,10 @@ auto MakeBox() {
 	positions.push_back(v7 * scale);
 	positions.push_back(v3 * scale);
 	positions.push_back(v2 * scale);
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
+	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
@@ -164,31 +164,30 @@ bool KuskApp::Initialize() {
 }
 
 void KuskApp::Update(float dt) {
-	static float rot = 0.0f;
-	rot += dt;
-
-	// 모델의 변환
-	m_constantBufferData.model = Matrix::CreateScale(0.5f) * Matrix::CreateRotationY(rot) *
-								 Matrix::CreateTranslation(Vector3(0.0f, -0.3f, 1.0f));
-	m_constantBufferData.model = m_constantBufferData.model.Transpose();
-
+	
 	using namespace DirectX;
+	
+	// 모델의 변환
+	m_constantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
+								 Matrix::CreateRotationY(m_modelRotation.y) *
+								 Matrix::CreateRotationX(m_modelRotation.x) *
+								 Matrix::CreateRotationZ(m_modelRotation.z) *
+								 Matrix::CreateTranslation(m_modelTranslation);
+	m_constantBufferData.model = m_constantBufferData.model.Transpose();
 
 	// 시점 변환
 	m_constantBufferData.view =
-		XMMatrixLookAtLH({ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f });
+		XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
 	m_constantBufferData.view = m_constantBufferData.view.Transpose();
 
 	// 프로젝션
-	const float aspect = AppBase::GetAspectRatio();
 	if (m_usePerspectiveProjection) {
-		const float fovAngleY = 70.0f * XM_PI / 180.0f;
 		m_constantBufferData.proj =
-			XMMatrixPerspectiveFovLH(fovAngleY, aspect, 0.01f, 100.0f);
+			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspect, m_nearZ, m_farZ);
 	}
 	else {
 		m_constantBufferData.proj =
-			XMMatrixOrthographicOffCenterLH(-aspect, aspect, -1.0f, 1.0f, 0.1f, 10.0f);
+			XMMatrixOrthographicOffCenterLH(-m_aspect, m_aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 	}
 	m_constantBufferData.proj = m_constantBufferData.proj.Transpose();
 
@@ -227,6 +226,18 @@ void KuskApp::Render() {
 
 void KuskApp::UpdateGUI() {
 	ImGui::Checkbox("usePerspectiveProjection", &m_usePerspectiveProjection);
+	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
+	ImGui::SliderFloat3("m_modelRotation(Radian)", &m_modelRotation.x, -3.14f, 3.14f);
+	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
+
+	ImGui::SliderFloat3("m_viewEyePos", &m_viewEyePos.x, -4.0f, 4.0f);
+	ImGui::SliderFloat3("m_viewEyeDir", &m_viewEyeDir.x, -4.0f, 4.0f);
+	ImGui::SliderFloat3("m_viewUp", &m_viewUp.x, -2.0f, 2.0f);
+
+	ImGui::SliderFloat("m_projFovAngleY(Degree)", &m_projFovAngleY, 10.0f, 180.0f);
+	ImGui::SliderFloat("m_nearZ", &m_nearZ, 0.01f, 10.0f);
+	ImGui::SliderFloat("m_farZ", &m_farZ, 0.01f, 10.0f);
+	ImGui::SliderFloat("m_aspect", &m_aspect, 1.0f, 3.0f);
 }
 
 } // namespace kusk
