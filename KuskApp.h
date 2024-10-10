@@ -11,12 +11,14 @@
 namespace kusk {
 
 using DirectX::SimpleMath::Matrix;
+using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 
 
 struct Vertex {
 	Vector3 position;
 	Vector3 color;
+	Vector2 uv;
 };
 
 struct ModelViewProjectionConstantBuffer {
@@ -24,6 +26,24 @@ struct ModelViewProjectionConstantBuffer {
 	Matrix view;
 	Matrix proj;
 };
+
+// ¡÷¿«:
+// For a constant buffer (BindFlags of D3D11_BUFFER_DESC set to
+// D3D11_BIND_CONSTANT_BUFFER), you must set the ByteWidth value of
+// D3D11_BUFFER_DESC in multiples of 16, and less than or equal to
+// D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT.
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createbuffer
+
+static_assert((sizeof(ModelViewProjectionConstantBuffer) % 16) == 0,
+	"Constant Buffer size must be 16-byte aligned");
+
+struct PixelShaderConstatntBuffer {
+	float xSplit;
+	float padding[3];
+};
+
+static_assert((sizeof(PixelShaderConstatntBuffer) % 16) == 0,
+	"Constant Buffer size must be 16-byte aligned");
 
 class KuskApp : public AppBase
 {
@@ -42,15 +62,17 @@ protected:
 
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
-	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_vsConstantBuffer;
 	UINT m_indexCount;
+	ComPtr<ID3D11Buffer> m_psConstantBuffer;
 
-	ModelViewProjectionConstantBuffer m_constantBufferData;
+	ModelViewProjectionConstantBuffer m_vsConstantBufferData;
+	PixelShaderConstatntBuffer m_psConstantBufferData;
 
 	bool m_usePerspectiveProjection = true;
-	Vector3 m_modelTranslation = Vector3(0.0f);
+	Vector3 m_modelTranslation = Vector3(0.0f, 0.0f, 1.0f);
 	Vector3 m_modelRotation = Vector3(0.0f);
-	Vector3 m_modelScaling = Vector3(0.5f);
+	Vector3 m_modelScaling = Vector3(1.5f);
 	Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
 	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };

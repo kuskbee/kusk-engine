@@ -40,15 +40,22 @@ protected:
 	bool InitMainWindow();
 	bool InitDirect3D();
 	bool InitGUI();
-	void CreateVertexShaderAndInputLayout(const wstring& filename,
-										  const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
-										  ComPtr<ID3D11VertexShader>& vertexShader,
-										  ComPtr<ID3D11InputLayout>& inputLayout);
-	void CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShader>& pixelShader);
-	void CreateIndexBuffer(const vector<uint16_t>& indices, ComPtr<ID3D11Buffer>& indexBuffer);
+	void CreateVertexShaderAndInputLayout(
+		const wstring& filename,
+		const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
+		ComPtr<ID3D11VertexShader>& vertexShader,
+		ComPtr<ID3D11InputLayout>& inputLayout);
+	void CreatePixelShader(
+		const wstring& filename, 
+		ComPtr<ID3D11PixelShader>& pixelShader);
+	void CreateIndexBuffer(
+		const vector<uint16_t>& indices, 
+		ComPtr<ID3D11Buffer>& indexBuffer);
 
 	template <typename T_VERTEX>
-	void CreateVertexBuffer(const vector<T_VERTEX>& vertices, ComPtr<ID3D11Buffer>& vertexBuffer) {
+	void CreateVertexBuffer(
+		const vector<T_VERTEX>& vertices, 
+		ComPtr<ID3D11Buffer>& vertexBuffer) {
 
 		D3D11_BUFFER_DESC bufferDesc;
 		ZeroMemory(&bufferDesc, sizeof(bufferDesc));
@@ -63,15 +70,16 @@ protected:
 		vertexBufferData.SysMemPitch = 0;
 		vertexBufferData.SysMemSlicePitch = 0;
 
-		const HRESULT hr =
-			m_device->CreateBuffer(&bufferDesc, &vertexBufferData, vertexBuffer.GetAddressOf());
+		const HRESULT hr = m_device->CreateBuffer(
+			&bufferDesc, &vertexBufferData, vertexBuffer.GetAddressOf());
 		if (FAILED(hr)) {
 			std::cout << "(vertex) CreateBuffer() failed. " << std::hex << hr << std::endl;
 		}
 	}
 
 	template <typename T_CONSTANT>
-	void CreateConstantBuffer(const T_CONSTANT& constantBufferData,
+	void CreateConstantBuffer(
+		const T_CONSTANT& constantBufferData,
 		ComPtr<ID3D11Buffer>& constantBuffer) {
 		D3D11_BUFFER_DESC cbDesc;
 		cbDesc.ByteWidth = sizeof(constantBufferData);
@@ -87,11 +95,20 @@ protected:
 		initData.SysMemPitch = 0;
 		initData.SysMemSlicePitch = 0;
 
-		m_device->CreateBuffer(&cbDesc, &initData, constantBuffer.GetAddressOf());
+		auto hr = m_device->CreateBuffer(&cbDesc, &initData, 
+								constantBuffer.GetAddressOf());
+		if (FAILED(hr)) {
+			std::cout << "CreateConstantBuffer() CreateBuffer failed." << std::endl;
+		}
 	}
 
 	template <typename T_DATA>
 	void UpdateBuffer(const T_DATA& bufferData, ComPtr<ID3D11Buffer>& buffer) {
+
+		if (!buffer) {
+			std::cout << "UpdateBuffer() buffer was not initialized." << std::endl;
+		}
+
 		D3D11_MAPPED_SUBRESOURCE ms;
 		m_context->Map(buffer.Get(), NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
 		memcpy(ms.pData, &bufferData, sizeof(bufferData));

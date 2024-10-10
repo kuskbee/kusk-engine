@@ -2,11 +2,16 @@
 
 #include <dxgi.h>		// DXGIFactory
 #include <dxgi1_4.h>	// DXGIFactory4
+#include <fstream>
+#include <iterator>
+#include <vector>
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
 // VCPKG를 통해 IMGUI를 사용할 경우 빨간줄로 경고가 뜰 수 있음
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam,
-    LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, 
+                                                             UINT msg, 
+                                                             WPARAM wParam,
+                                                             LPARAM lParam);
 
 namespace kusk {
 
@@ -49,7 +54,9 @@ AppBase::~AppBase() {
     // m_device.Reset() 생략
 }
 
-float AppBase::GetAspectRatio() const { return float(m_screenWidth) / m_screenHeight; }
+float AppBase::GetAspectRatio() const {
+    return float(m_screenWidth) / m_screenHeight;
+}
 
 int AppBase::Run() {
 
@@ -68,7 +75,8 @@ int AppBase::Run() {
             ImGui::Begin("Scene Control");
 
             // ImGui가 측정해주는 Framerate 출력
-            ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
+            ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 
+                        1000.0f / ImGui::GetIO().Framerate,
                         ImGui::GetIO().Framerate);
 
             UpdateGUI(); // 추가적으로 사용할 GUI
@@ -170,7 +178,8 @@ bool AppBase::InitMainWindow() {
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
     // 위에서 계산한 wr을 이용하여 윈도우를 만듦.
-    m_mainWindow = CreateWindow(wc.lpszClassName, L"KuskEngine Window", WS_OVERLAPPEDWINDOW,
+    m_mainWindow = CreateWindow(wc.lpszClassName, L"KuskEngine Window",
+                                WS_OVERLAPPEDWINDOW,
                                 100,
                                 100,
                                 wr.right - wr.left,
@@ -271,8 +280,9 @@ bool AppBase::InitDirect3D() {
     if (FAILED(D3D11CreateDeviceAndSwapChain(0, // Default adapter
                                              driverType,
                                              0, // No Software device
-                                             createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION, &sd, m_swapChain.GetAddressOf(),
-                                             m_device.GetAddressOf(), &featureLevel, m_context.GetAddressOf()))) {
+                                             createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION, &sd, 
+                                             m_swapChain.GetAddressOf(), m_device.GetAddressOf(), &featureLevel, 
+                                             m_context.GetAddressOf()))) {
         cout << "D3D11CreateDeviceAndSwapChain() failed." << endl;
         return false;
     }
@@ -330,11 +340,14 @@ bool AppBase::InitDirect3D() {
     depthStencilBufferDesc.CPUAccessFlags = 0;
     depthStencilBufferDesc.MiscFlags = 0;
 
-    if (FAILED(m_device->CreateTexture2D(&depthStencilBufferDesc, 0,
-               m_depthStencilBuffer.GetAddressOf()))) {
+    if (FAILED(m_device->CreateTexture2D(
+        &depthStencilBufferDesc, 0,
+        m_depthStencilBuffer.GetAddressOf()))) {
         cout << "CreateTexture2D() depthStencilBuffer failed." << endl;
     }
-    if (FAILED(m_device->CreateDepthStencilView(m_depthStencilBuffer.Get(), 0, &m_depthStencilView))) {
+    if (FAILED(m_device->CreateDepthStencilView(
+        m_depthStencilBuffer.Get(), 0,
+        m_depthStencilView.GetAddressOf()))) { 
         cout << "CreateDepthStencilView() failed." << endl;
     }
 
@@ -344,8 +357,8 @@ bool AppBase::InitDirect3D() {
     depthStencilDesc.DepthEnable = true;
     depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
     depthStencilDesc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
-    if (FAILED(m_device->CreateDepthStencilState(&depthStencilDesc,
-                                                 m_depthStencilState.GetAddressOf()))) {
+    if (FAILED(m_device->CreateDepthStencilState(
+        &depthStencilDesc, m_depthStencilState.GetAddressOf()))) {
         cout << "CreateDepthStencilState() failed." << endl;
     }
 
@@ -388,38 +401,50 @@ void CheckResult(HRESULT hr, ID3DBlob* errorBlob) {
 }
 
 void AppBase::CreateVertexShaderAndInputLayout(
-    const wstring& filename, const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
-    ComPtr<ID3D11VertexShader>& vertexShader, ComPtr<ID3D11InputLayout>& inputLayout) {
+    const wstring& filename, 
+    const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
+    ComPtr<ID3D11VertexShader>& vertexShader, 
+    ComPtr<ID3D11InputLayout>& inputLayout) {
     
     ComPtr<ID3DBlob> shaderBlob;
     ComPtr<ID3DBlob> errorBlob;
+
+    UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
     
     // 주의 : 쉐이더의 시작점의 이름이 "main"인 함수로 지정
     HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "vs_5_0", 0, 0, &shaderBlob, &errorBlob);
+        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
     
     CheckResult(hr, errorBlob.Get());
 
     m_device->CreateVertexShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), NULL,
-                                 &vertexShader);
+                                 vertexShader.GetAddressOf());
 
     m_device->CreateInputLayout(inputElements.data(), UINT(inputElements.size()),
                                 shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(),
-                                &inputLayout);
+                                inputLayout.GetAddressOf());
 }
 
 void AppBase::CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShader>& pixelShader) {
     ComPtr<ID3DBlob> shaderBlob;
     ComPtr<ID3DBlob> errorBlob;
 
+    UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
     // 주의 : 쉐이더의 시작점의 이름이 "main"인 함수로 지정
     HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "ps_5_0", 0, 0, &shaderBlob, &errorBlob);
+        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 
     CheckResult(hr, errorBlob.Get());
 
     m_device->CreatePixelShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), NULL,
-                                &pixelShader);
+                                pixelShader.GetAddressOf());
 }
 
 void AppBase::CreateIndexBuffer(const std::vector<uint16_t>& indices, 
