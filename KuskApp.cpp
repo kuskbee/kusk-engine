@@ -281,6 +281,7 @@ void KuskApp::Update(float dt) {
 	m_vertexConstantBufferData.view = m_vertexConstantBufferData.view.Transpose();
 
 	// 프로젝션
+	m_aspect = AppBase::GetAspectRatio( );
 	if (m_usePerspectiveProjection) {
 		m_vertexConstantBufferData.proj =
 			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspect, m_nearZ, m_farZ);

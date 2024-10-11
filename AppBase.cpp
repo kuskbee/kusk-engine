@@ -55,7 +55,7 @@ AppBase::~AppBase() {
 }
 
 float AppBase::GetAspectRatio() const {
-    return float(m_screenWidth) / m_screenHeight;
+    return float(m_screenWidth - m_screenViewport.TopLeftX) / m_screenHeight;
 }
 
 int AppBase::Run() {
@@ -80,6 +80,14 @@ int AppBase::Run() {
                         ImGui::GetIO().Framerate);
 
             UpdateGUI(); // 추가적으로 사용할 GUI
+
+            auto pos = ImGui::GetWindowPos( );
+            auto size = ImGui::GetWindowSize( );
+
+            ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+
+            m_screenViewport.TopLeftX = size.x;
+            m_screenViewport.Width = m_screenWidth - size.x;
             
             ImGui::End();
             ImGui::Render();

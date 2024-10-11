@@ -39,17 +39,12 @@ struct Light
     float spotPower;
 };
 
-float CalcAttenuation(float d, float falloffStart, float falloffEnd)
-{
-    //Linear falloff
-    return saturate((falloffEnd - d) / (falloffEnd - falloffStart));
-}
-
 float3 BlinnPhong(float3 lightStrength, float3 lightVec, float3 normal,
                   float3 toEye, Material mat)
 {
-    float3 halfway = normalize(lightVec + toEye);
-    float3 specular = mat.specular * pow(max(dot(halfway, normal), 0.0), mat.shininess);
+    float3 halfway = normalize(toEye + lightVec);
+    float hdotn = dot(halfway, normal);
+    float3 specular = mat.specular * pow(max(hdotn, 0.0), mat.shininess);
     return mat.ambient + (mat.diffuse + specular) * lightStrength;
 }
 
@@ -60,6 +55,12 @@ float3 ComputeDirectionalLight(Light L, Material mat, float3 normal,
     float ndotl = max(dot(normal, lightVec), 0.0);
     float3 lightStrength = L.strength * ndotl;
     return BlinnPhong(lightStrength, lightVec, normal, toEye, mat);
+}
+
+float CalcAttenuation(float d, float falloffStart, float falloffEnd)
+{
+    //Linear falloff
+    return saturate((falloffEnd - d) / (falloffEnd - falloffStart));
 }
 
 float3 ComputePointLight(Light L, Material mat, float3 pos, float3 normal,
