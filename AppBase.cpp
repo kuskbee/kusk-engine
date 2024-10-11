@@ -81,14 +81,9 @@ int AppBase::Run() {
 
             UpdateGUI(); // 추가적으로 사용할 GUI
 
-            auto pos = ImGui::GetWindowPos( );
-            auto size = ImGui::GetWindowSize( );
-
             ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+            m_guiWidth = int(ImGui::GetWindowWidth( ));
 
-            m_screenViewport.TopLeftX = size.x;
-            m_screenViewport.Width = m_screenWidth - size.x;
-            
             ImGui::End();
             ImGui::Render();
             
@@ -130,6 +125,21 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_SIZE :
         // Reset and resize swapchain
+        if (m_swapChain) { // 처음 실행이 아닌 지 확인
+            m_screenWidth = int(LOWORD(lParam));
+            m_screenHeight = int(HIWORD(lParam));
+            m_guiWidth = 0;
+
+            m_renderTargetView.Reset( );
+            m_swapChain->ResizeBuffers( 0,   // 현재 개수 유지
+                                        ( UINT ) LOWORD(lParam), // 해상도 변경
+                                        ( UINT ) HIWORD(lParam),
+                                        DXGI_FORMAT_UNKNOWN, // 현재 포맷 유지
+                                        0);
+            CreateRenderTargetView( );
+            CreateDepthBuffer( );
+            SetViewport( );
+        }
         break;
     case WM_SYSCOMMAND :
         if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
@@ -247,9 +257,8 @@ bool AppBase::InitDirect3D() {
     }
 
     // 4X MSAA 지원하는 지 확인
-    UINT numQualityLevels;
-    device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &numQualityLevels);
-    if (numQualityLevels <= 0) {
+    device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m_numQualityLevels);
+    if (m_numQualityLevels <= 0) {
         cout << "MSAA not supported." << endl;
     }
 
@@ -276,9 +285,9 @@ bool AppBase::InitDirect3D() {
     sd.Windowed = TRUE;                                 // Windowed/full-screen mode
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;  // allow full-screen switching
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    if (numQualityLevels > 0) {
+    if (m_numQualityLevels > 0) {
         sd.SampleDesc.Count = 4; // how many multisamples
-        sd.SampleDesc.Quality = numQualityLevels - 1;
+        sd.SampleDesc.Quality = m_numQualityLevels - 1;
     }
     else {
         sd.SampleDesc.Count = 1;
@@ -295,27 +304,8 @@ bool AppBase::InitDirect3D() {
         return false;
     }
 
-    // CreateRenderTarget
-    ComPtr<ID3D11Texture2D> backBuffer;
-    m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
-    if (backBuffer) {
-        m_device->CreateRenderTargetView(backBuffer.Get(), NULL, m_renderTargetView.GetAddressOf());
-    }
-    else {
-        cout << "CreateRenderTargetView() failed." << endl;
-        return false;
-    }
-
-    // Set the viewport
-    ZeroMemory(&m_screenViewport, sizeof(D3D11_VIEWPORT));
-    m_screenViewport.TopLeftX = 0;
-    m_screenViewport.TopLeftY = 0;
-    m_screenViewport.Width = float(m_screenWidth);
-    m_screenViewport.Height = float(m_screenHeight);
-    m_screenViewport.MinDepth = 0.0f;
-    m_screenViewport.MaxDepth = 1.0f; // Note: important for depth buffering
-
-    m_context->RSSetViewports(1, &m_screenViewport);
+    CreateRenderTargetView( );
+    SetViewport( );
 
     // Create a rasterize state
     D3D11_RASTERIZER_DESC rastDesc;
@@ -328,36 +318,7 @@ bool AppBase::InitDirect3D() {
 
     m_device->CreateRasterizerState(&rastDesc, m_rasterizerState.GetAddressOf());
 
-    // Create depth buffer
-    D3D11_TEXTURE2D_DESC depthStencilBufferDesc;
-    depthStencilBufferDesc.Width = m_screenWidth;
-    depthStencilBufferDesc.Height = m_screenHeight;
-    depthStencilBufferDesc.MipLevels = 1;
-    depthStencilBufferDesc.ArraySize = 1;
-    depthStencilBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    if (numQualityLevels > 0) {
-        depthStencilBufferDesc.SampleDesc.Count = 4;
-        depthStencilBufferDesc.SampleDesc.Quality = numQualityLevels - 1;
-    }
-    else {
-        depthStencilBufferDesc.SampleDesc.Count = 1;
-        depthStencilBufferDesc.SampleDesc.Quality = 0;
-    }
-    depthStencilBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    depthStencilBufferDesc.CPUAccessFlags = 0;
-    depthStencilBufferDesc.MiscFlags = 0;
-
-    if (FAILED(m_device->CreateTexture2D(
-        &depthStencilBufferDesc, 0,
-        m_depthStencilBuffer.GetAddressOf()))) {
-        cout << "CreateTexture2D() depthStencilBuffer failed." << endl;
-    }
-    if (FAILED(m_device->CreateDepthStencilView(
-        m_depthStencilBuffer.Get(), 0,
-        m_depthStencilView.GetAddressOf()))) { 
-        cout << "CreateDepthStencilView() failed." << endl;
-    }
+    CreateDepthBuffer( );
 
     // Create depth stencil state
     D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
@@ -389,6 +350,75 @@ bool AppBase::InitGUI() {
 
     if (!ImGui_ImplWin32_Init(m_mainWindow)) {
         return false;
+    }
+
+    return true;
+}
+
+void AppBase::SetViewport( ) {
+    
+    static int previousGuiWidth = m_guiWidth;
+
+    if (previousGuiWidth != m_guiWidth) {
+        previousGuiWidth = m_guiWidth;
+
+        // Set the viewport
+        ZeroMemory(&m_screenViewport, sizeof(D3D11_VIEWPORT));
+        m_screenViewport.TopLeftX = float(m_guiWidth);
+        m_screenViewport.TopLeftY = 0;
+        m_screenViewport.Width = float(m_screenWidth - m_guiWidth);
+        m_screenViewport.Height = float(m_screenHeight);
+        m_screenViewport.MinDepth = 0.0f;
+        m_screenViewport.MaxDepth = 1.0f; // Note: important for depth buffering
+
+        m_context->RSSetViewports(1, &m_screenViewport);
+    }
+}
+
+bool AppBase::CreateRenderTargetView( ) {
+    // CreateRenderTarget
+    ComPtr<ID3D11Texture2D> backBuffer;
+    m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
+    if (backBuffer) {
+        m_device->CreateRenderTargetView(backBuffer.Get( ), NULL, m_renderTargetView.GetAddressOf( ));
+    }
+    else {
+        cout << "CreateRenderTargetView() failed." << endl;
+        return false;
+    }
+    return true;
+}
+
+bool AppBase::CreateDepthBuffer( ) {
+    // Create depth buffer
+    D3D11_TEXTURE2D_DESC depthStencilBufferDesc;
+    depthStencilBufferDesc.Width = m_screenWidth;
+    depthStencilBufferDesc.Height = m_screenHeight;
+    depthStencilBufferDesc.MipLevels = 1;
+    depthStencilBufferDesc.ArraySize = 1;
+    depthStencilBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    if (m_numQualityLevels > 0) {
+        depthStencilBufferDesc.SampleDesc.Count = 4;
+        depthStencilBufferDesc.SampleDesc.Quality = m_numQualityLevels - 1;
+    }
+    else {
+        depthStencilBufferDesc.SampleDesc.Count = 1;
+        depthStencilBufferDesc.SampleDesc.Quality = 0;
+    }
+    depthStencilBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthStencilBufferDesc.CPUAccessFlags = 0;
+    depthStencilBufferDesc.MiscFlags = 0;
+
+    if (FAILED(m_device->CreateTexture2D(
+        &depthStencilBufferDesc, 0,
+        m_depthStencilBuffer.GetAddressOf( )))) {
+        cout << "CreateTexture2D() depthStencilBuffer failed." << endl;
+    }
+    if (FAILED(m_device->CreateDepthStencilView(
+        m_depthStencilBuffer.Get( ), 0,
+        m_depthStencilView.GetAddressOf( )))) {
+        cout << "CreateDepthStencilView() failed." << endl;
     }
 
     return true;

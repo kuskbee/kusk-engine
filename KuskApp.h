@@ -112,7 +112,6 @@ protected:
 	float m_projFovAngleY = 70.0f;
 	float m_nearZ = 0.01f;
 	float m_farZ = 100.0f;
-	float m_aspect = AppBase::GetAspectRatio();
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;

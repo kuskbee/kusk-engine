@@ -281,14 +281,14 @@ void KuskApp::Update(float dt) {
 	m_vertexConstantBufferData.view = m_vertexConstantBufferData.view.Transpose();
 
 	// 프로젝션
-	m_aspect = AppBase::GetAspectRatio( );
+	const float aspect = AppBase::GetAspectRatio( );
 	if (m_usePerspectiveProjection) {
 		m_vertexConstantBufferData.proj =
-			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspect, m_nearZ, m_farZ);
+			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), aspect, m_nearZ, m_farZ);
 	}
 	else {
 		m_vertexConstantBufferData.proj =
-			XMMatrixOrthographicOffCenterLH(-m_aspect, m_aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
+			XMMatrixOrthographicOffCenterLH(-aspect, aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 	}
 	m_vertexConstantBufferData.proj = m_vertexConstantBufferData.proj.Transpose();
 
@@ -313,8 +313,9 @@ void KuskApp::Update(float dt) {
 
 void KuskApp::Render() {
 	
-	m_context->RSSetViewports(1, &m_screenViewport);
-
+	// m_context->RSSetViewports(1, &m_screenViewport);
+	SetViewport( );
+	
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
 	m_context->ClearDepthStencilView(m_depthStencilView.Get(),
