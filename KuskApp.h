@@ -4,7 +4,6 @@
 #include <directxtk/SimpleMath.h>
 #include <iostream>
 #include <memory>
-#include <vector>
 
 #include "AppBase.h"
 
@@ -13,12 +12,6 @@ namespace kusk {
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
-
-struct Vertex {
-	Vector3 position;
-	Vector3 normal;
-	Vector2 texcoord;
-};
 
 // 재질
 struct Material {
@@ -115,7 +108,7 @@ protected:
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
-	float m_materialDiffuse = 1.0f;
-	float m_materialSpecular = 1.0f;
+	float m_materialDiffuse = 0.7f;
+	float m_materialSpecular = 0.2f;
 };
 } // namespace kusk

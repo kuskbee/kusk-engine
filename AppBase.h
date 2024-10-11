@@ -134,7 +134,10 @@ public:
 	ComPtr<ID3D11DeviceContext> m_context;
 	ComPtr<ID3D11RenderTargetView> m_renderTargetView;
 	ComPtr<IDXGISwapChain> m_swapChain;
-	ComPtr<ID3D11RasterizerState> m_rasterizerState;
+
+	ComPtr<ID3D11RasterizerState> m_solidRasterizerState;
+	ComPtr<ID3D11RasterizerState> m_wireRasterizerState;
+	bool m_drawAsWire = false;
 
 	// Depth Buffer
 	ComPtr<ID3D11Texture2D> m_depthStencilBuffer;

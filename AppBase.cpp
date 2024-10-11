@@ -311,12 +311,14 @@ bool AppBase::InitDirect3D() {
     D3D11_RASTERIZER_DESC rastDesc;
     ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-    // rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
     rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
     rastDesc.FrontCounterClockwise = false;
     rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
-    m_device->CreateRasterizerState(&rastDesc, m_rasterizerState.GetAddressOf());
+    m_device->CreateRasterizerState(&rastDesc, m_solidRasterizerState.GetAddressOf());
+
+    rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
+    m_device->CreateRasterizerState(&rastDesc, m_wireRasterizerState.GetAddressOf( ));
 
     CreateDepthBuffer( );
 

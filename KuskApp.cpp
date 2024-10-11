@@ -3,196 +3,11 @@
 #include <tuple>
 #include <vector>
 
+#include "GeometryGenerator.h"
+
 namespace kusk {
+
 using namespace std;
-
-auto MakeSquare() {
-	vector<Vector3> positions;
-	vector<Vector3> colors;
-	vector<Vector3> normals;
-	vector<Vector2> texcoords; // 텍스쳐 좌표
-
-	const float scale = 1.0f;
-
-	positions.push_back(Vector3(-1.0f, 1.0f, 0.0f) * scale);
-	positions.push_back(Vector3(1.0f, 1.0f, 0.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, 0.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, 0.0f) * scale);
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-
-	texcoords.push_back(Vector2(0.0f, 0.0f));
-	texcoords.push_back(Vector2(1.0f, 0.0f));
-	texcoords.push_back(Vector2(1.0f, 1.0f));
-	texcoords.push_back(Vector2(0.0f, 1.0f));
-
-	vector<Vertex> vertices;
-	for (size_t i = 0; i < positions.size(); i++) {
-		Vertex v;
-		v.position = positions[i];
-		v.normal = normals[i];
-		v.texcoord = texcoords[i];
-		vertices.push_back(v);
-	}
-
-	vector<uint16_t> indices = {
-		0, 1, 2, 0, 2, 3,
-	};
-
-	return tuple{ vertices, indices };
-}
-
-auto MakeBox() {
-	vector<Vector3> positions;
-	vector<Vector3> colors;
-	vector<Vector3> normals;
-	vector<Vector2> texcoords; // 텍스쳐 좌표
-
-	const float scale = 1.0f;
-
-	const Vector3 v0 = Vector3(-1.0f, 1.0f, -1.0f);
-	const Vector3 v1 = Vector3(-1.0f, 1.0f, 1.0f);
-	const Vector3 v2 = Vector3(1.0f, 1.0f, 1.0f);
-	const Vector3 v3 = Vector3(1.0f, 1.0f, -1.0f);
-	const Vector3 v4 = Vector3(-1.0f, -1.0f, -1.0f);
-	const Vector3 v5 = Vector3(-1.0f, -1.0f, 1.0f);
-	const Vector3 v6 = Vector3(1.0f, -1.0f, 1.0f);
-	const Vector3 v7 = Vector3(1.0f, -1.0f, -1.0f);
-
-	// 윗면
-	positions.push_back(v0 * scale);
-	positions.push_back(v1 * scale);
-	positions.push_back(v2 * scale);
-	positions.push_back(v3 * scale);
-	colors.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	// 아랫면
-	positions.push_back(v4 * scale);
-	positions.push_back(v7 * scale);
-	positions.push_back(v6 * scale);
-	positions.push_back(v5 * scale);
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	// 앞면
-	positions.push_back(v4 * scale);
-	positions.push_back(v0 * scale);
-	positions.push_back(v3 * scale);
-	positions.push_back(v7 * scale);
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	// 뒷면
-	positions.push_back(v5 * scale);
-	positions.push_back(v6 * scale);
-	positions.push_back(v2 * scale);
-	positions.push_back(v1 * scale);
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	colors.push_back(Vector3(0.0f, 1.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	// 왼쪽
-	positions.push_back(v5 * scale);
-	positions.push_back(v1 * scale);
-	positions.push_back(v0 * scale);
-	positions.push_back(v4 * scale);
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	colors.push_back(Vector3(1.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	// 오른쪽
-	positions.push_back(v6 * scale);
-	positions.push_back(v7 * scale);
-	positions.push_back(v3 * scale);
-	positions.push_back(v2 * scale);
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	colors.push_back(Vector3(1.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	texcoords.push_back({ 0.0f, 1.0f });
-	texcoords.push_back({ 0.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 0.0f });
-	texcoords.push_back({ 1.0f, 1.0f });
-
-	vector<Vertex> vertices;
-	for (size_t i = 0; i < positions.size(); i++) {
-		Vertex v;
-		v.position = positions[i];
-		v.normal = normals[i];
-		v.texcoord = texcoords[i];
-		vertices.push_back(v);
-	}
-
-	vector<uint16_t> indices = {
-		0, 1, 2, 0, 2, 3, // 윗면
-		4, 5, 6, 4, 6, 7, // 아랫면
-		8, 9, 10, 8, 10, 11, // 앞면
-		12, 13, 14, 12, 14, 15, // 뒷면
-		16, 17, 18, 16, 18, 19, // 왼쪽
-		20, 21, 22, 20, 22, 23 // 오른쪽
-	};
-
-	return tuple{ vertices, indices };
-}
 
 KuskApp::KuskApp() : AppBase(), m_indexCount(0), m_pixelConstantBufferData() {}
 
@@ -220,14 +35,14 @@ bool KuskApp::Initialize() {
 	m_device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 
 	// Geometry 정의
-	auto [vertices, indices] = MakeBox();
+	MeshData meshData = GeometryGenerator::MakeBox();
 
 	// Vertex Buffer
-	AppBase::CreateVertexBuffer(vertices, m_vertexBuffer);
+	AppBase::CreateVertexBuffer(meshData.vertices, m_vertexBuffer);
 
 	// Index Buffer
-	m_indexCount = UINT(indices.size());
-	AppBase::CreateIndexBuffer(indices, m_indexBuffer);
+	m_indexCount = UINT(meshData.indices.size());
+	AppBase::CreateIndexBuffer(meshData.indices, m_indexBuffer);
 
 	// Vertex Constant Buffer
 	m_vertexConstantBufferData.model = Matrix();
@@ -338,7 +153,10 @@ void KuskApp::Render() {
 	m_context->PSSetConstantBuffers(0, 1, m_pixelConstantBuffer.GetAddressOf( ));
 	m_context->PSSetShader(m_colorPixelShader.Get(), 0, 0);
 	
-	m_context->RSSetState(m_rasterizerState.Get());
+	if(m_drawAsWire)
+		m_context->RSSetState(m_wireRasterizerState.Get( ));
+	else
+		m_context->RSSetState(m_solidRasterizerState.Get());
 
 	// Vertex/Index Buffer setting
 	UINT stride = sizeof(Vertex);
@@ -352,6 +170,7 @@ void KuskApp::Render() {
 
 void KuskApp::UpdateGUI() {
 	ImGui::Checkbox("Use Texture", &m_pixelConstantBufferData.useTexture);
+	ImGui::Checkbox("Wireframe", &m_drawAsWire);
 
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);

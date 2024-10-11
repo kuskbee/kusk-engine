@@ -134,11 +134,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AppBase.cpp" />
+    <ClCompile Include="GeometryGenerator.cpp" />
     <ClCompile Include="KuskApp.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h" />
+    <ClInclude Include="GeometryGenerator.h" />
     <ClInclude Include="KuskApp.h" />
   </ItemGroup>
   <ItemGroup>
