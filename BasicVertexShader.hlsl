@@ -1,6 +1,6 @@
 #include "Common.hlsli" // 쉐이더에서도 include 사용 가능
 
-cbuffer VertexConstantBuffer : register(b0)
+cbuffer BasicVertexConstantBuffer : register(b0)
 {
     matrix model;
     matrix invTranspose;
@@ -21,6 +21,7 @@ PixelShaderInput main(VertexShaderInput input)
     
     output.posProj = pos;
     output.texcoord = input.texcoord;
+    output.color = float3(0.0f, 0.0f, 0.0f); // 다른 쉐이더에서 사용
     
     float4 normal = float4(input.normalModel, 0.0);
     output.normalWorld = mul(normal, invTranspose).xyz;

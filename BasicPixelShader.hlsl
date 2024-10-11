@@ -4,7 +4,7 @@ Texture2D g_texture0 : register(t0);
 Texture2D g_texture1 : register(t1);
 SamplerState g_sampler : register(s0);
 
-cbuffer PixelConstantBuffer : register(b0) 
+cbuffer BasicPixelConstantBuffer : register(b0) 
 {
     float3 eyeWorld;
     bool useTexture;

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <algorithm>
-#include <directxtk/SimpleMath.h>
 #include <iostream>
 #include <memory>
 
 #include "AppBase.h"
+#include "Mesh.h"
+#include "GeometryGenerator.h"
 
 namespace kusk {
 
@@ -33,7 +34,7 @@ struct Light {
 	float spotPower = 1.0f;							// 4
 };
 
-struct VertexConstantBuffer {
+struct BasicVertexConstantBuffer {
 	Matrix model;
 	Matrix invTranspose;
 	Matrix view;
@@ -47,20 +48,25 @@ struct VertexConstantBuffer {
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT.
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createbuffer
 
-static_assert((sizeof(VertexConstantBuffer) % 16) == 0,
+static_assert((sizeof(BasicVertexConstantBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
 #define MAX_LIGHTS 3
 
-struct PixelConstatntBuffer {
+struct BasicPixelConstatntBuffer {
 	Vector3 eyeWorld;		// 12
 	bool useTexture;		// 4
 	Material material;		// 48
 	Light light[ MAX_LIGHTS ]; // 48 * MAX_LIGHTS
 };
 
-static_assert((sizeof(PixelConstatntBuffer) % 16) == 0,
+static_assert((sizeof(BasicPixelConstatntBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
+
+struct NormalVertexConstantBuffer {
+	float scale = 0.1f;
+	float dummy[ 3 ];
+};
 
 class KuskApp : public AppBase
 {
@@ -73,15 +79,11 @@ public:
 	virtual void Render() override;
 
 protected:
-	ComPtr<ID3D11VertexShader> m_colorVertexShader;
-	ComPtr<ID3D11PixelShader> m_colorPixelShader;
-	ComPtr<ID3D11InputLayout> m_colorInputLayout;
+	ComPtr<ID3D11VertexShader> m_basicVertexShader;
+	ComPtr<ID3D11PixelShader> m_basicPixelShader;
+	ComPtr<ID3D11InputLayout> m_basicInputLayout;
 
-	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11Buffer> m_indexBuffer;
-	ComPtr<ID3D11Buffer> m_vertexConstantBuffer;
-	UINT m_indexCount;
-	ComPtr<ID3D11Buffer> m_pixelConstantBuffer;
+	shared_ptr<Mesh> m_mesh;
 
 	// Texturing
 	ComPtr<ID3D11Texture2D> m_texture;
@@ -90,12 +92,12 @@ protected:
 	ComPtr<ID3D11ShaderResourceView> m_textureResourceView2;
 	ComPtr<ID3D11SamplerState> m_samplerState;
 
-	VertexConstantBuffer m_vertexConstantBufferData;
-	PixelConstatntBuffer m_pixelConstantBufferData;
+	BasicVertexConstantBuffer m_basicVertexConstantBufferData;
+	BasicPixelConstatntBuffer m_basicPixelConstantBufferData;
 
 	bool m_usePerspectiveProjection = true;
 	Vector3 m_modelTranslation = Vector3(0.0f, 0.0f, 0.0f);
-	Vector3 m_modelRotation = Vector3(0.0f);
+	Vector3 m_modelRotation = Vector3(-0.6f, 1.0f, 0.0f);
 	Vector3 m_modelScaling = Vector3(0.5f);
 	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
@@ -110,5 +112,15 @@ protected:
 	Light m_lightFromGUI;
 	float m_materialDiffuse = 0.7f;
 	float m_materialSpecular = 0.2f;
+
+	// 노멀 벡터 그리기
+	ComPtr<ID3D11VertexShader> m_normalVertexShader;
+	ComPtr<ID3D11PixelShader> m_normalPixelShader;
+	// ID3D11InputLayout은 basic과 같이 사용
+
+	shared_ptr<Mesh> m_normalLines;
+	NormalVertexConstantBuffer m_normalVertexConstantBufferData;
+	bool m_drawNormals = true;
+	bool m_dirtyFlag = false;
 };
 } // namespace kusk

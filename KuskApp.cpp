@@ -3,13 +3,11 @@
 #include <tuple>
 #include <vector>
 
-#include "GeometryGenerator.h"
-
 namespace kusk {
 
 using namespace std;
 
-KuskApp::KuskApp() : AppBase(), m_indexCount(0), m_pixelConstantBufferData() {}
+KuskApp::KuskApp() : AppBase(), m_basicPixelConstantBufferData() {}
 
 bool KuskApp::Initialize() {
 
@@ -37,33 +35,66 @@ bool KuskApp::Initialize() {
 	// Geometry 정의
 	MeshData meshData = GeometryGenerator::MakeBox();
 
+	m_mesh = std::make_shared<Mesh>( );
+
 	// Vertex Buffer
-	AppBase::CreateVertexBuffer(meshData.vertices, m_vertexBuffer);
+	AppBase::CreateVertexBuffer(meshData.vertices, m_mesh->m_vertexBuffer);
 
 	// Index Buffer
-	m_indexCount = UINT(meshData.indices.size());
-	AppBase::CreateIndexBuffer(meshData.indices, m_indexBuffer);
+	m_mesh->m_indexCount = UINT(meshData.indices.size());
+	AppBase::CreateIndexBuffer(meshData.indices, m_mesh->m_indexBuffer);
 
 	// Vertex Constant Buffer
-	m_vertexConstantBufferData.model = Matrix();
-	m_vertexConstantBufferData.view = Matrix();
-	m_vertexConstantBufferData.proj = Matrix();
-	AppBase::CreateConstantBuffer(m_vertexConstantBufferData, m_vertexConstantBuffer);
+	m_basicVertexConstantBufferData.model = Matrix();
+	m_basicVertexConstantBufferData.view = Matrix();
+	m_basicVertexConstantBufferData.proj = Matrix();
+	AppBase::CreateConstantBuffer(m_basicVertexConstantBufferData, m_mesh->m_vertexConstantBuffer);
 
 	// Pixel Constant Buffer
-	AppBase::CreateConstantBuffer(m_pixelConstantBufferData, m_pixelConstantBuffer);
+	AppBase::CreateConstantBuffer(m_basicPixelConstantBufferData, m_mesh->m_pixelConstantBuffer);
 
 	// Make Shaders
-	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {
+	vector<D3D11_INPUT_ELEMENT_DESC> basicInputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	AppBase::CreateVertexShaderAndInputLayout(L"BasicVertexShader.hlsl", inputElements,
-												m_colorVertexShader, m_colorInputLayout);
+	AppBase::CreateVertexShaderAndInputLayout(L"BasicVertexShader.hlsl", basicInputElements,
+												m_basicVertexShader, m_basicInputLayout);
 
-	AppBase::CreatePixelShader(L"BasicPixelShader.hlsl", m_colorPixelShader);
+	AppBase::CreatePixelShader(L"BasicPixelShader.hlsl", m_basicPixelShader);
+
+	// 노멀 벡터 그리기
+	// 단순화를 위해 InputLayout은 BasicVertexShader와 같이 사용.
+	m_normalLines = std::make_shared<Mesh>( );
+
+	std::vector<Vertex> normalVertices;
+	std::vector<uint16_t> normalIndices;
+	for (size_t i = 0; i < meshData.vertices.size( ); i++) {
+		Vertex v = meshData.vertices[ i ];
+
+		v.texcoord.x = 0.0f; // 시작점
+		normalVertices.push_back(v);
+
+		v.texcoord.x = 1.0f; // 끝점
+		normalVertices.push_back(v);
+
+		normalIndices.push_back(uint16_t(2 * i));
+		normalIndices.push_back(uint16_t(2 * i + 1));
+	}
+
+
+	AppBase::CreateVertexBuffer(normalVertices, m_normalLines->m_vertexBuffer);
+	m_normalLines->m_indexCount = UINT(normalIndices.size());
+	AppBase::CreateIndexBuffer(normalIndices, m_normalLines->m_indexBuffer);
+	AppBase::CreateConstantBuffer(m_normalVertexConstantBufferData, m_normalLines->m_vertexConstantBuffer);
+
+	AppBase::CreateVertexShaderAndInputLayout(
+		L"NormalVertexShader.hlsl", basicInputElements, m_normalVertexShader,
+		m_basicInputLayout);
+
+	AppBase::CreatePixelShader(L"NormalPixelShader.hlsl", m_normalPixelShader);
 
 	return true;
 }
@@ -73,62 +104,68 @@ void KuskApp::Update(float dt) {
 	using namespace DirectX;
 	
 	// 모델의 변환
-	m_vertexConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
+	m_basicVertexConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
 								 Matrix::CreateRotationX(m_modelRotation.x) *
 								 Matrix::CreateRotationY(m_modelRotation.y) *
 								 Matrix::CreateRotationZ(m_modelRotation.z) *
 								 Matrix::CreateTranslation(m_modelTranslation);
-	m_vertexConstantBufferData.model = m_vertexConstantBufferData.model.Transpose();
+	m_basicVertexConstantBufferData.model = m_basicVertexConstantBufferData.model.Transpose();
 
-	m_vertexConstantBufferData.invTranspose = m_vertexConstantBufferData.model;
-	m_vertexConstantBufferData.invTranspose.Translation(Vector3(0.0f));
-	m_vertexConstantBufferData.invTranspose.Transpose( ).Invert( );
+	m_basicVertexConstantBufferData.invTranspose = m_basicVertexConstantBufferData.model;
+	m_basicVertexConstantBufferData.invTranspose.Translation(Vector3(0.0f));
+	m_basicVertexConstantBufferData.invTranspose.Transpose( ).Invert( );
 
 	// 시점 변환
 	//XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
-	m_vertexConstantBufferData.view =
+	m_basicVertexConstantBufferData.view =
 		Matrix::CreateRotationY(m_viewRot) *
 		Matrix::CreateTranslation(0.0f, 0.0f, 2.0f);
 
-	m_pixelConstantBufferData.eyeWorld = Vector3::Transform(
-		Vector3(0.0f), m_vertexConstantBufferData.view.Invert( ));
+	m_basicPixelConstantBufferData.eyeWorld = Vector3::Transform(
+		Vector3(0.0f), m_basicVertexConstantBufferData.view.Invert( ));
 		
-	m_vertexConstantBufferData.view = m_vertexConstantBufferData.view.Transpose();
+	m_basicVertexConstantBufferData.view = m_basicVertexConstantBufferData.view.Transpose();
 
 	// 프로젝션
 	const float aspect = AppBase::GetAspectRatio( );
 	if (m_usePerspectiveProjection) {
-		m_vertexConstantBufferData.proj =
+		m_basicVertexConstantBufferData.proj =
 			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), aspect, m_nearZ, m_farZ);
 	}
 	else {
-		m_vertexConstantBufferData.proj =
+		m_basicVertexConstantBufferData.proj =
 			XMMatrixOrthographicOffCenterLH(-aspect, aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 	}
-	m_vertexConstantBufferData.proj = m_vertexConstantBufferData.proj.Transpose();
+	m_basicVertexConstantBufferData.proj = m_basicVertexConstantBufferData.proj.Transpose();
 
 	// Constant를 CPU에서 GPU로복사
-	AppBase::UpdateBuffer(m_vertexConstantBufferData, m_vertexConstantBuffer);
+	AppBase::UpdateBuffer(m_basicVertexConstantBufferData, m_mesh->m_vertexConstantBuffer);
 
-	m_pixelConstantBufferData.material.diffuse = Vector3(m_materialDiffuse);
-	m_pixelConstantBufferData.material.specular = Vector3(m_materialSpecular);
+	m_basicPixelConstantBufferData.material.diffuse = Vector3(m_materialDiffuse);
+	m_basicPixelConstantBufferData.material.specular = Vector3(m_materialSpecular);
 
 	// 여러 개 조명 사용 예시
 	for (int i = 0; i < MAX_LIGHTS; i++) {
 		// 다른 조명 끄기
 		if (i != m_lightType) {
-			m_pixelConstantBufferData.light[ i ].strength *= 0.0f;
+			m_basicPixelConstantBufferData.light[ i ].strength *= 0.0f;
 		}
 		else {
-			m_pixelConstantBufferData.light[ i ] = m_lightFromGUI;
+			m_basicPixelConstantBufferData.light[ i ] = m_lightFromGUI;
 		}
 	}
-	AppBase::UpdateBuffer(m_pixelConstantBufferData, m_pixelConstantBuffer);
+	AppBase::UpdateBuffer(m_basicPixelConstantBufferData, m_mesh->m_pixelConstantBuffer);
+
+	// 노멀 벡터 그리기
+	if (m_drawNormals && m_dirtyFlag)
+	{
+		AppBase::UpdateBuffer(m_normalVertexConstantBufferData, m_normalLines->m_vertexConstantBuffer);
+		m_dirtyFlag = false;
+	}
 }
 
 void KuskApp::Render() {
 	
-	// m_context->RSSetViewports(1, &m_screenViewport);
 	SetViewport( );
 	
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -141,8 +178,8 @@ void KuskApp::Render() {
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
 	// Shader setting
-	m_context->VSSetShader(m_colorVertexShader.Get(), 0, 0);
-	m_context->VSSetConstantBuffers(0, 1, m_vertexConstantBuffer.GetAddressOf());
+	m_context->VSSetShader(m_basicVertexShader.Get(), 0, 0);
+	m_context->VSSetConstantBuffers(0, 1, m_mesh->m_vertexConstantBuffer.GetAddressOf());
 
 	ID3D11ShaderResourceView* pixelResources[ 2 ] = {
 		m_textureResourceView.Get( ),
@@ -150,8 +187,8 @@ void KuskApp::Render() {
 	};
 	m_context->PSSetShaderResources(0, 2, pixelResources);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	m_context->PSSetConstantBuffers(0, 1, m_pixelConstantBuffer.GetAddressOf( ));
-	m_context->PSSetShader(m_colorPixelShader.Get(), 0, 0);
+	m_context->PSSetConstantBuffers(0, 1, m_mesh->m_pixelConstantBuffer.GetAddressOf( ));
+	m_context->PSSetShader(m_basicPixelShader.Get(), 0, 0);
 	
 	if(m_drawAsWire)
 		m_context->RSSetState(m_wireRasterizerState.Get( ));
@@ -161,16 +198,34 @@ void KuskApp::Render() {
 	// Vertex/Index Buffer setting
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
-	m_context->IASetInputLayout(m_colorInputLayout.Get());
-	m_context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-	m_context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	m_context->IASetInputLayout(m_basicInputLayout.Get());
+	m_context->IASetVertexBuffers(0, 1, m_mesh->m_vertexBuffer.GetAddressOf(), &stride, &offset);
+	m_context->IASetIndexBuffer(m_mesh->m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_context->DrawIndexed(m_indexCount, 0, 0);
+	m_context->DrawIndexed(m_mesh->m_indexCount, 0, 0);
+
+	// 노멀 벡터 그리기
+	if (m_drawNormals) {
+		m_context->VSSetShader(m_normalVertexShader.Get( ), 0, 0);
+		ID3D11Buffer* pptr[ 2 ] = {
+			m_mesh->m_vertexConstantBuffer.Get( ),
+			m_normalLines->m_vertexConstantBuffer.Get( ),
+		};
+		m_context->VSSetConstantBuffers(0, 2, pptr);
+		m_context->PSSetShader(m_normalPixelShader.Get( ), 0, 0);
+		m_context->IASetVertexBuffers(0, 1, m_normalLines->m_vertexBuffer.GetAddressOf( ), &stride, &offset);
+		m_context->IASetIndexBuffer(m_normalLines->m_indexBuffer.Get( ), DXGI_FORMAT_R16_UINT, 0);
+		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+		m_context->DrawIndexed(m_normalLines->m_indexCount, 0, 0);
+	}
 }
 
 void KuskApp::UpdateGUI() {
-	ImGui::Checkbox("Use Texture", &m_pixelConstantBufferData.useTexture);
+	ImGui::Checkbox("Use Texture", &m_basicPixelConstantBufferData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
+	ImGui::Checkbox("Draw Normals", &m_drawNormals);
+
+	m_dirtyFlag = ImGui::SliderFloat("Normal scale", &m_normalVertexConstantBufferData.scale, 0.0f, 1.0f);
 
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
@@ -178,7 +233,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat("m_viewRot", &m_viewRot, -3.14f, 3.14f);
 
 	ImGui::SliderFloat("Material Shininess",
-					   &m_pixelConstantBufferData.material.shininess, 1.0f, 256.0f);
+					   &m_basicPixelConstantBufferData.material.shininess, 1.0f, 256.0f);
 
 	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
 		m_lightType = 0;

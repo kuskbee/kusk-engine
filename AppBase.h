@@ -13,6 +13,7 @@
 namespace kusk {
 
 using Microsoft::WRL::ComPtr;
+using std::shared_ptr;
 using std::vector;
 using std::wstring;
 
