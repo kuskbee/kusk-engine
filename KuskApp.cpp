@@ -36,7 +36,7 @@ auto MakeSquare() {
 	for (size_t i = 0; i < positions.size(); i++) {
 		Vertex v;
 		v.position = positions[i];
-		v.color = colors[i];
+		v.normal = normals[i];
 		v.texcoord = texcoords[i];
 		vertices.push_back(v);
 	}
@@ -52,6 +52,7 @@ auto MakeBox() {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
+	vector<Vector2> texcoords; // 텍스쳐 좌표
 
 	const float scale = 1.0f;
 
@@ -77,6 +78,10 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	// 아랫면
 	positions.push_back(v4 * scale);
@@ -91,6 +96,10 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
 	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	// 앞면
 	positions.push_back(v4 * scale);
@@ -105,6 +114,10 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	// 뒷면
 	positions.push_back(v5 * scale);
@@ -119,6 +132,10 @@ auto MakeBox() {
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
 	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	// 왼쪽
 	positions.push_back(v5 * scale);
@@ -133,6 +150,10 @@ auto MakeBox() {
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	// 오른쪽
 	positions.push_back(v6 * scale);
@@ -147,12 +168,17 @@ auto MakeBox() {
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+	texcoords.push_back({ 0.0f, 1.0f });
+	texcoords.push_back({ 0.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 0.0f });
+	texcoords.push_back({ 1.0f, 1.0f });
 
 	vector<Vertex> vertices;
 	for (size_t i = 0; i < positions.size(); i++) {
 		Vertex v;
 		v.position = positions[i];
-		v.color = colors[i];
+		v.normal = normals[i];
+		v.texcoord = texcoords[i];
 		vertices.push_back(v);
 	}
 
@@ -168,7 +194,7 @@ auto MakeBox() {
 	return tuple{ vertices, indices };
 }
 
-KuskApp::KuskApp() : AppBase(), m_indexCount(0) {}
+KuskApp::KuskApp() : AppBase(), m_indexCount(0), m_pixelConstantBufferData() {}
 
 bool KuskApp::Initialize() {
 
@@ -194,7 +220,7 @@ bool KuskApp::Initialize() {
 	m_device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 
 	// Geometry 정의
-	auto [vertices, indices] = MakeSquare();
+	auto [vertices, indices] = MakeBox();
 
 	// Vertex Buffer
 	AppBase::CreateVertexBuffer(vertices, m_vertexBuffer);
@@ -204,26 +230,25 @@ bool KuskApp::Initialize() {
 	AppBase::CreateIndexBuffer(indices, m_indexBuffer);
 
 	// Vertex Constant Buffer
-	m_vsConstantBufferData.model = Matrix();
-	m_vsConstantBufferData.view = Matrix();
-	m_vsConstantBufferData.proj = Matrix();
-	AppBase::CreateConstantBuffer(m_vsConstantBufferData, m_vsConstantBuffer);
+	m_vertexConstantBufferData.model = Matrix();
+	m_vertexConstantBufferData.view = Matrix();
+	m_vertexConstantBufferData.proj = Matrix();
+	AppBase::CreateConstantBuffer(m_vertexConstantBufferData, m_vertexConstantBuffer);
 
 	// Pixel Constant Buffer
-	m_psConstantBufferData.xSplit = 0.0f;
-	AppBase::CreateConstantBuffer(m_psConstantBufferData, m_psConstantBuffer);
+	AppBase::CreateConstantBuffer(m_pixelConstantBufferData, m_pixelConstantBuffer);
 
 	// Make Shaders
 	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	AppBase::CreateVertexShaderAndInputLayout(L"ColorVertexShader.hlsl", inputElements,
+	AppBase::CreateVertexShaderAndInputLayout(L"BasicVertexShader.hlsl", inputElements,
 												m_colorVertexShader, m_colorInputLayout);
 
-	AppBase::CreatePixelShader(L"ColorPixelShader.hlsl", m_colorPixelShader);
+	AppBase::CreatePixelShader(L"BasicPixelShader.hlsl", m_colorPixelShader);
 
 	return true;
 }
@@ -233,32 +258,56 @@ void KuskApp::Update(float dt) {
 	using namespace DirectX;
 	
 	// 모델의 변환
-	m_vsConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
-								 Matrix::CreateRotationY(m_modelRotation.y) *
+	m_vertexConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
 								 Matrix::CreateRotationX(m_modelRotation.x) *
+								 Matrix::CreateRotationY(m_modelRotation.y) *
 								 Matrix::CreateRotationZ(m_modelRotation.z) *
 								 Matrix::CreateTranslation(m_modelTranslation);
-	m_vsConstantBufferData.model = m_vsConstantBufferData.model.Transpose();
+	m_vertexConstantBufferData.model = m_vertexConstantBufferData.model.Transpose();
+
+	m_vertexConstantBufferData.invTranspose = m_vertexConstantBufferData.model;
+	m_vertexConstantBufferData.invTranspose.Translation(Vector3(0.0f));
+	m_vertexConstantBufferData.invTranspose.Transpose( ).Invert( );
 
 	// 시점 변환
-	m_vsConstantBufferData.view =
-		XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
-	m_vsConstantBufferData.view = m_vsConstantBufferData.view.Transpose();
+	//XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
+	m_vertexConstantBufferData.view =
+		Matrix::CreateRotationY(m_viewRot) *
+		Matrix::CreateTranslation(0.0f, 0.0f, 2.0f);
+
+	m_pixelConstantBufferData.eyeWorld = Vector3::Transform(
+		Vector3(0.0f), m_vertexConstantBufferData.view.Invert( ));
+		
+	m_vertexConstantBufferData.view = m_vertexConstantBufferData.view.Transpose();
 
 	// 프로젝션
 	if (m_usePerspectiveProjection) {
-		m_vsConstantBufferData.proj =
+		m_vertexConstantBufferData.proj =
 			XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), m_aspect, m_nearZ, m_farZ);
 	}
 	else {
-		m_vsConstantBufferData.proj =
+		m_vertexConstantBufferData.proj =
 			XMMatrixOrthographicOffCenterLH(-m_aspect, m_aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 	}
-	m_vsConstantBufferData.proj = m_vsConstantBufferData.proj.Transpose();
+	m_vertexConstantBufferData.proj = m_vertexConstantBufferData.proj.Transpose();
 
 	// Constant를 CPU에서 GPU로복사
-	AppBase::UpdateBuffer(m_vsConstantBufferData, m_vsConstantBuffer);
-	AppBase::UpdateBuffer(m_psConstantBufferData, m_psConstantBuffer);
+	AppBase::UpdateBuffer(m_vertexConstantBufferData, m_vertexConstantBuffer);
+
+	m_pixelConstantBufferData.material.diffuse = Vector3(m_materialDiffuse);
+	m_pixelConstantBufferData.material.specular = Vector3(m_materialSpecular);
+
+	// 여러 개 조명 사용 예시
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		// 다른 조명 끄기
+		if (i != m_lightType) {
+			m_pixelConstantBufferData.light[ i ].strength *= 0.0f;
+		}
+		else {
+			m_pixelConstantBufferData.light[ i ] = m_lightFromGUI;
+		}
+	}
+	AppBase::UpdateBuffer(m_pixelConstantBufferData, m_pixelConstantBuffer);
 }
 
 void KuskApp::Render() {
@@ -276,7 +325,7 @@ void KuskApp::Render() {
 
 	// Shader setting
 	m_context->VSSetShader(m_colorVertexShader.Get(), 0, 0);
-	m_context->VSSetConstantBuffers(0, 1, m_vsConstantBuffer.GetAddressOf());
+	m_context->VSSetConstantBuffers(0, 1, m_vertexConstantBuffer.GetAddressOf());
 
 	ID3D11ShaderResourceView* pixelResources[ 2 ] = {
 		m_textureResourceView.Get( ),
@@ -284,7 +333,7 @@ void KuskApp::Render() {
 	};
 	m_context->PSSetShaderResources(0, 2, pixelResources);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	m_context->PSSetConstantBuffers(0, 1, m_psConstantBuffer.GetAddressOf( ));
+	m_context->PSSetConstantBuffers(0, 1, m_pixelConstantBuffer.GetAddressOf( ));
 	m_context->PSSetShader(m_colorPixelShader.Get(), 0, 0);
 	
 	m_context->RSSetState(m_rasterizerState.Get());
@@ -300,20 +349,38 @@ void KuskApp::Render() {
 }
 
 void KuskApp::UpdateGUI() {
-	ImGui::SliderFloat("xSplit", &m_psConstantBufferData.xSplit, 0.0f, 1.0f);
-	/*ImGui::Checkbox("usePerspectiveProjection", &m_usePerspectiveProjection);
+	ImGui::Checkbox("Use Texture", &m_pixelConstantBufferData.useTexture);
+
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
-	ImGui::SliderFloat3("m_modelRotation(Radian)", &m_modelRotation.x, -3.14f, 3.14f);
+	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
 	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
+	ImGui::SliderFloat("m_viewRot", &m_viewRot, -3.14f, 3.14f);
 
-	ImGui::SliderFloat3("m_viewEyePos", &m_viewEyePos.x, -4.0f, 4.0f);
-	ImGui::SliderFloat3("m_viewEyeDir", &m_viewEyeDir.x, -4.0f, 4.0f);
-	ImGui::SliderFloat3("m_viewUp", &m_viewUp.x, -2.0f, 2.0f);
+	ImGui::SliderFloat("Material Shininess",
+					   &m_pixelConstantBufferData.material.shininess, 1.0f, 256.0f);
 
-	ImGui::SliderFloat("m_projFovAngleY(Degree)", &m_projFovAngleY, 10.0f, 180.0f);
-	ImGui::SliderFloat("m_nearZ", &m_nearZ, 0.01f, 10.0f);
-	ImGui::SliderFloat("m_farZ", &m_farZ, 0.01f, 10.0f);
-	ImGui::SliderFloat("m_aspect", &m_aspect, 1.0f, 3.0f);*/
+	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
+		m_lightType = 0;
+	}
+	ImGui::SameLine( );
+	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
+		m_lightType = 1;
+	}
+	ImGui::SameLine( );
+	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
+		m_lightType = 2;
+	}
+
+	ImGui::SliderFloat("Material Diffuse", &m_materialDiffuse, 0.0f, 1.0f);
+	ImGui::SliderFloat("Material Specular", &m_materialSpecular, 0.0f, 1.0f);
+
+	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+
+	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
+
+	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
+
+	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
 }
 
 } // namespace kusk

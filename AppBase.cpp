@@ -414,9 +414,11 @@ void AppBase::CreateVertexShaderAndInputLayout(
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
     
-    // 주의 : 쉐이더의 시작점의 이름이 "main"인 함수로 지정
+    // 쉐이더의 시작점의 이름이 "main"인 함수로 지정
+    // D3D_COMPILE_STANDARD_FILE_INCLUDE 추가 : 쉐이더에서 include 사용
     HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+        D3DCompileFromFile(filename.c_str(), 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0",
+                            compileFlags, 0, &shaderBlob, &errorBlob);
     
     CheckResult(hr, errorBlob.Get());
 
@@ -437,9 +439,11 @@ void AppBase::CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShade
     compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-    // 주의 : 쉐이더의 시작점의 이름이 "main"인 함수로 지정
+    // 쉐이더의 시작점의 이름이 "main"인 함수로 지정
+    // D3D_COMPILE_STANDARD_FILE_INCLUDE 추가 : 쉐이더에서 include 사용
     HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+        D3DCompileFromFile(filename.c_str(), 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 
+                            compileFlags, 0, &shaderBlob, &errorBlob);
 
     CheckResult(hr, errorBlob.Get());
 

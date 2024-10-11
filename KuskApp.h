@@ -14,15 +14,35 @@ using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 
-
 struct Vertex {
 	Vector3 position;
-	Vector3 color;
+	Vector3 normal;
 	Vector2 texcoord;
 };
 
-struct ModelViewProjectionConstantBuffer {
+// 재질
+struct Material {
+	Vector3 ambient = Vector3(0.1f);	// 12
+	float shininess = 1.0f;				// 4
+	Vector3 diffuse = Vector3(0.5f);	// 12
+	float dummy1;						// 4
+	Vector3 specular = Vector3(0.5f);	// 12
+	float dummy2;						// 4
+};
+
+struct Light {
+	// 순서와 크기 관계 주의 (16 byte 패딩)
+	Vector3 strength = Vector3(1.0f);				// 12
+	float fallOffStart = 0.0f;						// 4
+	Vector3 direction = Vector3(0.0f, 0.0f, 1.0f);	// 12
+	float fallOffEnd = 10.0f;						// 4
+	Vector3 position = Vector3(0.0f, 0.0f, -2.0f);	// 12
+	float spotPower = 1.0f;							// 4
+};
+
+struct VertexConstantBuffer {
 	Matrix model;
+	Matrix invTranspose;
 	Matrix view;
 	Matrix proj;
 };
@@ -34,15 +54,19 @@ struct ModelViewProjectionConstantBuffer {
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT.
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createbuffer
 
-static_assert((sizeof(ModelViewProjectionConstantBuffer) % 16) == 0,
+static_assert((sizeof(VertexConstantBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
-struct PixelShaderConstatntBuffer {
-	float xSplit;
-	float padding[3];
+#define MAX_LIGHTS 3
+
+struct PixelConstatntBuffer {
+	Vector3 eyeWorld;		// 12
+	bool useTexture;		// 4
+	Material material;		// 48
+	Light light[ MAX_LIGHTS ]; // 48 * MAX_LIGHTS
 };
 
-static_assert((sizeof(PixelShaderConstatntBuffer) % 16) == 0,
+static_assert((sizeof(PixelConstatntBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
 class KuskApp : public AppBase
@@ -62,9 +86,9 @@ protected:
 
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
-	ComPtr<ID3D11Buffer> m_vsConstantBuffer;
+	ComPtr<ID3D11Buffer> m_vertexConstantBuffer;
 	UINT m_indexCount;
-	ComPtr<ID3D11Buffer> m_psConstantBuffer;
+	ComPtr<ID3D11Buffer> m_pixelConstantBuffer;
 
 	// Texturing
 	ComPtr<ID3D11Texture2D> m_texture;
@@ -73,19 +97,26 @@ protected:
 	ComPtr<ID3D11ShaderResourceView> m_textureResourceView2;
 	ComPtr<ID3D11SamplerState> m_samplerState;
 
-	ModelViewProjectionConstantBuffer m_vsConstantBufferData;
-	PixelShaderConstatntBuffer m_psConstantBufferData;
+	VertexConstantBuffer m_vertexConstantBufferData;
+	PixelConstatntBuffer m_pixelConstantBufferData;
 
 	bool m_usePerspectiveProjection = true;
-	Vector3 m_modelTranslation = Vector3(0.0f, 0.0f, 1.0f);
+	Vector3 m_modelTranslation = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3 m_modelRotation = Vector3(0.0f);
-	Vector3 m_modelScaling = Vector3(1.5f);
-	Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
+	Vector3 m_modelScaling = Vector3(0.5f);
+	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
-	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };
+	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };*/
+	float m_viewRot = 0.0f;
+
 	float m_projFovAngleY = 70.0f;
 	float m_nearZ = 0.01f;
 	float m_farZ = 100.0f;
 	float m_aspect = AppBase::GetAspectRatio();
+
+	int m_lightType = 0;
+	Light m_lightFromGUI;
+	float m_materialDiffuse = 1.0f;
+	float m_materialSpecular = 1.0f;
 };
 } // namespace kusk
