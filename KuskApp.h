@@ -5,8 +5,8 @@
 #include <memory>
 
 #include "AppBase.h"
-#include "Mesh.h"
 #include "GeometryGenerator.h"
+#include "Mesh.h"
 
 namespace kusk {
 
@@ -120,7 +120,7 @@ protected:
 
 	shared_ptr<Mesh> m_normalLines;
 	NormalVertexConstantBuffer m_normalVertexConstantBufferData;
-	bool m_drawNormals = true;
-	bool m_dirtyFlag = false;
+	bool m_drawNormals = false;
+	bool m_drawNormalsDirtyFlag = false;
 };
 } // namespace kusk

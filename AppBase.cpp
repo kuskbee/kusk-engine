@@ -312,6 +312,7 @@ bool AppBase::InitDirect3D() {
     ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
     rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+    //rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
     rastDesc.FrontCounterClockwise = false;
     rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
@@ -521,8 +522,14 @@ void AppBase::CreateTexture(
     //assert(channels == 4);
 
     std::vector<uint8_t> image;
-    image.resize(width * height * channels);
-    memcpy(image.data( ), img, image.size( ) * sizeof(uint8_t));
+    // 4채널로 만들어서 복사
+    image.resize(width * height * 4);
+    for (size_t i = 0; i < width * height; i++) {
+        for (size_t c = 0; c < 3; c++) {
+            image[ 4 * i + c ] = img[ i * channels + c ];
+        }
+        image[ 4 * i + 3 ] = 255;
+    }
 
     // Create texture
     D3D11_TEXTURE2D_DESC txtDesc = {};
@@ -537,7 +544,7 @@ void AppBase::CreateTexture(
     // Fill in the subresource data
     D3D11_SUBRESOURCE_DATA initData;
     initData.pSysMem = image.data( );
-    initData.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * channels;
+    initData.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * 4;
     // initData.SysMemSlicePitch = 0;
 
     m_device->CreateTexture2D(&txtDesc, &initData, texture.GetAddressOf( ));

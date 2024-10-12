@@ -15,7 +15,7 @@ bool KuskApp::Initialize() {
 		return false;
 
 	// Texture 만들기
-	AppBase::CreateTexture("crate2_diffuse.png", m_texture, m_textureResourceView);
+	AppBase::CreateTexture("ojwD8.jpg", m_texture, m_textureResourceView);
 	AppBase::CreateTexture("wall.jpg", m_texture2, m_textureResourceView2);
 
 	// Texture sampler 만들기
@@ -33,7 +33,9 @@ bool KuskApp::Initialize() {
 	m_device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 
 	// Geometry 정의
-	MeshData meshData = GeometryGenerator::MakeBox();
+	//MeshData meshData = GeometryGenerator::MakeGrid(2.0f, 1.7f, 5, 3);
+	//MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 20);
+	MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 15, 13);
 
 	m_mesh = std::make_shared<Mesh>( );
 
@@ -113,7 +115,7 @@ void KuskApp::Update(float dt) {
 
 	m_basicVertexConstantBufferData.invTranspose = m_basicVertexConstantBufferData.model;
 	m_basicVertexConstantBufferData.invTranspose.Translation(Vector3(0.0f));
-	m_basicVertexConstantBufferData.invTranspose.Transpose( ).Invert( );
+	m_basicVertexConstantBufferData.invTranspose = m_basicVertexConstantBufferData.invTranspose.Transpose( ).Invert( );
 
 	// 시점 변환
 	//XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
@@ -157,10 +159,10 @@ void KuskApp::Update(float dt) {
 	AppBase::UpdateBuffer(m_basicPixelConstantBufferData, m_mesh->m_pixelConstantBuffer);
 
 	// 노멀 벡터 그리기
-	if (m_drawNormals && m_dirtyFlag)
+	if (m_drawNormals && m_drawNormalsDirtyFlag)
 	{
 		AppBase::UpdateBuffer(m_normalVertexConstantBufferData, m_normalLines->m_vertexConstantBuffer);
-		m_dirtyFlag = false;
+		m_drawNormalsDirtyFlag = false;
 	}
 }
 
@@ -225,7 +227,10 @@ void KuskApp::UpdateGUI() {
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
 	ImGui::Checkbox("Draw Normals", &m_drawNormals);
 
-	m_dirtyFlag = ImGui::SliderFloat("Normal scale", &m_normalVertexConstantBufferData.scale, 0.0f, 1.0f);
+	if (ImGui::SliderFloat("Normal scale", &m_normalVertexConstantBufferData.scale, 0.0f, 1.0f))
+	{
+		m_drawNormalsDirtyFlag = true;
+	}
 
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
