@@ -110,7 +110,7 @@ protected:
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
-	float m_materialDiffuse = 0.7f;
+	float m_materialDiffuse = 0.4f;
 	float m_materialSpecular = 0.2f;
 
 	// 노멀 벡터 그리기

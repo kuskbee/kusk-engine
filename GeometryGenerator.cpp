@@ -356,21 +356,164 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 
 MeshData GeometryGenerator::MakeTetrahedron() {
 
+	const float a = 1.0f;
+	const float x = sqrt(3.0f) / 3.0f * a;
+	const float d = sqrt(3.0f) / 6.0f * a; // = x / 2
+	const float h = sqrt(6.0f) / 3.0f * a;
+
+	vector<Vector3> points = { {0.0f, x, 0.0f},
+							  {-0.5f * a, -d, 0.0f},
+							  {+0.5f * a, -d, 0.0f},
+							  {0.0f, 0.0f, h} };
+
+	Vector3 center = Vector3(0.0f);
+
+	for (int i = 0; i < 4; i++) {
+		center += points[ i ];
+	}
+	center /= 4.0f;
+
+	for (int i = 0; i < 4; i++) {
+		points[ i ] -= center;
+	}
+
 	MeshData meshData;
+
+	for (int i = 0; i < points.size( ); i++) {
+
+		Vertex v;
+		v.position = points[ i ];
+		v.normal = v.position; // 중심이 원점
+		v.normal.Normalize( );
+
+		meshData.vertices.push_back(v);
+	}
+
+	meshData.indices = { 0, 1, 2, 3, 2, 1, 0, 3, 1, 0, 2, 3 };
 
 	return meshData;
 }
 
 MeshData GeometryGenerator::MakeIcosahedron( ) {
 
-	MeshData meshData;
+	const float X = 0.525731f;
+	const float Z = 0.850651f;
 
-	return meshData;
+	MeshData newMesh;
+
+	vector<Vector3> pos = {
+		Vector3(-X, 0.0f, Z), Vector3(X, 0.0f, Z),   Vector3(-X, 0.0f, -Z),
+		Vector3(X, 0.0f, -Z), Vector3(0.0f, Z, X),   Vector3(0.0f, Z, -X),
+		Vector3(0.0f, -Z, X), Vector3(0.0f, -Z, -X), Vector3(Z, X, 0.0f),
+		Vector3(-Z, X, 0.0f), Vector3(Z, -X, 0.0f),  Vector3(-Z, -X, 0.0f) };
+
+	for (size_t i = 0; i < pos.size( ); i++) {
+		Vertex v;
+		v.position = pos[ i ];
+		v.normal = v.position;
+		v.normal.Normalize( );
+
+		newMesh.vertices.push_back(v);
+	}
+
+	newMesh.indices = { 1,  4,  0, 4,  9, 0, 4, 5,  9, 8, 5, 4,  1,  8, 4,
+					   1,  10, 8, 10, 3, 8, 8, 3,  5, 3, 2, 5,  3,  7, 2,
+					   3,  10, 7, 10, 6, 7, 6, 11, 7, 6, 0, 11, 6,  1, 0,
+					   10, 1,  6, 11, 0, 9, 2, 11, 9, 5, 2, 9,  11, 2, 7 };
+
+	return newMesh;
+
 }
 
-MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshData) {
+MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshData, bool faceNormal) {
 
-	return MeshData( );
+	// 원점을 중심이라고 가정
+	
+	// 구의 표면으로 옮기고 노멀과 texture 좌표 계산
+	auto ProjectVertex = [&](Vertex& v) {
+		v.normal = v.position;
+		v.normal.Normalize( );
+		v.position = v.normal * radius;
+
+		// 텍스쳐 좌표를 역산정하는 로직
+		/*const float theta = atan2f(v.position.z, v.position.x);
+		const float phi = acosf(v.position.y / radius);
+		v.texcoord.x = theta / XM_2PI;
+		v.texcoord.y = phi / XM_PI;*/
+	};
+
+	auto UpdateFaceNormal = [](Vertex& v0, Vertex& v1, Vertex& v2) {
+		// v0, v1, v2로 이루어진 삼각형의 faceNormal 계산
+		auto faceNormal =
+			(v1.position - v0.position).Cross(v2.position - v0.position);
+		faceNormal.Normalize( );
+		v0.normal = faceNormal;
+		v1.normal = faceNormal;
+		v2.normal = faceNormal;
+	};
+
+	// Vertex가 중복되는 구조로 구현
+	MeshData newMesh;
+	uint16_t count = 0;
+	for (uint16_t i = 0; i < meshData.indices.size( ); i += 3) {
+		size_t i0 = meshData.indices[ i ];
+		size_t i1 = meshData.indices[ i + 1 ];
+		size_t i2 = meshData.indices[ i + 2 ];
+
+		Vertex v0 = meshData.vertices[ i0 ];
+		Vertex v1 = meshData.vertices[ i1 ];
+		Vertex v2 = meshData.vertices[ i2 ];
+
+		ProjectVertex(v0);
+		ProjectVertex(v1);
+		ProjectVertex(v2);
+
+		Vertex v3;
+		// 위치와 텍스쳐 좌표 결정
+		v3.position = (v0.position + v1.position) * 0.5f;
+		v3.texcoord = (v0.texcoord + v1.texcoord) * 0.5f;
+		ProjectVertex(v3);
+
+		Vertex v4;
+		v4.position = (v1.position + v2.position) * 0.5f;
+		v4.texcoord = (v1.texcoord + v2.texcoord) * 0.5f;
+		ProjectVertex(v4);
+
+		Vertex v5;
+		v5.position = (v0.position + v2.position) * 0.5f;
+		v5.texcoord = (v0.texcoord + v2.texcoord) * 0.5f;
+		ProjectVertex(v5);
+		
+		// 모든 vertex 새로 추가
+
+		if(faceNormal) UpdateFaceNormal(v3, v1, v4);
+		newMesh.vertices.push_back(v3);
+		newMesh.vertices.push_back(v1);
+		newMesh.vertices.push_back(v4);
+
+		if (faceNormal) UpdateFaceNormal(v0, v3, v5);
+		newMesh.vertices.push_back(v0);
+		newMesh.vertices.push_back(v3);
+		newMesh.vertices.push_back(v5);
+
+		if (faceNormal) UpdateFaceNormal(v3, v4, v5);
+		newMesh.vertices.push_back(v3);
+		newMesh.vertices.push_back(v4);
+		newMesh.vertices.push_back(v5);
+
+		if (faceNormal) UpdateFaceNormal(v5, v4, v2);
+		newMesh.vertices.push_back(v5);
+		newMesh.vertices.push_back(v4);
+		newMesh.vertices.push_back(v2);
+		
+		// 인덱스 업데이트
+		for (uint16_t j = 0; j < 12; j++) {
+			newMesh.indices.push_back(j + count);
+		}
+		count += 12;
+	}
+
+	return newMesh;
 }
 
 } // namespace kusk

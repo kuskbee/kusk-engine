@@ -38,5 +38,10 @@ float4 main(PixelShaderInput input) : SV_TARGET {
         color += ComputeSpotLight(lights[i], material, input.posWorld, input.normalWorld, toEye);
     }
     
-    return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0f);
+    float2 uv;
+    uv.x = atan2(input.posModel.z, input.posModel.x) / (3.141592 * 2.0) + 0.5;
+    uv.y = acos(input.posModel.y / 1.5) / 3.141592;
+
+    return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, uv) : float4(color, 1.0);
+    //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0);
 }

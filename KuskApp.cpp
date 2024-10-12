@@ -35,7 +35,16 @@ bool KuskApp::Initialize() {
 	// Geometry 정의
 	//MeshData meshData = GeometryGenerator::MakeGrid(2.0f, 1.7f, 5, 3);
 	//MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 20);
-	MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 15, 13);
+	MeshData meshData = GeometryGenerator::MakeIcosahedron();
+	//MeshData meshData = GeometryGenerator::MakeTetrahedron();
+	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 3, 3);
+	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 5, 5);
+	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 12, 12);
+
+	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
+	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
+	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
+	//meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
 
 	m_mesh = std::make_shared<Mesh>( );
 

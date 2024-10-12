@@ -11,6 +11,7 @@ cbuffer BasicVertexConstantBuffer : register(b0)
 PixelShaderInput main(VertexShaderInput input)
 {
     PixelShaderInput output;
+    output.posModel = input.posModel;
     float4 pos = float4(input.posModel, 1.0f);
     pos = mul(pos, model);
     

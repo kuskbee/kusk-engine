@@ -33,7 +33,7 @@ public:
 							   const int numStacks);
 	static MeshData MakeTetrahedron( ); // 사면체
 	static MeshData MakeIcosahedron( ); // 이십면체
-	static MeshData SubdivideToSphere(const float radius, MeshData meshData);
+	static MeshData SubdivideToSphere(const float radius, MeshData meshData, bool faceNormal=false);
 };
 
 }
