@@ -54,7 +54,7 @@ protected:
 		const wstring& filename, 
 		ComPtr<ID3D11PixelShader>& pixelShader);
 	void CreateIndexBuffer(
-		const vector<uint16_t>& indices, 
+		const vector<uint32_t>& indices, 
 		ComPtr<ID3D11Buffer>& indexBuffer);
 
 	template <typename T_VERTEX>

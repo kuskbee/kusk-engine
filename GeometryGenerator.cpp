@@ -1,6 +1,6 @@
 #include "GeometryGenerator.h"
 
-#include <iostream>
+#include "ModelLoader.h"
 
 namespace kusk {
 
@@ -207,7 +207,7 @@ MeshData GeometryGenerator::MakeGrid(const float width, const float height,
 	MeshData meshData;
 
 	vector<Vertex>& vertices = meshData.vertices;
-	vector<uint16_t>& indices = meshData.indices;
+	vector<uint32_t>& indices = meshData.indices;
 
 	Vector3 leftbottom = Vector3(-0.5f * width, -0.5 * height, 0.0f);
 
@@ -289,7 +289,7 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 		vertices.push_back(v);
 	}
 
-	vector<uint16_t>& indices = meshData.indices;
+	vector<uint32_t>& indices = meshData.indices;
 
 	for (int i = 0; i < numSlices; i++) {
 		indices.push_back(i);
@@ -336,7 +336,7 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 
 	cout << vertices.size( ) << endl;
 
-	vector<uint16_t>& indices = meshData.indices;
+	vector<uint32_t>& indices = meshData.indices;
 
 	for (int j = 0; j < numStacks; j++) {
 		for (int i = 0; i < numSlices; i++) {
@@ -455,7 +455,7 @@ MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshD
 	// Vertex가 중복되는 구조로 구현
 	MeshData newMesh;
 	uint16_t count = 0;
-	for (uint16_t i = 0; i < meshData.indices.size( ); i += 3) {
+	for (uint32_t i = 0; i < meshData.indices.size( ); i += 3) {
 		size_t i0 = meshData.indices[ i ];
 		size_t i1 = meshData.indices[ i + 1 ];
 		size_t i2 = meshData.indices[ i + 2 ];
@@ -507,13 +507,51 @@ MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshD
 		newMesh.vertices.push_back(v2);
 		
 		// 인덱스 업데이트
-		for (uint16_t j = 0; j < 12; j++) {
+		for (uint32_t j = 0; j < 12; j++) {
 			newMesh.indices.push_back(j + count);
 		}
 		count += 12;
 	}
 
 	return newMesh;
+}
+
+vector<MeshData> GeometryGenerator::ReadFromFile(std::string basePath,
+												 std::string filename) {
+	using namespace DirectX;
+
+	ModelLoader modelLoader;
+	modelLoader.Load(basePath, filename);
+	vector<MeshData>& meshes = modelLoader.meshes;
+
+	// Normalize vertices
+	Vector3 vmin(1000, 1000, 1000);
+	Vector3 vmax(-1000, -1000, -1000);
+	for (auto& mesh : meshes) {
+		for (auto& v : mesh.vertices) {
+			vmin.x = XMMin(vmin.x, v.position.x);
+			vmin.y = XMMin(vmin.y, v.position.y);
+			vmin.z = XMMin(vmin.z, v.position.z);
+
+			vmax.x = XMMax(vmax.x, v.position.x);
+			vmax.y = XMMax(vmax.y, v.position.y);
+			vmax.z = XMMax(vmax.z, v.position.z);
+		}
+	}
+
+	float dx = vmax.x - vmin.x, dy = vmax.y - vmin.y, dz = vmax.z - vmin.z;
+	float dl = XMMax(XMMax(dx, dy), dz);
+	float cx = (vmax.x + vmin.x) * 0.5f, cy = (vmax.y + vmin.y) * 0.5f, cz = (vmax.z + vmin.z) * 0.5;
+
+	for (auto& mesh : meshes) {
+		for (auto& v : mesh.vertices) {
+			v.position.x = (v.position.x - cx) / dl;
+			v.position.y = (v.position.y - cy) / dl;
+			v.position.z = (v.position.z - cz) / dl;
+		}
+	}
+
+	return meshes;
 }
 
 } // namespace kusk

@@ -492,14 +492,14 @@ void AppBase::CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShade
                                 pixelShader.GetAddressOf());
 }
 
-void AppBase::CreateIndexBuffer(const std::vector<uint16_t>& indices, 
+void AppBase::CreateIndexBuffer(const std::vector<uint32_t>& indices,
                                 ComPtr<ID3D11Buffer>& indexBuffer) {
     D3D11_BUFFER_DESC bufferDesc = {};
     bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    bufferDesc.ByteWidth = UINT(sizeof(uint16_t) * indices.size());
+    bufferDesc.ByteWidth = UINT(sizeof(uint32_t) * indices.size());
     bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
     bufferDesc.CPUAccessFlags = 0;
-    bufferDesc.StructureByteStride = sizeof(uint16_t);
+    bufferDesc.StructureByteStride = sizeof(uint32_t);
 
     D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
     indexBufferData.pSysMem = indices.data();

@@ -14,10 +14,6 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
-	// Texture 만들기
-	AppBase::CreateTexture("ojwD8.jpg", m_texture, m_textureResourceView);
-	AppBase::CreateTexture("wall.jpg", m_texture2, m_textureResourceView2);
-
 	// Texture sampler 만들기
 	D3D11_SAMPLER_DESC sampDesc;
 	ZeroMemory(&sampDesc, sizeof(sampDesc));
@@ -33,36 +29,62 @@ bool KuskApp::Initialize() {
 	m_device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 
 	// Geometry 정의
-	//MeshData meshData = GeometryGenerator::MakeGrid(2.0f, 1.7f, 5, 3);
-	//MeshData meshData = GeometryGenerator::MakeCylinder(1.0f, 0.7f, 2.0f, 20);
-	MeshData meshData = GeometryGenerator::MakeIcosahedron();
-	//MeshData meshData = GeometryGenerator::MakeTetrahedron();
-	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 3, 3);
-	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 5, 5);
-	//MeshData meshData = GeometryGenerator::MakeSphere(1.5f, 12, 12);
+	// 젤다 모델 다운로드 경로
+	// https://f3d.app/doc/GALLERY.html
+	// you can download them here. 클릭
 
-	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
-	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
-	meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
-	//meshData = GeometryGenerator::SubdivideToSphere(1.5f, meshData);
+	// auto meshes =
+	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/",
+	// "monkey2.obj");
+	
+	 auto meshes =
+	 GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/zelda/",
+	 "zeldaPosed001.fbx");
 
-	m_mesh = std::make_shared<Mesh>( );
+	// GLTF 샘플들
+	// https://github.com/KhronosGroup/glTF-Sample-Models
 
-	// Vertex Buffer
-	AppBase::CreateVertexBuffer(meshData.vertices, m_mesh->m_vertexBuffer);
+	/*auto meshes = GeometryGenerator::ReadFromFile(
+		"C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/DamagedHelmet/"
+		"glTF/",
+		"DamagedHelmet.gltf");*/
 
-	// Index Buffer
-	m_mesh->m_indexCount = UINT(meshData.indices.size());
-	AppBase::CreateIndexBuffer(meshData.indices, m_mesh->m_indexBuffer);
+	// auto meshes =
+	//     GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ABeautifulGame/glTF/",
+	//     "ABeautifulGame.gltf");
 
-	// Vertex Constant Buffer
+	// auto meshes =
+	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ToyCar/glTF/",
+	//                                               "ToyCar.gltf");
+
+	// ConstantBuffer 만들기 (하나 만들어서 공유)
 	m_basicVertexConstantBufferData.model = Matrix();
 	m_basicVertexConstantBufferData.view = Matrix();
 	m_basicVertexConstantBufferData.proj = Matrix();
-	AppBase::CreateConstantBuffer(m_basicVertexConstantBufferData, m_mesh->m_vertexConstantBuffer);
+	ComPtr<ID3D11Buffer> vertexConstantBuffer;
+	ComPtr<ID3D11Buffer> pixelConstantBuffer;
+	AppBase::CreateConstantBuffer(m_basicVertexConstantBufferData, vertexConstantBuffer);
+	
+	AppBase::CreateConstantBuffer(m_basicPixelConstantBufferData, pixelConstantBuffer);
 
-	// Pixel Constant Buffer
-	AppBase::CreateConstantBuffer(m_basicPixelConstantBufferData, m_mesh->m_pixelConstantBuffer);
+	for (const auto& meshData : meshes) {
+		auto newMesh = std::make_shared<Mesh>( );
+		AppBase::CreateVertexBuffer(meshData.vertices, newMesh->vertexBuffer);
+		newMesh->indexCount = UINT(meshData.indices.size( ));
+		AppBase::CreateIndexBuffer(meshData.indices, newMesh->indexBuffer);
+
+		if (!meshData.textureFilename.empty( )) {
+			cout << meshData.textureFilename << endl;
+			AppBase::CreateTexture(meshData.textureFilename, newMesh->texture,
+								 newMesh->textureResourceView);
+		}
+
+		newMesh->vertexConstantBuffer = vertexConstantBuffer;
+		newMesh->pixelConstantBuffer = pixelConstantBuffer;
+
+		this->m_meshes.push_back(newMesh);
+	}
+
 
 	// Make Shaders
 	vector<D3D11_INPUT_ELEMENT_DESC> basicInputElements = {
@@ -81,25 +103,30 @@ bool KuskApp::Initialize() {
 	m_normalLines = std::make_shared<Mesh>( );
 
 	std::vector<Vertex> normalVertices;
-	std::vector<uint16_t> normalIndices;
-	for (size_t i = 0; i < meshData.vertices.size( ); i++) {
-		Vertex v = meshData.vertices[ i ];
+	std::vector<uint32_t> normalIndices;
 
-		v.texcoord.x = 0.0f; // 시작점
-		normalVertices.push_back(v);
+	// 여러 메쉬의 normal 들을 하나로 합치기
+	size_t offset = 0;
+	for (const auto& meshData : meshes) {
+		for (size_t i = 0; i < meshData.vertices.size( ); i++) {
+			Vertex v = meshData.vertices[ i ];
 
-		v.texcoord.x = 1.0f; // 끝점
-		normalVertices.push_back(v);
+			v.texcoord.x = 0.0f; // 시작점
+			normalVertices.push_back(v);
 
-		normalIndices.push_back(uint16_t(2 * i));
-		normalIndices.push_back(uint16_t(2 * i + 1));
+			v.texcoord.x = 1.0f; // 끝점
+			normalVertices.push_back(v);
+
+			normalIndices.push_back(uint32_t(2 * (i + offset)));
+			normalIndices.push_back(uint32_t(2 * (i + offset) + 1));
+		}
+		offset += meshData.vertices.size( );
 	}
-
-
-	AppBase::CreateVertexBuffer(normalVertices, m_normalLines->m_vertexBuffer);
-	m_normalLines->m_indexCount = UINT(normalIndices.size());
-	AppBase::CreateIndexBuffer(normalIndices, m_normalLines->m_indexBuffer);
-	AppBase::CreateConstantBuffer(m_normalVertexConstantBufferData, m_normalLines->m_vertexConstantBuffer);
+	
+	AppBase::CreateVertexBuffer(normalVertices, m_normalLines->vertexBuffer);
+	m_normalLines->indexCount = UINT(normalIndices.size());
+	AppBase::CreateIndexBuffer(normalIndices, m_normalLines->indexBuffer);
+	AppBase::CreateConstantBuffer(m_normalVertexConstantBufferData, m_normalLines->vertexConstantBuffer);
 
 	AppBase::CreateVertexShaderAndInputLayout(
 		L"NormalVertexShader.hlsl", basicInputElements, m_normalVertexShader,
@@ -150,8 +177,11 @@ void KuskApp::Update(float dt) {
 	m_basicVertexConstantBufferData.proj = m_basicVertexConstantBufferData.proj.Transpose();
 
 	// Constant를 CPU에서 GPU로복사
-	AppBase::UpdateBuffer(m_basicVertexConstantBufferData, m_mesh->m_vertexConstantBuffer);
-
+	// buffer를 공유하기 때문에 하나만 복사
+	if (m_meshes[ 0 ]) {
+		AppBase::UpdateBuffer(m_basicVertexConstantBufferData, m_meshes[0]->vertexConstantBuffer);
+	}
+	
 	m_basicPixelConstantBufferData.material.diffuse = Vector3(m_materialDiffuse);
 	m_basicPixelConstantBufferData.material.specular = Vector3(m_materialSpecular);
 
@@ -165,12 +195,16 @@ void KuskApp::Update(float dt) {
 			m_basicPixelConstantBufferData.light[ i ] = m_lightFromGUI;
 		}
 	}
-	AppBase::UpdateBuffer(m_basicPixelConstantBufferData, m_mesh->m_pixelConstantBuffer);
+
+	// buffer를 공유하기 때문에 하나만 복사
+	if (m_meshes[ 0 ]) {
+		AppBase::UpdateBuffer(m_basicPixelConstantBufferData, m_meshes[0]->pixelConstantBuffer);
+	}
 
 	// 노멀 벡터 그리기
 	if (m_drawNormals && m_drawNormalsDirtyFlag)
 	{
-		AppBase::UpdateBuffer(m_normalVertexConstantBufferData, m_normalLines->m_vertexConstantBuffer);
+		AppBase::UpdateBuffer(m_normalVertexConstantBufferData, m_normalLines->vertexConstantBuffer);
 		m_drawNormalsDirtyFlag = false;
 	}
 }
@@ -190,15 +224,8 @@ void KuskApp::Render() {
 
 	// Shader setting
 	m_context->VSSetShader(m_basicVertexShader.Get(), 0, 0);
-	m_context->VSSetConstantBuffers(0, 1, m_mesh->m_vertexConstantBuffer.GetAddressOf());
 
-	ID3D11ShaderResourceView* pixelResources[ 2 ] = {
-		m_textureResourceView.Get( ),
-		m_textureResourceView2.Get( ),
-	};
-	m_context->PSSetShaderResources(0, 2, pixelResources);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	m_context->PSSetConstantBuffers(0, 1, m_mesh->m_pixelConstantBuffer.GetAddressOf( ));
 	m_context->PSSetShader(m_basicPixelShader.Get(), 0, 0);
 	
 	if(m_drawAsWire)
@@ -209,25 +236,33 @@ void KuskApp::Render() {
 	// Vertex/Index Buffer setting
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
-	m_context->IASetInputLayout(m_basicInputLayout.Get());
-	m_context->IASetVertexBuffers(0, 1, m_mesh->m_vertexBuffer.GetAddressOf(), &stride, &offset);
-	m_context->IASetIndexBuffer(m_mesh->m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_context->DrawIndexed(m_mesh->m_indexCount, 0, 0);
+
+	// 버텍스/인덱스 버퍼 설정
+	for (const auto& mesh : m_meshes) {
+		m_context->VSSetConstantBuffers(0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
+		m_context->PSSetShaderResources(0, 1, mesh->textureResourceView.GetAddressOf());
+		m_context->PSSetConstantBuffers(0, 1, mesh->pixelConstantBuffer.GetAddressOf( ));
+		
+		m_context->IASetInputLayout(m_basicInputLayout.Get( ));
+		m_context->IASetVertexBuffers(0, 1, mesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
+		m_context->IASetIndexBuffer(mesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
+		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_context->DrawIndexed(mesh->indexCount, 0, 0);
+	}
 
 	// 노멀 벡터 그리기
 	if (m_drawNormals) {
 		m_context->VSSetShader(m_normalVertexShader.Get( ), 0, 0);
 		ID3D11Buffer* pptr[ 2 ] = {
-			m_mesh->m_vertexConstantBuffer.Get( ),
-			m_normalLines->m_vertexConstantBuffer.Get( ),
+			m_meshes[ 0 ]->vertexConstantBuffer.Get(),
+			m_normalLines->vertexConstantBuffer.Get( ),
 		};
 		m_context->VSSetConstantBuffers(0, 2, pptr);
 		m_context->PSSetShader(m_normalPixelShader.Get( ), 0, 0);
-		m_context->IASetVertexBuffers(0, 1, m_normalLines->m_vertexBuffer.GetAddressOf( ), &stride, &offset);
-		m_context->IASetIndexBuffer(m_normalLines->m_indexBuffer.Get( ), DXGI_FORMAT_R16_UINT, 0);
+		m_context->IASetVertexBuffers(0, 1, m_normalLines->vertexBuffer.GetAddressOf( ), &stride, &offset);
+		m_context->IASetIndexBuffer(m_normalLines->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
 		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-		m_context->DrawIndexed(m_normalLines->m_indexCount, 0, 0);
+		m_context->DrawIndexed(m_normalLines->indexCount, 0, 0);
 	}
 }
 

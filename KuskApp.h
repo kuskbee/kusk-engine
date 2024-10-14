@@ -6,23 +6,13 @@
 
 #include "AppBase.h"
 #include "GeometryGenerator.h"
-#include "Mesh.h"
+#include "Material.h"
 
 namespace kusk {
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
-
-// 재질
-struct Material {
-	Vector3 ambient = Vector3(0.1f);	// 12
-	float shininess = 1.0f;				// 4
-	Vector3 diffuse = Vector3(0.5f);	// 12
-	float dummy1;						// 4
-	Vector3 specular = Vector3(0.5f);	// 12
-	float dummy2;						// 4
-};
 
 struct Light {
 	// 순서와 크기 관계 주의 (16 byte 패딩)
@@ -83,22 +73,23 @@ protected:
 	ComPtr<ID3D11PixelShader> m_basicPixelShader;
 	ComPtr<ID3D11InputLayout> m_basicInputLayout;
 
-	shared_ptr<Mesh> m_mesh;
+	// 하나의 3D 모델이 내부적으로는 여러 개의 메쉬로 구성
+	std::vector<shared_ptr<Mesh>> m_meshes;
 
 	// Texturing
-	ComPtr<ID3D11Texture2D> m_texture;
-	ComPtr<ID3D11ShaderResourceView> m_textureResourceView;
-	ComPtr<ID3D11Texture2D> m_texture2;
-	ComPtr<ID3D11ShaderResourceView> m_textureResourceView2;
+	//ComPtr<ID3D11Texture2D> m_texture;
+	//ComPtr<ID3D11ShaderResourceView> m_textureResourceView;
+	//ComPtr<ID3D11Texture2D> m_texture2;
+	//ComPtr<ID3D11ShaderResourceView> m_textureResourceView2;
 	ComPtr<ID3D11SamplerState> m_samplerState;
 
 	BasicVertexConstantBuffer m_basicVertexConstantBufferData;
 	BasicPixelConstatntBuffer m_basicPixelConstantBufferData;
 
 	bool m_usePerspectiveProjection = true;
-	Vector3 m_modelTranslation = Vector3(0.0f, 0.0f, 0.0f);
-	Vector3 m_modelRotation = Vector3(-0.6f, 1.0f, 0.0f);
-	Vector3 m_modelScaling = Vector3(0.5f);
+	Vector3 m_modelTranslation = Vector3(0.0f);
+	Vector3 m_modelRotation = Vector3(-0.286f, 0.058f, 0.0f);
+	Vector3 m_modelScaling = Vector3(1.8f);
 	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
 	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };*/
@@ -110,8 +101,8 @@ protected:
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
-	float m_materialDiffuse = 0.4f;
-	float m_materialSpecular = 0.2f;
+	float m_materialDiffuse = 0.8f;
+	float m_materialSpecular = 1.0f;
 
 	// 노멀 벡터 그리기
 	ComPtr<ID3D11VertexShader> m_normalVertexShader;
