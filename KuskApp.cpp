@@ -37,9 +37,9 @@ bool KuskApp::Initialize() {
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/",
 	// "monkey2.obj");
 	
-	 auto meshes =
+	/* auto meshes =
 	 GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/zelda/",
-	 "zeldaPosed001.fbx");
+	 "zeldaPosed001.fbx");*/
 
 	// GLTF 샘플들
 	// https://github.com/KhronosGroup/glTF-Sample-Models
@@ -56,6 +56,9 @@ bool KuskApp::Initialize() {
 	// auto meshes =
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ToyCar/glTF/",
 	//                                               "ToyCar.gltf");
+
+	vector<MeshData> meshes = {
+		GeometryGenerator::ReadFromFile("./", "stanford_dragon.stl") };
 
 	// ConstantBuffer 만들기 (하나 만들어서 공유)
 	m_basicVertexConstantBufferData.model = Matrix();
@@ -267,6 +270,16 @@ void KuskApp::Render() {
 }
 
 void KuskApp::UpdateGUI() {
+	ImGui::SliderFloat("Rim Strength",
+					   &m_basicPixelConstantBufferData.rimStrength, 0.0f,
+					   10.0f);
+	ImGui::Checkbox("Use Smoothstep",
+					&m_basicPixelConstantBufferData.useSmoothstep);
+	ImGui::SliderFloat3("Rim Color", &m_basicPixelConstantBufferData.rimColor.x,
+						0.0f, 1.0f);
+	ImGui::SliderFloat("Rim Power", &m_basicPixelConstantBufferData.rimPower,
+					   0.01f, 10.0f);
+
 	ImGui::Checkbox("Use Texture", &m_basicPixelConstantBufferData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
 	ImGui::Checkbox("Draw Normals", &m_drawNormals);

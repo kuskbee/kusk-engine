@@ -15,13 +15,18 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 		this->basePath + filename,
 		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
 
-	Matrix tr; // Initial transformation
-	ProcessNode(pScene->mRootNode, pScene, tr);
+	if (!pScene) {
+		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;
+	}
+	else {
+		Matrix tr; // Initial transformation
+		ProcessNode(pScene->mRootNode, pScene, tr);
+	}
 
 	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
 	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
 #pragma region non-normal-case
-	/*for (auto& m : this->meshes) {
+	for (auto& m : this->meshes) {
 		vector<Vector3> normalsTemp(m.vertices.size( ), Vector3(0.0f));
 		vector<float> weightsTemp(m.vertices.size( ), 0.0f);
 
@@ -50,7 +55,7 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 				m.vertices[ i ].normal.Normalize( );
 			}
 		}
-	}*/
+	}
 #pragma endregion
 }
 

@@ -9,6 +9,10 @@ cbuffer BasicPixelConstantBuffer : register(b0)
     bool useTexture;
     Material material;
     Light lights[MAX_LIGHTS];
+    float3 rimColor;
+    float rimPower;
+    float rimStrength;
+    bool useSmoothstep;
 };
 
 
@@ -37,11 +41,21 @@ float4 main(PixelShaderInput input) : SV_TARGET {
         color += ComputeSpotLight(lights[i], material, input.posWorld, input.normalWorld, toEye);
     }
     
+    // Rim Lighting
+    float rim = 1.0 - dot(toEye, input.normalWorld);
+    
+    if(useSmoothstep)
+        rim = smoothstep(0.0, 1.0, rim);
+    rim = pow(abs(rim), rimPower);
+    
+    color += rim * rimColor * rimStrength;
+    
     // sphere mapping ½Ã »ç¿ë
     //float2 uv;
     //uv.x = atan2(input.posModel.z, input.posModel.x) / (3.141592 * 2.0) + 0.5;
     //uv.y = acos(input.posModel.y / 1.5) / 3.141592;
 
     //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, uv) : float4(color, 1.0);
+    
     return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0);
 }

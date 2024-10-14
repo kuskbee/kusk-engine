@@ -21,7 +21,7 @@ struct Light {
 	Vector3 direction = Vector3(0.0f, 0.0f, 1.0f);	// 12
 	float fallOffEnd = 10.0f;						// 4
 	Vector3 position = Vector3(0.0f, 0.0f, -2.0f);	// 12
-	float spotPower = 1.0f;							// 4
+	float spotPower = 100.0f;							// 4
 };
 
 struct BasicVertexConstantBuffer {
@@ -48,6 +48,11 @@ struct BasicPixelConstatntBuffer {
 	bool useTexture;		// 4
 	Material material;		// 48
 	Light light[ MAX_LIGHTS ]; // 48 * MAX_LIGHTS
+	Vector3 rimColor = Vector3(1.0f);
+	float rimPower;
+	float rimStrength = 0.0f;
+	bool useSmoothstep = false;
+	float dummy[ 2 ];
 };
 
 static_assert((sizeof(BasicPixelConstatntBuffer) % 16) == 0,
@@ -88,7 +93,7 @@ protected:
 
 	bool m_usePerspectiveProjection = true;
 	Vector3 m_modelTranslation = Vector3(0.0f);
-	Vector3 m_modelRotation = Vector3(-0.286f, 0.058f, 0.0f);
+	Vector3 m_modelRotation = Vector3(3.141592f * 0.46f, 0.0f, 0.0f);
 	Vector3 m_modelScaling = Vector3(1.8f);
 	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
@@ -101,7 +106,7 @@ protected:
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
-	float m_materialDiffuse = 0.8f;
+	float m_materialDiffuse = 0.1f;
 	float m_materialSpecular = 1.0f;
 
 	// 노멀 벡터 그리기
