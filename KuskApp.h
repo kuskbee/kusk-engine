@@ -7,6 +7,7 @@
 #include "AppBase.h"
 #include "GeometryGenerator.h"
 #include "Material.h"
+#include "CubeMapping.h"
 
 namespace kusk {
 
@@ -73,6 +74,8 @@ public:
 	virtual void Update(float dt) override;
 	virtual void Render() override;
 
+	void InitializeCubeMapping( );
+
 protected:
 	ComPtr<ID3D11VertexShader> m_basicVertexShader;
 	ComPtr<ID3D11PixelShader> m_basicPixelShader;
@@ -93,12 +96,12 @@ protected:
 
 	bool m_usePerspectiveProjection = true;
 	Vector3 m_modelTranslation = Vector3(0.0f);
-	Vector3 m_modelRotation = Vector3(3.141592f * 0.46f, 0.0f, 0.0f);
+	Vector3 m_modelRotation = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3 m_modelScaling = Vector3(1.8f);
 	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
 	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
 	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };*/
-	float m_viewRot = 0.0f;
+	Vector3 m_viewRot = Vector3(0.0f);
 
 	float m_projFovAngleY = 70.0f;
 	float m_nearZ = 0.01f;
@@ -106,7 +109,7 @@ protected:
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
-	float m_materialDiffuse = 0.1f;
+	float m_materialDiffuse = 1.0f;
 	float m_materialSpecular = 1.0f;
 
 	// 노멀 벡터 그리기
@@ -118,5 +121,8 @@ protected:
 	NormalVertexConstantBuffer m_normalVertexConstantBufferData;
 	bool m_drawNormals = false;
 	bool m_drawNormalsDirtyFlag = false;
+
+	// 큐브 매핑
+	CubeMapping m_cubeMapping;
 };
 } // namespace kusk

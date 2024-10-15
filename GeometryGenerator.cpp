@@ -51,13 +51,11 @@ MeshData GeometryGenerator::MakeSquare( ) {
 	return meshData;
 }
 
-MeshData GeometryGenerator::MakeBox( ) {
+MeshData GeometryGenerator::MakeBox(const float scale) {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
 	vector<Vector2> texcoords; // 텍스쳐 좌표
-
-	const float scale = 1.0f;
 
 	const Vector3 v0 = Vector3(-1.0f, 1.0f, -1.0f);
 	const Vector3 v1 = Vector3(-1.0f, 1.0f, 1.0f);

@@ -1,18 +1,88 @@
 #include "KuskApp.h"
 
-#include <tuple>
+#include <directxtk/DDSTextureLoader.h>
+#include <directxtk/WICTextureLoader.h>
 #include <vector>
 
 namespace kusk {
 
 using namespace std;
+using namespace DirectX;
 
 KuskApp::KuskApp() : AppBase(), m_basicPixelConstantBufferData() {}
+
+void KuskApp::InitializeCubeMapping( ) {
+	// texassemble.exe cube -w 2048 -h 2048 -o saintpeters.dds posx.jpg negx.jpg
+	// posy.jpg negy.jpg posz.jpg negz.jpg texassemble.exe cube -w 2048 -h 2048
+	// -o skybox.dds right.jpg left.jpg top.jpg bottom.jpg front.jpg back.jpg -y
+	// https://github.com/Microsoft/DirectXTex/wiki/Texassemble
+
+	// .dds 파일 읽어들여서 초기화
+	ComPtr<ID3D11Texture2D> texture;
+	auto hr = CreateDDSTextureFromFileEx(
+		//this->m_device.Get(), L"./SaintPetersBasilica/saintpeters.dds", 0,
+		this->m_device.Get( ), L"./skybox/skybox.dds", 0, D3D11_USAGE_DEFAULT,
+		D3D11_BIND_SHADER_RESOURCE, 0,
+		D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
+		DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
+		this->m_cubeMapping.cubemapResourceView.GetAddressOf( ), nullptr);
+
+	if (FAILED(hr)) {
+		std::cout << "CreateDDSTextureFromFileEx() failed" << std::endl;
+	}
+
+	m_cubeMapping.cubeMesh = std::make_shared<Mesh>( );
+
+	m_basicVertexConstantBufferData.model = Matrix( );
+	m_basicVertexConstantBufferData.view = Matrix( );
+	m_basicVertexConstantBufferData.proj = Matrix( );
+	ComPtr<ID3D11Buffer> vertexConstantBuffer;
+	ComPtr<ID3D11Buffer> pixelConstantBuffer;
+	AppBase::CreateConstantBuffer(m_basicVertexConstantBufferData,
+								  m_cubeMapping.cubeMesh->vertexConstantBuffer);
+	AppBase::CreateConstantBuffer(m_basicPixelConstantBufferData,
+								  m_cubeMapping.cubeMesh->pixelConstantBuffer);
+
+	// 커다란 박스 초기화
+	// - 세상이 커다란 박스 안에 갇혀있는 구조
+	// - D3D11_CULL_MODE::D3D11_CULL_NONE 또는 삼각형 뒤집기
+	// - 예시) std::reverse(myvector.begin(), myvector.end())
+	//MeshData cubeMeshData = GeometryGenerator::MakeSphere(20.0f, 3, 3);
+	//MeshData cubeMeshData = GeometryGenerator::MakeBox(100.0f);
+	MeshData cubeMeshData = GeometryGenerator::MakeBox(20.0f);
+	std::reverse(cubeMeshData.indices.begin( ), cubeMeshData.indices.end( ));
+
+	AppBase::CreateVertexBuffer(cubeMeshData.vertices,
+								m_cubeMapping.cubeMesh->vertexBuffer);
+	m_cubeMapping.cubeMesh->indexCount = UINT(cubeMeshData.indices.size( ));
+	AppBase::CreateIndexBuffer(cubeMeshData.indices,
+							   m_cubeMapping.cubeMesh->indexBuffer);
+
+	// 쉐이더 초기화
+
+	// 다른 쉐이더와 동일한 InputLayout
+	// 실제로는 "POSITION"만 사용
+	vector<D3D11_INPUT_ELEMENT_DESC> basicInputElements = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
+	};
+
+	AppBase::CreateVertexShaderAndInputLayout(L"CubeMappingVertexShader.hlsl",
+											 basicInputElements, m_cubeMapping.vertexShader, m_cubeMapping.inputLayout);
+	AppBase::CreatePixelShader(L"CubeMappingPixelShader.hlsl", m_cubeMapping.pixelShader);
+
+	// 기타
+	// - 텍스쳐 샘플러도 다른 텍스쳐와 같이 사용
+
+}
 
 bool KuskApp::Initialize() {
 
 	if (!AppBase::Initialize())
 		return false;
+
+	InitializeCubeMapping( );
 
 	// Texture sampler 만들기
 	D3D11_SAMPLER_DESC sampDesc;
@@ -37,9 +107,9 @@ bool KuskApp::Initialize() {
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/",
 	// "monkey2.obj");
 	
-	/* auto meshes =
+	auto meshes =
 	 GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/zelda/",
-	 "zeldaPosed001.fbx");*/
+	 "zeldaPosed001.fbx");
 
 	// GLTF 샘플들
 	// https://github.com/KhronosGroup/glTF-Sample-Models
@@ -57,8 +127,8 @@ bool KuskApp::Initialize() {
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ToyCar/glTF/",
 	//                                               "ToyCar.gltf");
 
-	vector<MeshData> meshes = {
-		GeometryGenerator::ReadFromFile("./", "stanford_dragon.stl") };
+	//vector<MeshData> meshes = {
+	//	GeometryGenerator::ReadFromFile("./", "stanford_dragon.stl") };
 
 	// ConstantBuffer 만들기 (하나 만들어서 공유)
 	m_basicVertexConstantBufferData.model = Matrix();
@@ -159,7 +229,8 @@ void KuskApp::Update(float dt) {
 	// 시점 변환
 	//XMMatrixLookToLH(m_viewEyePos, m_viewEyeDir, m_viewUp);
 	m_basicVertexConstantBufferData.view =
-		Matrix::CreateRotationY(m_viewRot) *
+		Matrix::CreateRotationY(m_viewRot.y) *
+		Matrix::CreateRotationX(m_viewRot.x) *
 		Matrix::CreateTranslation(0.0f, 0.0f, 2.0f);
 
 	m_basicPixelConstantBufferData.eyeWorld = Vector3::Transform(
@@ -210,6 +281,13 @@ void KuskApp::Update(float dt) {
 		AppBase::UpdateBuffer(m_normalVertexConstantBufferData, m_normalLines->vertexConstantBuffer);
 		m_drawNormalsDirtyFlag = false;
 	}
+
+	// 큐브매핑을 위한 constantBuffers
+	m_basicVertexConstantBufferData.model = Matrix( );
+	// Transpose()도 생략 가능
+
+	AppBase::UpdateBuffer(m_basicVertexConstantBufferData,
+						  m_cubeMapping.cubeMesh->vertexConstantBuffer);
 }
 
 void KuskApp::Render() {
@@ -267,6 +345,22 @@ void KuskApp::Render() {
 		m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
 		m_context->DrawIndexed(m_normalLines->indexCount, 0, 0);
 	}
+
+	// 큐브 매핑
+	m_context->IASetInputLayout(m_cubeMapping.inputLayout.Get( ));
+	m_context->IASetVertexBuffers(0, 1, m_cubeMapping.cubeMesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
+	m_context->IASetIndexBuffer(m_cubeMapping.cubeMesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_context->VSSetShader(m_cubeMapping.vertexShader.Get( ), 0, 0);
+	m_context->VSSetConstantBuffers(0, 1, m_cubeMapping.cubeMesh->vertexConstantBuffer.GetAddressOf( ));
+
+	ID3D11ShaderResourceView* views[ 1 ] = {
+		m_cubeMapping.cubemapResourceView.Get( ),
+	};
+	m_context->PSSetShaderResources(0, 1, views);
+	m_context->PSSetShader(m_cubeMapping.pixelShader.Get( ), 0, 0);
+	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	m_context->DrawIndexed(m_cubeMapping.cubeMesh->indexCount, 0, 0);
 }
 
 void KuskApp::UpdateGUI() {
@@ -292,7 +386,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
 	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
-	ImGui::SliderFloat("m_viewRot", &m_viewRot, -3.14f, 3.14f);
+	ImGui::SliderFloat3("m_viewRot", &m_viewRot.x, -3.14f, 3.14f);
 
 	ImGui::SliderFloat("Material Shininess",
 					   &m_basicPixelConstantBufferData.material.shininess, 1.0f, 256.0f);

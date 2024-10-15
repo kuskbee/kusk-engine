@@ -56,12 +56,17 @@
     <ClInclude Include="ModelLoader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="CubeMapping.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicPixelShader.hlsl" />
     <FxCompile Include="BasicVertexShader.hlsl" />
     <FxCompile Include="NormalVertexShader.hlsl" />
     <FxCompile Include="NormalPixelShader.hlsl" />
+    <FxCompile Include="CubeMappingPixelShader.hlsl" />
+    <FxCompile Include="CubeMappingVertexShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

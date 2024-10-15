@@ -81,8 +81,10 @@ int AppBase::Run() {
 
             UpdateGUI(); // 추가적으로 사용할 GUI
 
-            ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
-            m_guiWidth = int(ImGui::GetWindowWidth( ));
+            m_guiWidth = 0;
+            // 화면을 크게 쓰기 위해 아래 기능 주석
+            //ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
+            //m_guiWidth = int(ImGui::GetWindowWidth( ));
 
             ImGui::End();
             ImGui::Render();
@@ -311,8 +313,8 @@ bool AppBase::InitDirect3D() {
     D3D11_RASTERIZER_DESC rastDesc;
     ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-    rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-    //rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+    //rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+    rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
     rastDesc.FrontCounterClockwise = false;
     rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
@@ -360,7 +362,7 @@ bool AppBase::InitGUI() {
 
 void AppBase::SetViewport( ) {
     
-    static int previousGuiWidth = m_guiWidth;
+    static int previousGuiWidth = -1;
 
     if (previousGuiWidth != m_guiWidth) {
         previousGuiWidth = m_guiWidth;
