@@ -1,7 +1,6 @@
 #include "KuskApp.h"
 
 #include <directxtk/DDSTextureLoader.h>
-#include <directxtk/WICTextureLoader.h>
 #include <vector>
 
 namespace kusk {
@@ -13,23 +12,17 @@ KuskApp::KuskApp() : AppBase(), m_basicPixelConstantBufferData() {}
 
 void KuskApp::InitializeCubeMapping( ) {
 	// texassemble.exe cube -w 2048 -h 2048 -o saintpeters.dds posx.jpg negx.jpg
-	// posy.jpg negy.jpg posz.jpg negz.jpg texassemble.exe cube -w 2048 -h 2048
-	// -o skybox.dds right.jpg left.jpg top.jpg bottom.jpg front.jpg back.jpg -y
+	// posy.jpg negy.jpg posz.jpg negz.jpg
+	// texassemble.exe cube -w 256 -h 256 -o
+	// skybox.dds right.jpg left.jpg top.jpg bottom.jpg front.jpg back.jpg -y
 	// https://github.com/Microsoft/DirectXTex/wiki/Texassemble
 
-	// .dds 파일 읽어들여서 초기화
-	ComPtr<ID3D11Texture2D> texture;
-	auto hr = CreateDDSTextureFromFileEx(
-		//this->m_device.Get(), L"./SaintPetersBasilica/saintpeters.dds", 0,
-		this->m_device.Get( ), L"./skybox/skybox.dds", 0, D3D11_USAGE_DEFAULT,
-		D3D11_BIND_SHADER_RESOURCE, 0,
-		D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
-		DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
-		this->m_cubeMapping.cubemapResourceView.GetAddressOf( ), nullptr);
+	auto skyboxFilename = L"./CubemapTextures/skybox.dds";
+	auto nightPathFilename = L"./CubemapTextures/HumusTextures/NightPath.dds";
+	auto atribumDiffuseFilename = L"./CubemapTextures/Atrium_diffuseIBL.dds";
 
-	if (FAILED(hr)) {
-		std::cout << "CreateDDSTextureFromFileEx() failed" << std::endl;
-	}
+	// .dds 파일 읽어들여서 초기화
+	CreateCubemapTexture(skyboxFilename, m_cubeMapping.cubemapResourceView);
 
 	m_cubeMapping.cubeMesh = std::make_shared<Mesh>( );
 
@@ -103,13 +96,15 @@ bool KuskApp::Initialize() {
 	// https://f3d.app/doc/GALLERY.html
 	// you can download them here. 클릭
 
+	vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.3f, 100, 100) };
+
 	// auto meshes =
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/",
 	// "monkey2.obj");
 	
-	auto meshes =
+	/*auto meshes =
 	 GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/zelda/",
-	 "zeldaPosed001.fbx");
+	 "zeldaPosed001.fbx");*/
 
 	// GLTF 샘플들
 	// https://github.com/KhronosGroup/glTF-Sample-Models
@@ -119,9 +114,9 @@ bool KuskApp::Initialize() {
 		"glTF/",
 		"DamagedHelmet.gltf");*/
 
-	// auto meshes =
-	//     GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ABeautifulGame/glTF/",
-	//     "ABeautifulGame.gltf");
+	 /*auto meshes =
+	     GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ABeautifulGame/glTF/",
+	     "ABeautifulGame.gltf");*/
 
 	// auto meshes =
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/glTF-Sample-Models/2.0/ToyCar/glTF/",
@@ -216,8 +211,8 @@ void KuskApp::Update(float dt) {
 	
 	// 모델의 변환
 	m_basicVertexConstantBufferData.model = Matrix::CreateScale(m_modelScaling) * 
-								 Matrix::CreateRotationX(m_modelRotation.x) *
 								 Matrix::CreateRotationY(m_modelRotation.y) *
+								 Matrix::CreateRotationX(m_modelRotation.x) *
 								 Matrix::CreateRotationZ(m_modelRotation.z) *
 								 Matrix::CreateTranslation(m_modelTranslation);
 	m_basicVertexConstantBufferData.model = m_basicVertexConstantBufferData.model.Transpose();
@@ -303,25 +298,45 @@ void KuskApp::Render() {
 	m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
-	// Shader setting
-	m_context->VSSetShader(m_basicVertexShader.Get(), 0, 0);
-
-	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	m_context->PSSetShader(m_basicPixelShader.Get(), 0, 0);
-	
-	if(m_drawAsWire)
-		m_context->RSSetState(m_wireRasterizerState.Get( ));
-	else
-		m_context->RSSetState(m_solidRasterizerState.Get());
-
 	// Vertex/Index Buffer setting
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 
+	// 큐브 매핑
+	m_context->IASetInputLayout(m_cubeMapping.inputLayout.Get( ));
+	m_context->IASetVertexBuffers(0, 1, m_cubeMapping.cubeMesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
+	m_context->IASetIndexBuffer(m_cubeMapping.cubeMesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
+	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_context->VSSetShader(m_cubeMapping.vertexShader.Get( ), 0, 0);
+	m_context->VSSetConstantBuffers(0, 1, m_cubeMapping.cubeMesh->vertexConstantBuffer.GetAddressOf( ));
+
+	ID3D11ShaderResourceView* views[ 1 ] = {
+		m_cubeMapping.cubemapResourceView.Get( ),
+	};
+	m_context->PSSetShaderResources(0, 1, views);
+	m_context->PSSetShader(m_cubeMapping.pixelShader.Get( ), 0, 0);
+	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	m_context->DrawIndexed(m_cubeMapping.cubeMesh->indexCount, 0, 0);
+
+	// 물체들
+	m_context->VSSetShader(m_basicVertexShader.Get( ), 0, 0);
+
+	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	m_context->PSSetShader(m_basicPixelShader.Get( ), 0, 0);
+
+	if (m_drawAsWire)
+		m_context->RSSetState(m_wireRasterizerState.Get( ));
+	else
+		m_context->RSSetState(m_solidRasterizerState.Get( ));
+
 	// 버텍스/인덱스 버퍼 설정
 	for (const auto& mesh : m_meshes) {
 		m_context->VSSetConstantBuffers(0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
-		m_context->PSSetShaderResources(0, 1, mesh->textureResourceView.GetAddressOf());
+		ID3D11ShaderResourceView* resViews[ 2 ] = {
+			mesh->textureResourceView.Get( ),
+			m_cubeMapping.cubemapResourceView.Get( ),
+		};
+		m_context->PSSetShaderResources(0, 2, resViews);
 		m_context->PSSetConstantBuffers(0, 1, mesh->pixelConstantBuffer.GetAddressOf( ));
 		
 		m_context->IASetInputLayout(m_basicInputLayout.Get( ));
@@ -346,21 +361,6 @@ void KuskApp::Render() {
 		m_context->DrawIndexed(m_normalLines->indexCount, 0, 0);
 	}
 
-	// 큐브 매핑
-	m_context->IASetInputLayout(m_cubeMapping.inputLayout.Get( ));
-	m_context->IASetVertexBuffers(0, 1, m_cubeMapping.cubeMesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
-	m_context->IASetIndexBuffer(m_cubeMapping.cubeMesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
-	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_context->VSSetShader(m_cubeMapping.vertexShader.Get( ), 0, 0);
-	m_context->VSSetConstantBuffers(0, 1, m_cubeMapping.cubeMesh->vertexConstantBuffer.GetAddressOf( ));
-
-	ID3D11ShaderResourceView* views[ 1 ] = {
-		m_cubeMapping.cubemapResourceView.Get( ),
-	};
-	m_context->PSSetShaderResources(0, 1, views);
-	m_context->PSSetShader(m_cubeMapping.pixelShader.Get( ), 0, 0);
-	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	m_context->DrawIndexed(m_cubeMapping.cubeMesh->indexCount, 0, 0);
 }
 
 void KuskApp::UpdateGUI() {

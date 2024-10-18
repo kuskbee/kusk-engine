@@ -123,7 +123,9 @@ protected:
 	void CreateTexture(const std::string filename,
 					   ComPtr<ID3D11Texture2D>& texture,
 					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
-	
+	void CreateCubemapTexture(const wchar_t* filename,
+							 ComPtr<ID3D11ShaderResourceView>& texResView);
+
 public:
 	int m_screenWidth; // 렌더링할 최종 화면의 해상도
 	int m_screenHeight;

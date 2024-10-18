@@ -3,6 +3,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include <directxtk/DDSTextureLoader.h> // 큐브맵 읽을 때 필요
 #include <dxgi.h>		// DXGIFactory
 #include <dxgi1_4.h>	// DXGIFactory4
 
@@ -16,12 +17,13 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd,
 namespace kusk {
 
 using namespace std;
+using namespace DirectX;
 
 // RegisterClassEx() 에서 멤버 함수를 직접 등록할 수 없기 때문에
 // 클래스의 멤버 함수에서 간접적으로 메시지를 처리할 수 있도록 전역변수로 다룸.
 AppBase* g_appBase = nullptr;
 
-// RegisterclassEx() 에서 실제 등록될 콜백 함수
+// RegisterClassEx() 에서 실제 등록될 콜백 함수
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     
     if (g_appBase) {
@@ -313,8 +315,8 @@ bool AppBase::InitDirect3D() {
     D3D11_RASTERIZER_DESC rastDesc;
     ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-    //rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-    rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+    rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+    //rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
     rastDesc.FrontCounterClockwise = false;
     rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
@@ -551,6 +553,24 @@ void AppBase::CreateTexture(
 
     m_device->CreateTexture2D(&txtDesc, &initData, texture.GetAddressOf( ));
     m_device->CreateShaderResourceView(texture.Get( ), nullptr, textureResourceView.GetAddressOf( ));
+}
+
+void AppBase::CreateCubemapTexture(
+    const wchar_t* filename,
+    ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
+    ComPtr<ID3D11Texture2D> texture;
+
+    // https://github.com/microsoft/DirectXTK/wiki/DDSTextureLoader
+    auto hr = CreateDDSTextureFromFileEx(
+        m_device.Get( ), filename, 0, D3D11_USAGE_DEFAULT,
+        D3D11_BIND_SHADER_RESOURCE, 0,
+        D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
+        DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
+        textureResourceView.GetAddressOf( ), nullptr);
+
+    if (FAILED(hr)) {
+        std::cout << "CreateDDSTextureFromFileEx() failed" << std::endl;
+    }
 }
 
 } // namespace kusk

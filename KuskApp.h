@@ -30,21 +30,21 @@ struct BasicVertexConstantBuffer {
 	Matrix invTranspose;
 	Matrix view;
 	Matrix proj;
-};
-
+}; 
+ 
 // 주의:
 // For a constant buffer (BindFlags of D3D11_BUFFER_DESC set to
 // D3D11_BIND_CONSTANT_BUFFER), you must set the ByteWidth value of
 // D3D11_BUFFER_DESC in multiples of 16, and less than or equal to
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT.
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-createbuffer
-
+ 
 static_assert((sizeof(BasicVertexConstantBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
 #define MAX_LIGHTS 3
 
-struct BasicPixelConstatntBuffer {
+struct BasicPixelConstantBuffer {
 	Vector3 eyeWorld;		// 12
 	bool useTexture;		// 4
 	Material material;		// 48
@@ -54,9 +54,9 @@ struct BasicPixelConstatntBuffer {
 	float rimStrength = 0.0f;
 	bool useSmoothstep = false;
 	float dummy[ 2 ];
-};
-
-static_assert((sizeof(BasicPixelConstatntBuffer) % 16) == 0,
+}; 
+ 
+static_assert((sizeof(BasicPixelConstantBuffer) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
 struct NormalVertexConstantBuffer {
@@ -92,7 +92,7 @@ protected:
 	ComPtr<ID3D11SamplerState> m_samplerState;
 
 	BasicVertexConstantBuffer m_basicVertexConstantBufferData;
-	BasicPixelConstatntBuffer m_basicPixelConstantBufferData;
+	BasicPixelConstantBuffer m_basicPixelConstantBufferData;
 
 	bool m_usePerspectiveProjection = true;
 	Vector3 m_modelTranslation = Vector3(0.0f);

@@ -307,7 +307,7 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 	// Texture 좌표계때문에 (numSlices + 1) 개의 vertex 사용 (마지막에 닫아주는 vertex가 중복)
 	// Stack은 y축 양의 방향으로 쌓아가는 방식
 
-	const float dDelta = -XM_2PI / float(numSlices);
+	const float dTheta = -XM_2PI / float(numSlices);
 	const float dPhi = -XM_PI / float(numStacks);
 
 	MeshData meshData;
@@ -324,7 +324,7 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 
 			// 시작점을 x-z평면에서 회전시키면서 원을 만드는 구조
 			v.position = Vector3::Transform(
-				stackStartPoint, Matrix::CreateRotationY(dDelta * float(i)));
+				stackStartPoint, Matrix::CreateRotationY(dTheta * float(i)));
 			v.normal = v.position; // 원점이 구의 중심이므로
 			v.normal.Normalize( );
 			v.texcoord = Vector2(float(i) / numSlices, 1.0f - float(j) / numStacks);
@@ -332,7 +332,7 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 		}
 	}
 
-	cout << vertices.size( ) << endl;
+	//cout << vertices.size( ) << endl;
 
 	vector<uint32_t>& indices = meshData.indices;
 
@@ -539,7 +539,7 @@ vector<MeshData> GeometryGenerator::ReadFromFile(std::string basePath,
 
 	float dx = vmax.x - vmin.x, dy = vmax.y - vmin.y, dz = vmax.z - vmin.z;
 	float dl = XMMax(XMMax(dx, dy), dz);
-	float cx = (vmax.x + vmin.x) * 0.5f, cy = (vmax.y + vmin.y) * 0.5f, cz = (vmax.z + vmin.z) * 0.5;
+	float cx = (vmax.x + vmin.x) * 0.5f, cy = (vmax.y + vmin.y) * 0.5f, cz = (vmax.z + vmin.z) * 0.5f;
 
 	for (auto& mesh : meshes) {
 		for (auto& v : mesh.vertices) {
