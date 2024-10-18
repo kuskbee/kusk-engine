@@ -19,10 +19,21 @@ void KuskApp::InitializeCubeMapping( ) {
 
 	auto skyboxFilename = L"./CubemapTextures/skybox.dds";
 	auto nightPathFilename = L"./CubemapTextures/HumusTextures/NightPath.dds";
+	
 	auto atribumDiffuseFilename = L"./CubemapTextures/Atrium_diffuseIBL.dds";
+	auto atribumSpecularFilename = L"./CubemapTextures/Atrium_specularIBL.dds";
+
+	auto stonewallSpecularFilename = L"./CubemapTextures/Stonewall_specularIBL.dds";
+	auto stonewallDiffuseFilename = L"./CubemapTextures/Stonewall_diffuseIBL.dds";
+
+	auto sanFilename = L"./CubemapTextures/Output/output.dds";
+	auto sanDiffuseFilename = L"./CubemapTextures/Output/output_diffuse.dds";
+	auto sanSpecularFilename = L"./CubemapTextures/Output/output_specular.dds";
+
 
 	// .dds 파일 읽어들여서 초기화
-	CreateCubemapTexture(skyboxFilename, m_cubeMapping.cubemapResourceView);
+	CreateCubemapTexture(atribumDiffuseFilename, m_cubeMapping.diffuseResourceView);
+	CreateCubemapTexture(atribumSpecularFilename, m_cubeMapping.specularResourceView);
 
 	m_cubeMapping.cubeMesh = std::make_shared<Mesh>( );
 
@@ -97,6 +108,7 @@ bool KuskApp::Initialize() {
 	// you can download them here. 클릭
 
 	vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.3f, 100, 100) };
+	meshes[ 0 ].textureFilename = "ojwD8.jpg";
 
 	// auto meshes =
 	// GeometryGenerator::ReadFromFile("C:/workspaces/portfolio/models/",
@@ -310,10 +322,11 @@ void KuskApp::Render() {
 	m_context->VSSetShader(m_cubeMapping.vertexShader.Get( ), 0, 0);
 	m_context->VSSetConstantBuffers(0, 1, m_cubeMapping.cubeMesh->vertexConstantBuffer.GetAddressOf( ));
 
-	ID3D11ShaderResourceView* views[ 1 ] = {
-		m_cubeMapping.cubemapResourceView.Get( ),
+	ID3D11ShaderResourceView* views[ 2 ] = {
+		m_cubeMapping.diffuseResourceView.Get( ),
+		m_cubeMapping.specularResourceView.Get( ),
 	};
-	m_context->PSSetShaderResources(0, 1, views);
+	m_context->PSSetShaderResources(0, 2, views);
 	m_context->PSSetShader(m_cubeMapping.pixelShader.Get( ), 0, 0);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
 	m_context->DrawIndexed(m_cubeMapping.cubeMesh->indexCount, 0, 0);
@@ -332,11 +345,12 @@ void KuskApp::Render() {
 	// 버텍스/인덱스 버퍼 설정
 	for (const auto& mesh : m_meshes) {
 		m_context->VSSetConstantBuffers(0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
-		ID3D11ShaderResourceView* resViews[ 2 ] = {
+		ID3D11ShaderResourceView* resViews[ 3 ] = {
 			mesh->textureResourceView.Get( ),
-			m_cubeMapping.cubemapResourceView.Get( ),
+			m_cubeMapping.diffuseResourceView.Get( ),
+			m_cubeMapping.specularResourceView.Get( ),
 		};
-		m_context->PSSetShaderResources(0, 2, resViews);
+		m_context->PSSetShaderResources(0, 3, resViews);
 		m_context->PSSetConstantBuffers(0, 1, mesh->pixelConstantBuffer.GetAddressOf( ));
 		
 		m_context->IASetInputLayout(m_basicInputLayout.Get( ));
@@ -364,7 +378,7 @@ void KuskApp::Render() {
 }
 
 void KuskApp::UpdateGUI() {
-	ImGui::SliderFloat("Rim Strength",
+	/*ImGui::SliderFloat("Rim Strength",
 					   &m_basicPixelConstantBufferData.rimStrength, 0.0f,
 					   10.0f);
 	ImGui::Checkbox("Use Smoothstep",
@@ -372,7 +386,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat3("Rim Color", &m_basicPixelConstantBufferData.rimColor.x,
 						0.0f, 1.0f);
 	ImGui::SliderFloat("Rim Power", &m_basicPixelConstantBufferData.rimPower,
-					   0.01f, 10.0f);
+					   0.01f, 10.0f);*/
 
 	ImGui::Checkbox("Use Texture", &m_basicPixelConstantBufferData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
@@ -383,36 +397,36 @@ void KuskApp::UpdateGUI() {
 		m_drawNormalsDirtyFlag = true;
 	}
 
-	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
+	//ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
-	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
+	//ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
 	ImGui::SliderFloat3("m_viewRot", &m_viewRot.x, -3.14f, 3.14f);
 
+	ImGui::SliderFloat("Material Diffuse", &m_materialDiffuse, 0.0f, 3.0f);
+	ImGui::SliderFloat("Material Specular", &m_materialSpecular, 0.0f, 3.0f);
+
 	ImGui::SliderFloat("Material Shininess",
-					   &m_basicPixelConstantBufferData.material.shininess, 1.0f, 256.0f);
+					   &m_basicPixelConstantBufferData.material.shininess, 0.01f, 20.0f);
 
-	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
-		m_lightType = 0;
-	}
-	ImGui::SameLine( );
-	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
-		m_lightType = 1;
-	}
-	ImGui::SameLine( );
-	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
-		m_lightType = 2;
-	}
+	//if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
+	//	m_lightType = 0;
+	//}
+	//ImGui::SameLine( );
+	//if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
+	//	m_lightType = 1;
+	//}
+	//ImGui::SameLine( );
+	//if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
+	//	m_lightType = 2;
+	//}
 
-	ImGui::SliderFloat("Material Diffuse", &m_materialDiffuse, 0.0f, 1.0f);
-	ImGui::SliderFloat("Material Specular", &m_materialSpecular, 0.0f, 1.0f);
+	//ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
 
-	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+	//ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
 
-	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
+	//ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
 
-	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
-
-	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
+	//ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
 }
 
 } // namespace kusk

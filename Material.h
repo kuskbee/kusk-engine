@@ -14,7 +14,7 @@ using DirectX::SimpleMath::Vector3;
 
 struct Material {
 	Vector3 ambient = Vector3(0.0f);	// 12
-	float shininess = 256.0f;			// 4
+	float shininess = 0.01f;			// 4
 	Vector3 diffuse = Vector3(0.0f);	// 12
 	float dummy1;						// 4
 	Vector3 specular = Vector3(1.0f);	// 12

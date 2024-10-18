@@ -111,7 +111,7 @@ protected:
 	Light m_lightFromGUI;
 	float m_materialDiffuse = 1.0f;
 	float m_materialSpecular = 1.0f;
-
+	
 	// 노멀 벡터 그리기
 	ComPtr<ID3D11VertexShader> m_normalVertexShader;
 	ComPtr<ID3D11PixelShader> m_normalPixelShader;
