@@ -1,32 +1,21 @@
 #include "Common.hlsli"
 
-cbuffer BasicVertexConstantBuffer : register(b0)
+cbuffer VertexConstantBuffer : register(b0)
 {
-    matrix model;
-    matrix invTranspose;
-    matrix view;
-    matrix projection;
+    matrix viewProj;
 };
 
-PixelShaderInput main(VertexShaderInput input)
+struct CubeMappingPixelShaderInput
 {
-    // 불필요한 멤버들도 VertexShaderInput을 통일시켰기 때문에 채워주기.
-    PixelShaderInput output;
-    output.posModel = input.posModel;
-    float4 pos = float4(input.posModel, 1.0f);
-    pos = mul(pos, model); // Identity
-    output.posWorld = pos.xyz;
-    
-    float4 normal = float4(input.normalModel, 0.0f);
-    output.normalWorld = mul(normal, invTranspose);
-    output.normalWorld = normalize(output.normalWorld);
-    
-    pos = mul(pos, view);
-    pos = mul(pos, projection);
-    output.posProj = pos;
-    
-    output.texcoord = input.texcoord;
-    output.color = float3(1.0f, 1.0f, 0.0);
+    float4 posProj : SV_POSITION;
+    float3 posModel : POSITION;
+};
 
+CubeMappingPixelShaderInput main(VertexShaderInput input)
+{
+    CubeMappingPixelShaderInput output;
+    output.posModel = input.posModel;
+    output.posProj = mul(float4(input.posModel, 1.0f), viewProj);
+    
     return output;
 }

@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-cbuffer BasicVertexConstantBuffer : register(b0)
+cbuffer BasicVertexConstantData : register(b0)
 {
     matrix model;
     matrix invTranspose;
@@ -8,7 +8,7 @@ cbuffer BasicVertexConstantBuffer : register(b0)
     matrix projection;
 };
 
-cbuffer NormalVertexConstantBuffer : register(b1)
+cbuffer NormalVertexConstantData : register(b1)
 {
     float scale; // 그려지는 선분의 길이 조절
 };

@@ -1,6 +1,6 @@
 #include "Common.hlsli" // 쉐이더에서도 include 사용 가능
 
-cbuffer BasicVertexConstantBuffer : register(b0)
+cbuffer BasicVertexConstantData : register(b0)
 {
     matrix model;
     matrix invTranspose;

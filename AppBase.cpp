@@ -1,11 +1,6 @@
 #include "AppBase.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
-#include <directxtk/DDSTextureLoader.h> // 큐브맵 읽을 때 필요
-#include <dxgi.h>		// DXGIFactory
-#include <dxgi1_4.h>	// DXGIFactory4
+#include "D3D11Utils.h"
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
 // VCPKG를 통해 IMGUI를 사용할 경우 빨간줄로 경고가 뜰 수 있음
@@ -17,7 +12,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd,
 namespace kusk {
 
 using namespace std;
-using namespace DirectX;
 
 // RegisterClassEx() 에서 멤버 함수를 직접 등록할 수 없기 때문에
 // 클래스의 멤버 함수에서 간접적으로 메시지를 처리할 수 있도록 전역변수로 다룸.
@@ -141,7 +135,7 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                                         DXGI_FORMAT_UNKNOWN, // 현재 포맷 유지
                                         0);
             CreateRenderTargetView( );
-            CreateDepthBuffer( );
+            D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, m_numQualityLevels, m_depthStencilView);
             SetViewport( );
         }
         break;
@@ -266,6 +260,8 @@ bool AppBase::InitDirect3D() {
         cout << "MSAA not supported." << endl;
     }
 
+    //m_numQualityLevels = 0; // MSAA 강제로 끄기
+
     if (FAILED(device.As(&m_device))) {
         cout << "device.As() failed." << endl;
         return false;
@@ -284,7 +280,8 @@ bool AppBase::InitDirect3D() {
     sd.BufferCount = 2;                                 // Double-buffering
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;   // how swap chain is to be used
+    // DXGI_USAGE_SHADER_INPUT 쉐이더에 입력으로 넣어주기 위해 필요
+    sd.BufferUsage = DXGI_USAGE_SHADER_INPUT | DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow = m_mainWindow;                     // the window to be used
     sd.Windowed = TRUE;                                 // Windowed/full-screen mode
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;  // allow full-screen switching
@@ -325,7 +322,7 @@ bool AppBase::InitDirect3D() {
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
     m_device->CreateRasterizerState(&rastDesc, m_wireRasterizerState.GetAddressOf( ));
 
-    CreateDepthBuffer( );
+    D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, m_numQualityLevels, m_depthStencilView);
 
     // Create depth stencil state
     D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
@@ -387,7 +384,8 @@ bool AppBase::CreateRenderTargetView( ) {
     ComPtr<ID3D11Texture2D> backBuffer;
     m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
     if (backBuffer) {
-        m_device->CreateRenderTargetView(backBuffer.Get( ), NULL, m_renderTargetView.GetAddressOf( ));
+        m_device->CreateRenderTargetView(backBuffer.Get( ), nullptr, m_renderTargetView.GetAddressOf( ));
+        m_device->CreateShaderResourceView(backBuffer.Get( ), nullptr, m_shaderResourceView.GetAddressOf( ));
     }
     else {
         cout << "CreateRenderTargetView() failed." << endl;
@@ -396,181 +394,5 @@ bool AppBase::CreateRenderTargetView( ) {
     return true;
 }
 
-bool AppBase::CreateDepthBuffer( ) {
-    // Create depth buffer
-    D3D11_TEXTURE2D_DESC depthStencilBufferDesc;
-    depthStencilBufferDesc.Width = m_screenWidth;
-    depthStencilBufferDesc.Height = m_screenHeight;
-    depthStencilBufferDesc.MipLevels = 1;
-    depthStencilBufferDesc.ArraySize = 1;
-    depthStencilBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    if (m_numQualityLevels > 0) {
-        depthStencilBufferDesc.SampleDesc.Count = 4;
-        depthStencilBufferDesc.SampleDesc.Quality = m_numQualityLevels - 1;
-    }
-    else {
-        depthStencilBufferDesc.SampleDesc.Count = 1;
-        depthStencilBufferDesc.SampleDesc.Quality = 0;
-    }
-    depthStencilBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    depthStencilBufferDesc.CPUAccessFlags = 0;
-    depthStencilBufferDesc.MiscFlags = 0;
-
-    if (FAILED(m_device->CreateTexture2D(
-        &depthStencilBufferDesc, 0,
-        m_depthStencilBuffer.GetAddressOf( )))) {
-        cout << "CreateTexture2D() depthStencilBuffer failed." << endl;
-    }
-    if (FAILED(m_device->CreateDepthStencilView(
-        m_depthStencilBuffer.Get( ), 0,
-        m_depthStencilView.GetAddressOf( )))) {
-        cout << "CreateDepthStencilView() failed." << endl;
-    }
-
-    return true;
-}
-
-void CheckResult(HRESULT hr, ID3DBlob* errorBlob) {
-    if (FAILED(hr)) {
-        // 파일이 없을 경우
-        if ((hr & D3D11_ERROR_FILE_NOT_FOUND) != 0) {
-            cout << "File not found." << endl;
-        }
-
-        // 에러 메시지가 있으면 출력
-        if (errorBlob) {
-            cout << "Shader compiler error\n" << (char*)errorBlob->GetBufferPointer() << endl;
-        }
-    }
-}
-
-void AppBase::CreateVertexShaderAndInputLayout(
-    const wstring& filename, 
-    const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
-    ComPtr<ID3D11VertexShader>& vertexShader, 
-    ComPtr<ID3D11InputLayout>& inputLayout) {
-    
-    ComPtr<ID3DBlob> shaderBlob;
-    ComPtr<ID3DBlob> errorBlob;
-
-    UINT compileFlags = 0;
-#if defined(DEBUG) || defined(_DEBUG)
-    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-    
-    // 쉐이더의 시작점의 이름이 "main"인 함수로 지정
-    // D3D_COMPILE_STANDARD_FILE_INCLUDE 추가 : 쉐이더에서 include 사용
-    HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0",
-                            compileFlags, 0, &shaderBlob, &errorBlob);
-    
-    CheckResult(hr, errorBlob.Get());
-
-    m_device->CreateVertexShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), NULL,
-                                 vertexShader.GetAddressOf());
-
-    m_device->CreateInputLayout(inputElements.data(), UINT(inputElements.size()),
-                                shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(),
-                                inputLayout.GetAddressOf());
-}
-
-void AppBase::CreatePixelShader(const wstring& filename, ComPtr<ID3D11PixelShader>& pixelShader) {
-    ComPtr<ID3DBlob> shaderBlob;
-    ComPtr<ID3DBlob> errorBlob;
-
-    UINT compileFlags = 0;
-#if defined(DEBUG) || defined(_DEBUG)
-    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-    // 쉐이더의 시작점의 이름이 "main"인 함수로 지정
-    // D3D_COMPILE_STANDARD_FILE_INCLUDE 추가 : 쉐이더에서 include 사용
-    HRESULT hr =
-        D3DCompileFromFile(filename.c_str(), 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 
-                            compileFlags, 0, &shaderBlob, &errorBlob);
-
-    CheckResult(hr, errorBlob.Get());
-
-    m_device->CreatePixelShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), NULL,
-                                pixelShader.GetAddressOf());
-}
-
-void AppBase::CreateIndexBuffer(const std::vector<uint32_t>& indices,
-                                ComPtr<ID3D11Buffer>& indexBuffer) {
-    D3D11_BUFFER_DESC bufferDesc = {};
-    bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    bufferDesc.ByteWidth = UINT(sizeof(uint32_t) * indices.size());
-    bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    bufferDesc.CPUAccessFlags = 0;
-    bufferDesc.StructureByteStride = sizeof(uint32_t);
-
-    D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-    indexBufferData.pSysMem = indices.data();
-    indexBufferData.SysMemPitch = 0;
-    indexBufferData.SysMemSlicePitch = 0;
-
-    m_device->CreateBuffer(&bufferDesc, &indexBufferData, indexBuffer.GetAddressOf());
-}
-
-void AppBase::CreateTexture(
-    const std::string filename, 
-    ComPtr<ID3D11Texture2D>& texture,
-    ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
-
-    int width, height, channels;
-
-    unsigned char* img =
-        stbi_load(filename.c_str( ), &width, &height, &channels, 0);
-
-    //assert(channels == 4);
-
-    std::vector<uint8_t> image;
-    // 4채널로 만들어서 복사
-    image.resize(width * height * 4);
-    for (size_t i = 0; i < width * height; i++) {
-        for (size_t c = 0; c < 3; c++) {
-            image[ 4 * i + c ] = img[ i * channels + c ];
-        }
-        image[ 4 * i + 3 ] = 255;
-    }
-
-    // Create texture
-    D3D11_TEXTURE2D_DESC txtDesc = {};
-    txtDesc.Width = width;
-    txtDesc.Height = height;
-    txtDesc.MipLevels = txtDesc.ArraySize = 1;
-    txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    txtDesc.SampleDesc.Count = 1;
-    txtDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-    // Fill in the subresource data
-    D3D11_SUBRESOURCE_DATA initData;
-    initData.pSysMem = image.data( );
-    initData.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * 4;
-    // initData.SysMemSlicePitch = 0;
-
-    m_device->CreateTexture2D(&txtDesc, &initData, texture.GetAddressOf( ));
-    m_device->CreateShaderResourceView(texture.Get( ), nullptr, textureResourceView.GetAddressOf( ));
-}
-
-void AppBase::CreateCubemapTexture(
-    const wchar_t* filename,
-    ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
-    ComPtr<ID3D11Texture2D> texture;
-
-    // https://github.com/microsoft/DirectXTK/wiki/DDSTextureLoader
-    auto hr = CreateDDSTextureFromFileEx(
-        m_device.Get( ), filename, 0, D3D11_USAGE_DEFAULT,
-        D3D11_BIND_SHADER_RESOURCE, 0,
-        D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
-        DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
-        textureResourceView.GetAddressOf( ), nullptr);
-
-    if (FAILED(hr)) {
-        std::cout << "CreateDDSTextureFromFileEx() failed" << std::endl;
-    }
-}
 
 } // namespace kusk

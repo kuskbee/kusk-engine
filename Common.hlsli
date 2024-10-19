@@ -29,6 +29,8 @@ struct Material
     float dummy1;   // 16bytes 맞춰주기 위해 추가
     float3 specular;
     float dummy2;
+    float3 fresnelR0;
+    float dummy3;
 };
 
 // 조명

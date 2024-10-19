@@ -5,7 +5,7 @@ TextureCube g_diffuseCube : register(t1);
 TextureCube g_specularCube : register(t2);
 SamplerState g_sampler : register(s0);
 
-cbuffer BasicPixelConstantBuffer : register(b0) 
+cbuffer BasicPixelConstantData : register(b0) 
 {
     float3 eyeWorld;
     bool useTexture;
@@ -17,6 +17,13 @@ cbuffer BasicPixelConstantBuffer : register(b0)
     bool useSmoothstep;
 };
 
+float3 SchlickFresnel(float3 fresnelR0, float3 normal, float3 toEye)
+{
+    float normalDotView = saturate(dot(normal, toEye));
+    float f0 = 1.0f - normalDotView; // 90도이면 f0 = 1, 0도이면 f0 = 0
+    
+    return fresnelR0 + (1.0f - fresnelR0) * pow(f0, 5.0f);
+}
 
 float4 main(PixelShaderInput input) : SV_TARGET {
     
@@ -59,22 +66,23 @@ float4 main(PixelShaderInput input) : SV_TARGET {
     //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, uv) : float4(color, 1.0);
     
     // IBL
-    float4 diffuseColor = g_diffuseCube.Sample(g_sampler, input.normalWorld.xyz);
+    float4 diffuse = g_diffuseCube.Sample(g_sampler, input.normalWorld);
     
     float3 reflected = reflect(-toEye, input.normalWorld);
-    float4 specularColor = g_specularCube.Sample(g_sampler, reflected);
+    float4 specular = g_specularCube.Sample(g_sampler, reflected);
     
-    specularColor *= pow((specularColor.x + specularColor.y + specularColor.z) / 3.0,
-                        material.shininess);
+    diffuse *= float4(material.diffuse, 1.0f);
+    specular *= pow(abs(specular.r + specular.g + specular.b) / 3.0, material.shininess);
+    specular *= float4(material.specular, 1.0f);
     
-    diffuseColor.xyz *= material.diffuse;
-    specularColor.xyz *= material.specular;
+    float3 f = SchlickFresnel(material.fresnelR0, input.normalWorld, toEye);
+    specular.xyz *= f;
     
     if(useTexture)
     {
-        diffuseColor *= g_texture0.Sample(g_sampler, input.texcoord);
+        diffuse *= g_texture0.Sample(g_sampler, input.texcoord);
     }
     
-    return diffuseColor + specularColor;
+    return diffuse + specular;
     //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0);
 }
