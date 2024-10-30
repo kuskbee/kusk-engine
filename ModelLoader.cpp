@@ -13,7 +13,7 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 
 	const aiScene* pScene = importer.ReadFile(
 		this->basePath + filename,
-		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded);
+		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals);
 
 	if (!pScene) {
 		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;

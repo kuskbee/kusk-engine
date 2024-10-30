@@ -3,6 +3,8 @@
 #include <directxtk/DDSTextureLoader.h>
 #include <vector>
 
+#include "textureResources.h"
+
 namespace kusk {
 
 using namespace std;
@@ -15,9 +17,7 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
-	m_cubeMapping.Initialize(m_device, 
-							L"./CubemapTextures/Stonewall_diffuseIBL.dds",
-							L"./CubemapTextures/Stonewall_specularIBL.dds");
+	m_cubeMapping.Initialize(m_device, MSPATH_DIFF_DDS, MSPATH_SPEC_DDS);
 
 	MeshData sphere = GeometryGenerator::MakeSphere(0.3f, 100, 100);
 	sphere.textureFilename = "ojwD8.jpg";
@@ -116,9 +116,6 @@ void KuskApp::Render() {
 	else
 		m_context->RSSetState(m_solidRasterizerState.Get( ));
 
-	// 큐브매핑
-	m_cubeMapping.Render(m_context);
-	
 	// 물체들
 	if (m_visibleMeshIndex == 0) {
 		m_meshGroupSphere.Render(m_context);
@@ -126,6 +123,9 @@ void KuskApp::Render() {
 	else {
 		m_meshGroupCharacter.Render(m_context);
 	}
+
+	// 큐브매핑
+	m_cubeMapping.Render(m_context);
 
 	// 후처리 필터
 	for (auto& f : m_filters) {
@@ -206,7 +206,7 @@ void KuskApp::UpdateGUI() {
 		m_visibleMeshIndex = 1;
 	}
 
-	/*ImGui::SliderFloat("Rim Strength",
+	ImGui::SliderFloat("Rim Strength",
 				   &meshGroup.m_basicPixelConstantData.rimStrength, 0.0f,
 				   10.0f);
 	ImGui::Checkbox("Use Smoothstep",
@@ -214,7 +214,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat3("Rim Color", &meshGroup.m_basicPixelConstantData.rimColor.x,
 						0.0f, 1.0f);
 	ImGui::SliderFloat("Rim Power", &meshGroup.m_basicPixelConstantData.rimPower,
-					   0.01f, 10.0f);*/
+					   0.01f, 10.0f);
 
 	m_dirtyFlag +=
 		ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
@@ -231,9 +231,9 @@ void KuskApp::UpdateGUI() {
 		meshGroup.m_drawNormalsDirtyFlag = true;
 	}
 
-	//ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
+	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
-	//ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
+	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
 	ImGui::SliderFloat3("m_viewRot", &m_viewRot.x, -3.14f, 3.14f);
 	ImGui::SliderFloat3("Material FresnelR0",
 						&meshGroup.m_basicPixelConstantData.material.fresnelR0.x, 0.0f, 1.0f);
@@ -244,25 +244,28 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat("Material Shininess",
 					   &meshGroup.m_basicPixelConstantData.material.shininess, 0.01f, 20.0f);
 
-	//if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
-	//	m_lightType = 0;
-	//}
-	//ImGui::SameLine( );
-	//if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
-	//	m_lightType = 1;
-	//}
-	//ImGui::SameLine( );
-	//if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
-	//	m_lightType = 2;
-	//}
+	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
+		m_lightType = 0;
+	}
+	ImGui::SameLine( );
+	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
+		m_lightType = 1;
+	}
+	ImGui::SameLine( );
+	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
+		m_lightType = 2;
+	}
 
-	//ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+	ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, 0.0f, 0.1f);
 
-	//ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
+	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
 
-	//ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
+	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
 
-	//ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
+	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
+
+	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
+	
 }
 
 } // namespace kusk

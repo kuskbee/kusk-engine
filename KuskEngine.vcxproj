@@ -156,6 +156,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshData.h" />
     <ClInclude Include="ModelLoader.h" />
+    <ClInclude Include="textureResources.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
