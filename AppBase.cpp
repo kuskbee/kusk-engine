@@ -1,5 +1,7 @@
 #include "AppBase.h"
 
+#include <algorithm>
+
 #include "D3D11Utils.h"
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
@@ -29,10 +31,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 // 생성자
 AppBase::AppBase()
-    : m_screenWidth(1280), m_screenHeight(960), m_mainWindow(0),
+    : m_screenWidth(1280), m_screenHeight(720), m_mainWindow(0),
       m_screenViewport(D3D11_VIEWPORT())
 {
     g_appBase = this;
+
+    m_camera.SetAspectRatio(this->GetAspectRatio( ));
 }
 
 AppBase::~AppBase() {
@@ -112,7 +116,27 @@ bool AppBase::Initialize() {
     if (!InitGUI())
         return false;
 
+    // 콘솔창이 렌더링 창 덮는 것 방지
+    SetForegroundWindow(m_mainWindow);
+
     return true;
+}
+
+void AppBase::OnMouseMove(WPARAM btnState, int mouseX, int mouseY) {
+    
+    // 마우스 커서의 위치를 NDC로 변환
+    // 마우스 커서는 좌측 상단 (0, 0), 우측 하단 (width-1, height-1)
+    // NDC는 좌측 상단 (-1, -1), 우측 하단 (1, 1)
+    float x = mouseX * 2.0f / m_screenWidth - 1.0f;
+    float y = -mouseY * 2.0f / m_screenHeight + 1.0f;
+
+    // 커서가 화면 밖으로 나갔을 경우 범위 조절
+    x = std::clamp(x, -1.0f, 1.0f);
+    y = std::clamp(y, -1.0f, 1.0f);
+
+    // 카메라 시점 회전
+    if (m_useFirstPersonView)
+        m_camera.UpdateMouse(x, y);
 }
 
 LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -137,6 +161,9 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             CreateRenderTargetView( );
             D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, m_numQualityLevels, m_depthStencilView);
             SetViewport( );
+
+            // 화면 해상도가 바뀌면 카메라 aspect ratio도 같이 변경
+            m_camera.SetAspectRatio(this->GetAspectRatio());
         }
         break;
     case WM_SYSCOMMAND :
@@ -145,6 +172,7 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_MOUSEMOVE:
         // cout << "Mouse " << LOWORD(lParam) << " " << HIWORD(lParam) << endl;
+        OnMouseMove(wParam, LOWORD(lParam), HIWORD(lParam));
         break;
     case WM_LBUTTONUP:
         // cout << "WM_LBUTTONUP Left mouse button" << endl;
@@ -154,6 +182,22 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_KEYDOWN:
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
+        
+        // 키보드 키 눌림 갱신
+        m_keyPressed[ wParam ] = true;
+        
+        if (wParam == 27) {
+            // esc
+            DestroyWindow(hWnd);
+        }         
+        break;
+    case WM_KEYUP :
+        if (wParam == 70) { // 'f' 키
+            m_useFirstPersonView = !m_useFirstPersonView;
+        }
+
+        // 키보드 키 해제 갱신
+        m_keyPressed[ wParam ] = false;
         break;
     case WM_DESTROY:
         ::PostQuitMessage(0);

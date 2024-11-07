@@ -135,9 +135,11 @@
   <ItemGroup>
     <ClCompile Include="AppBase.cpp" />
     <ClCompile Include="BasicMeshGroup.cpp" />
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CubeMapping.cpp" />
     <ClCompile Include="D3D11Utils.cpp" />
     <ClCompile Include="GeometryGenerator.cpp" />
+    <ClCompile Include="ImageFilter.cpp" />
     <ClCompile Include="KuskApp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ModelLoader.cpp" />
@@ -146,6 +148,7 @@
     <ClInclude Include="AppBase.h" />
     <ClInclude Include="BasicConstantData.h" />
     <ClInclude Include="BasicMeshGroup.h" />
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="CubeMapping.h" />
     <ClInclude Include="D3D11Utils.h" />
     <ClInclude Include="GeometryGenerator.h" />

@@ -2,9 +2,11 @@
 
 namespace kusk {
 void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
+					const wchar_t* originalFilename,
 					const wchar_t* diffuseFilename,
 					const wchar_t* specularFilename	) {
 	// .dds 파일 읽어들여서 초기화
+	D3D11Utils::CreateCubemapTexture(device, originalFilename, m_originalResView);
 	D3D11Utils::CreateCubemapTexture(device, diffuseFilename, m_diffuseResView);
 	D3D11Utils::CreateCubemapTexture(device, specularFilename, m_specularResView);
 
@@ -14,7 +16,7 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 									 m_cubeMesh->vertexConstantBuffer);
 
 	// MeshData cubeMeshData = GeometryGenerator::MakeBox(20.0f);
-	MeshData cubeMeshData = GeometryGenerator::MakeSphere(10.0f, 100, 100);
+	MeshData cubeMeshData = GeometryGenerator::MakeSphere(10.0f, 10, 10);
 	std::reverse(cubeMeshData.indices.begin( ), cubeMeshData.indices.end( ));
 
 	D3D11Utils::CreateVertexBuffer(device, cubeMeshData.vertices,
@@ -71,8 +73,8 @@ void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->VSSetShader(m_vertexShader.Get( ), 0, 0);
 	context->VSSetConstantBuffers(0, 1, m_cubeMesh->vertexConstantBuffer.GetAddressOf( ));
 
-	// Diffuse, Specular 선택 가능
-	ID3D11ShaderResourceView* views[ 1 ] = { m_specularResView.Get( ) };
+	// 배경 자체를 렌더링할 때는 original 텍스쳐 사용
+	ID3D11ShaderResourceView* views[ 1 ] = { m_originalResView.Get( ) };
 	context->PSSetShaderResources(0, 1, views);
 	context->PSSetShader(m_pixelShader.Get( ), 0, 0);
 	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));

@@ -30,20 +30,12 @@ public:
 protected:
 	BasicMeshGroup m_meshGroupSphere;
 	BasicMeshGroup m_meshGroupCharacter;
+	BasicMeshGroup m_meshGroupGround;
 	CubeMapping m_cubeMapping;
 
-	bool m_usePerspectiveProjection = true;
-	Vector3 m_modelTranslation = Vector3(0.0f);
+	Vector3 m_modelTranslation = Vector3(0.0f, 0.2f, 0.6f);
 	Vector3 m_modelRotation = Vector3(0.0f, 0.0f, 0.0f);
 	Vector3 m_modelScaling = Vector3(1.8f);
-	/*Vector3 m_viewEyePos = { 0.0f, 0.0f, -2.0f };
-	Vector3 m_viewEyeDir = { 0.0f, 0.0f, 1.0f };
-	Vector3 m_viewUp = { 0.0f, 1.0f, 0.0f };*/
-	Vector3 m_viewRot = Vector3(-0.1f, 0.0f, 0.0f);
-
-	float m_projFovAngleY = 70.0f;
-	float m_nearZ = 0.01f;
-	float m_farZ = 100.0f;
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
@@ -54,10 +46,11 @@ protected:
 
 	std::vector<shared_ptr<ImageFilter>> m_filters;
 
+	// Bloom 효과 옵션
 	int m_dirtyFlag = 1; // 처음 한 번만 실행
 	int m_down = 16;
 	int m_repeat = 5;
-	float m_threshold = 0.3f;
-	float m_strength = 1.0f;
+	float m_threshold = 0.95f;
+	float m_strength = 0.3f;
 };
 } // namespace kusk

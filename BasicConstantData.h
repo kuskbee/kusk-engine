@@ -22,7 +22,7 @@ static_assert((sizeof(BasicVertexConstantData) % 16) == 0,
 
 struct BasicPixelConstantData {
 	Vector3 eyeWorld;		// 12
-	bool useTexture = true;		// 4
+	bool useTexture = true;		// bool 1 + 3 padding
 	Material material;		// 48
 	Light lights[ MAX_LIGHTS ]; // 48 * MAX_LIGHTS
 	Vector3 rimColor = Vector3(1.0f);

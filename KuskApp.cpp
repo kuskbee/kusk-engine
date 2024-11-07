@@ -17,18 +17,40 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
-	m_cubeMapping.Initialize(m_device, MSPATH_DIFF_DDS, MSPATH_SPEC_DDS);
+	m_cubeMapping.Initialize(m_device, SKYBOX_ORGN_DDS, SKYBOX_DIFF_DDS, SKYBOX_SPEC_DDS);
 
-	MeshData sphere = GeometryGenerator::MakeSphere(0.3f, 100, 100);
+	// $sphere
+	MeshData sphere = GeometryGenerator::MakeSphere(0.1f, 20, 20);
 	sphere.textureFilename = "ojwD8.jpg";
 	m_meshGroupSphere.Initialize(m_device, { sphere });
 	m_meshGroupSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 	m_meshGroupSphere.m_specularResView = m_cubeMapping.m_specularResView;
 
+	// $character
 	m_meshGroupCharacter.Initialize(
 		m_device, "c:/workspaces/honglab/models/zelda/", "zeldaPosed001.fbx");
 	m_meshGroupCharacter.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 	m_meshGroupCharacter.m_specularResView = m_cubeMapping.m_specularResView;
+
+	// $ground
+	MeshData ground = GeometryGenerator::MakeSquare(2.0f);
+	ground.textureFilename = BLENDER_UV_GRID_2K;
+	m_meshGroupGround.Initialize(m_device, { ground });
+	m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
+	m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
+
+	// 바닥으로 사용하기 위해 회전
+	Matrix modelMat = Matrix::CreateRotationX(DirectX::XM_PIDIV2);
+	Matrix invTransposeRow = modelMat;
+	invTransposeRow.Translation(Vector3(0.0f));
+	invTransposeRow = invTransposeRow.Invert( ).Transpose( );
+
+	// ConstantBuffer 초기화
+	m_meshGroupGround.m_basicVertexConstantData.model = modelMat.Transpose( );
+	m_meshGroupGround.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+	m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
+	m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
+	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 
 	BuildFilters( );
 
@@ -37,7 +59,21 @@ bool KuskApp::Initialize() {
 
 void KuskApp::Update(float dt) {
 	
-	using namespace DirectX;
+	// 카메라의 이동
+	if (m_useFirstPersonView) {
+		if (m_keyPressed[ 87 ]) // w
+			m_camera.MoveForward(dt);
+		if (m_keyPressed[ 83 ]) // s
+			m_camera.MoveForward(-dt);
+		if (m_keyPressed[ 68 ]) // d
+			m_camera.MoveRight(dt);
+		if (m_keyPressed[ 65 ]) // a
+			m_camera.MoveRight(-dt);
+	}
+
+	Matrix viewRow = m_camera.GetViewRow( );
+	Matrix projRow = m_camera.GetProjRow( );
+	Vector3 eyeWorld = m_camera.GetEyePos( );
 
 	auto& visibleMeshGroup = m_visibleMeshIndex == 0 ? m_meshGroupSphere : m_meshGroupCharacter;
 
@@ -51,15 +87,7 @@ void KuskApp::Update(float dt) {
 	invTransposeRow.Translation(Vector3(0.0f));
 	invTransposeRow = invTransposeRow.Invert( ).Transpose( );
 
-	auto viewRow = Matrix::CreateRotationY(m_viewRot.y) *
-				   Matrix::CreateRotationX(m_viewRot.x) *
-				   Matrix::CreateTranslation(0.0f, 0.0f, 2.0f);
-
 	const float aspect = AppBase::GetAspectRatio( );
-	Matrix projRow = m_usePerspectiveProjection ? XMMatrixPerspectiveFovLH(XMConvertToRadians(m_projFovAngleY), aspect, m_nearZ, m_farZ)
-												: XMMatrixOrthographicOffCenterLH(-aspect, aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
-
-	auto eyeWorld = Vector3::Transform(Vector3(0.0f), viewRow.Invert( ));
 
 	// MeshGroup의 ConstantBuffers 업데이트
 	for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -83,11 +111,16 @@ void KuskApp::Update(float dt) {
 	visibleMeshGroup.UpdateConstantBuffers(m_device, m_context);
 
 	// 큐브매핑을 위한 constantBuffers 업데이트
-	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, 
-		 							    (Matrix::CreateRotationY(m_viewRot.y) * Matrix::CreateRotationX(m_viewRot.x)).Transpose( ),
-									    projRow.Transpose( ));
+	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, viewRow.Transpose( ), projRow.Transpose( ));
+
+	m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
+	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
+	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );
+	m_meshGroupGround.m_basicVertexConstantData.proj = projRow.Transpose( );
+	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 
 	if (m_dirtyFlag) {
+		assert(m_filters.size( ) > 1);
 		m_filters[ 1 ]->m_pixelConstData.threshold = m_threshold;
 		m_filters[ 1 ]->UpdateConstantBuffers(m_device, m_context);
 		m_filters.back( )->m_pixelConstData.strength = m_strength;
@@ -124,7 +157,9 @@ void KuskApp::Render() {
 		m_meshGroupCharacter.Render(m_context);
 	}
 
-	// 큐브매핑
+	m_meshGroupGround.Render(m_context);
+
+	// 물체 렌더링 후 큐브매핑
 	m_cubeMapping.Render(m_context);
 
 	// 후처리 필터
@@ -143,6 +178,7 @@ void KuskApp::BuildFilters( ) {
 	copyFilter->SetShaderResources({ this->m_shaderResourceView });
 	m_filters.push_back(copyFilter);
 	
+	// 해상도를 낮춰서 다운 샘플링
 	int resolution = 2;
 	while (resolution <= m_down) {
 		auto downFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"Sampling", m_screenWidth / resolution, m_screenHeight / resolution);
@@ -161,7 +197,7 @@ void KuskApp::BuildFilters( ) {
 
 	resolution = m_down;
 	while (resolution >= 1) {
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < m_repeat; i++) {
 			auto& prevResource = m_filters.back( )->m_shaderResourceView;
 			auto blurXFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"BlurX", m_screenWidth / resolution, m_screenHeight / resolution);
 			blurXFilter->SetShaderResources({ prevResource });
@@ -195,6 +231,8 @@ void KuskApp::BuildFilters( ) {
 }
 
 void KuskApp::UpdateGUI() {
+
+	ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
 	
 	auto& meshGroup = m_visibleMeshIndex == 0 ? m_meshGroupSphere : m_meshGroupCharacter;
 
@@ -234,7 +272,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
 	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
-	ImGui::SliderFloat3("m_viewRot", &m_viewRot.x, -3.14f, 3.14f);
+	
 	ImGui::SliderFloat3("Material FresnelR0",
 						&meshGroup.m_basicPixelConstantData.material.fresnelR0.x, 0.0f, 1.0f);
 

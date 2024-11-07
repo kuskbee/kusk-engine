@@ -14,7 +14,7 @@ class GeometryGenerator
 public:
 	static vector<MeshData> ReadFromFile(std::string basePath,
 										 std::string filename);
-	static MeshData MakeSquare( );
+	static MeshData MakeSquare(const float scale = 1.0f);
 	static MeshData MakeBox(const float scale = 1.0f);
 	static MeshData MakeGrid(const float width, const float height,
 							const int numSlices, const int numStacks);

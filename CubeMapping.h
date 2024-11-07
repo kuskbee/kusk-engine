@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <wrl.h>
+#include <wrl/client.h>
 
 #include "D3D11Utils.h"
 #include "GeometryGenerator.h"
@@ -15,6 +15,7 @@ using Microsoft::WRL::ComPtr;
 class CubeMapping {
 public:
 	void Initialize(ComPtr<ID3D11Device>& device,
+					const wchar_t* originalFilename,
 					const wchar_t* diffuseFilename,
 					const wchar_t* specularFilename);
 
@@ -30,7 +31,10 @@ public:
 	static_assert((sizeof(VertexConstantData) % 16) == 0,
 				  "Constant Buffer size must be 16-byte aligned");
 public:
-	// IBL을 위해 다른 메쉬들도 사용
+	// Pre-filter가 되지 않은 원본 텍스쳐
+	ComPtr<ID3D11ShaderResourceView> m_originalResView;
+
+	// IBL을 위해 다른 물체들 그릴 때도 사용
 	ComPtr<ID3D11ShaderResourceView> m_diffuseResView;
 	ComPtr<ID3D11ShaderResourceView> m_specularResView;
 

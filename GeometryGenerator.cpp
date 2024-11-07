@@ -8,13 +8,11 @@ using namespace std;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
-MeshData GeometryGenerator::MakeSquare( ) {
+MeshData GeometryGenerator::MakeSquare(const float scale) {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
 	vector<Vector2> texcoords; // 텍스쳐 좌표
-
-	const float scale = 1.0f;
 
 	positions.push_back(Vector3(-1.0f, 1.0f, 0.0f) * scale);
 	positions.push_back(Vector3(1.0f, 1.0f, 0.0f) * scale);

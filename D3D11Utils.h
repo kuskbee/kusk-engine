@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <windows.h>
-#include <wrl.h> // ComPtr
+#include <wrl/client.h> // ComPtr
 
 namespace kusk {
 using namespace std;

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+#include "Camera.h"
 #include "D3D11Utils.h"
 
 namespace kusk {
@@ -34,7 +35,7 @@ public :
 	// 마우스를 다루기 위한 편의성 재정의
 	virtual void OnMouseDown(WPARAM btnState, int x, int y) {};
 	virtual void OnMouseUp(WPARAM btnState, int x, int y) {};
-	virtual void OnMouseMove(WPARAM btnState, int x, int y) {};
+	virtual void OnMouseMove(WPARAM btnState, int x, int y);
 
 protected:
 	bool InitMainWindow();
@@ -64,6 +65,12 @@ public:
 	// Depth Buffer
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
 	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
+
+	Camera m_camera;
+	bool m_useFirstPersonView = false;
+
+	// 현재 키보드가 눌렸는지 상태를 저장하는 배열
+	bool m_keyPressed[ 256 ] = { false };
 
 	D3D11_VIEWPORT m_screenViewport;
 };
