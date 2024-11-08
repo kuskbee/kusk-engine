@@ -166,17 +166,19 @@ void KuskApp::Update(float dt) {
 	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 
-	// mainSphere의 회전 계산용
-	static Vector3 prevVector(0.0f);
-	Quaternion q = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), 0.0f);
-
 	m_meshGroupCharacter.m_basicVertexConstantData.view = viewRow.Transpose( );
 	m_meshGroupCharacter.m_basicVertexConstantData.proj = projRow.Transpose( );
 	m_meshGroupCharacter.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
 
+	// mainSphere의 회전 및 이동 계산용
+	static float prevRatio = 0.0f;
+	Quaternion q = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), 0.0f);
+	static Vector3 prevPos(0.0f);
+	Vector3 dragTranslation(0.0f);
+
 	// 마우스 선택했을 때만 업데이트
-	if (m_leftButton)
+	if (m_leftButton || m_rightButton)
 	{
 		// OnMouseMove에서 m_mouseNdcX, m_mouseNdxY 저장
 
@@ -212,18 +214,36 @@ void KuskApp::Update(float dt) {
 			m_cursorSphere.UpdateConstantBuffers(m_device, m_context);
 
 			// mainSphere를 어떻게 회전시킬지 결정
-			if (m_dragStartFlag) { // 드래그를 시작하는 경우
-				m_dragStartFlag = false;
+			if (m_leftButton)
+			{
+				if (m_dragStartFlag) { // 드래그를 시작하는 경우
+					m_dragStartFlag = false;
 
-				prevVector = pickPoint - Vector3(m_mainBoundingSphere.Center);
+					prevPos = pickPoint - Vector3(m_mainBoundingSphere.Center);
+				}
+				else {
+					Vector3 currentPos = pickPoint - Vector3(m_mainBoundingSphere.Center);
+
+					// 마우스가 조금이라도 움직였을 경우에만 회전시키기
+					if ((currentPos - prevPos).Length( ) > 1e-3) {
+						q = Quaternion::FromToRotation(prevPos, currentPos);
+						prevPos = currentPos;
+					}
+				}
 			}
-			else {
-				Vector3 currentVector = pickPoint - Vector3(m_mainBoundingSphere.Center);
-				
-				// 마우스가 조금이라도 움직였을 경우에만 회전시키기
-				if ((currentVector - prevVector).Length( ) > 1e-3) {
-					q = Quaternion::FromToRotation(prevVector, currentVector);
-					prevVector = currentVector;
+			// mainSphere를 어떻게 이동시킬지 결정
+			else if (m_rightButton)
+			{
+				if (m_dragStartFlag) { // 드래그를 시작하는 경우
+					m_dragStartFlag = false;
+
+					prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
+					prevPos = pickPoint;
+				}
+				else {
+					Vector3 newPos = cursorWorldNear + prevRatio * (cursorWorldFar - cursorWorldNear);
+					dragTranslation = newPos - prevPos;
+					prevPos = newPos;
 				}
 			}
 		}
@@ -233,8 +253,11 @@ void KuskApp::Update(float dt) {
 	Vector3 translation = m_mainSphere.m_modelWorldRow.Translation( );
 	m_mainSphere.m_modelWorldRow.Translation(Vector3(0.0f));
 	m_mainSphere.UpdateModelWorld(m_mainSphere.m_modelWorldRow *
-								  Matrix::CreateFromQuaternion(q) *
-								  Matrix::CreateTranslation(translation));
+							  Matrix::CreateFromQuaternion(q) *
+							  Matrix::CreateTranslation(dragTranslation) *
+							  Matrix::CreateTranslation(translation));
+	//Bounding Sphere도 같이 이동
+	m_mainBoundingSphere.Center = m_mainSphere.m_modelWorldRow.Translation( );
 	m_mainSphere.m_basicVertexConstantData.view = viewRow.Transpose( );
 	m_mainSphere.m_basicVertexConstantData.proj = projRow.Transpose( );
 	m_mainSphere.m_basicPixelConstantData.eyeWorld = eyeWorld;
@@ -279,7 +302,7 @@ void KuskApp::Render() {
 		m_meshGroupCharacter.Render(m_context);
 	}
 
-	if (m_leftButton && m_selected)
+	if ((m_leftButton || m_rightButton) && m_selected)
 		m_cursorSphere.Render(m_context);
 
 	m_meshGroupGround.Render(m_context);

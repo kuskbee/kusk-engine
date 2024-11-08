@@ -177,12 +177,15 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
-        if (!m_leftButton)
+        if (!m_leftButton && !m_rightButton)
             m_dragStartFlag = true;
         m_leftButton = true;
         break;
     case WM_RBUTTONDOWN:
         // cout << "WM_RBUTTONDOWN Right mouse button" << endl;
+        if (!m_rightButton && !m_leftButton)
+            m_dragStartFlag = true;
+        m_rightButton = true;
         break;
     case WM_LBUTTONUP:
         // cout << "WM_LBUTTONUP Left mouse button" << endl;
@@ -190,6 +193,7 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_RBUTTONUP:
         // cout << "WM_RBUTTONUP Right mouse button" << endl;
+        m_rightButton = false;
         break;
     case WM_KEYDOWN:
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
