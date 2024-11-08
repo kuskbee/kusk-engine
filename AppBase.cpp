@@ -127,16 +127,17 @@ void AppBase::OnMouseMove(WPARAM btnState, int mouseX, int mouseY) {
     // 마우스 커서의 위치를 NDC로 변환
     // 마우스 커서는 좌측 상단 (0, 0), 우측 하단 (width-1, height-1)
     // NDC는 좌측 상단 (-1, -1), 우측 하단 (1, 1)
-    float x = mouseX * 2.0f / m_screenWidth - 1.0f;
-    float y = -mouseY * 2.0f / m_screenHeight + 1.0f;
+    m_cursorNdcX = mouseX * 2.0f / m_screenWidth - 1.0f;
+    m_cursorNdcY = -mouseY * 2.0f / m_screenHeight + 1.0f;
 
     // 커서가 화면 밖으로 나갔을 경우 범위 조절
-    x = std::clamp(x, -1.0f, 1.0f);
-    y = std::clamp(y, -1.0f, 1.0f);
+    m_cursorNdcX = std::clamp(m_cursorNdcX, -1.0f, 1.0f);
+    m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
 
     // 카메라 시점 회전
-    if (m_useFirstPersonView)
-        m_camera.UpdateMouse(x, y);
+    if (m_useFirstPersonView) {
+        m_camera.UpdateMouse(m_cursorNdcX, m_cursorNdcY);
+    }
 }
 
 LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -174,8 +175,16 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // cout << "Mouse " << LOWORD(lParam) << " " << HIWORD(lParam) << endl;
         OnMouseMove(wParam, LOWORD(lParam), HIWORD(lParam));
         break;
+    case WM_LBUTTONDOWN:
+        // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
+        m_leftButton = true;
+        break;
+    case WM_RBUTTONDOWN:
+        // cout << "WM_RBUTTONDOWN Right mouse button" << endl;
+        break;
     case WM_LBUTTONUP:
         // cout << "WM_LBUTTONUP Left mouse button" << endl;
+        m_leftButton = false;
         break;
     case WM_RBUTTONUP:
         // cout << "WM_RBUTTONUP Right mouse button" << endl;

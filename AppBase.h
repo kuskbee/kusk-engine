@@ -33,8 +33,6 @@ public :
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	// 마우스를 다루기 위한 편의성 재정의
-	virtual void OnMouseDown(WPARAM btnState, int x, int y) {};
-	virtual void OnMouseUp(WPARAM btnState, int x, int y) {};
 	virtual void OnMouseMove(WPARAM btnState, int x, int y);
 
 protected:
@@ -61,6 +59,7 @@ public:
 	ComPtr<ID3D11RasterizerState> m_solidRasterizerState;
 	ComPtr<ID3D11RasterizerState> m_wireRasterizerState;
 	bool m_drawAsWire = false;
+	bool m_usePostProcessing = true;
 
 	// Depth Buffer
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
@@ -71,8 +70,16 @@ public:
 
 	// 현재 키보드가 눌렸는지 상태를 저장하는 배열
 	bool m_keyPressed[ 256 ] = { false };
+	bool m_leftButton = false;
+	bool m_selected = false;
 
 	D3D11_VIEWPORT m_screenViewport;
+
+	// 마우스 커서 위치 저장 (Picking에 사용)
+	int m_cursorX = 0;
+	int m_cursorY = 0;
+	float m_cursorNdcX = 0.0f;
+	float m_cursorNdcY = 0.0f;
 };
 
 } // namespace kusk

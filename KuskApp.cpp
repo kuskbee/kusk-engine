@@ -1,5 +1,6 @@
 #include "KuskApp.h"
 
+#include <DirectXCollision.h> // 구와 광선 충돌 계산에 사용
 #include <directxtk/DDSTextureLoader.h>
 #include <vector>
 
@@ -20,11 +21,51 @@ bool KuskApp::Initialize() {
 	m_cubeMapping.Initialize(m_device, SKYBOX_ORGN_DDS, SKYBOX_DIFF_DDS, SKYBOX_SPEC_DDS);
 
 	// $sphere
-	MeshData sphere = GeometryGenerator::MakeSphere(0.1f, 20, 20);
-	sphere.textureFilename = "ojwD8.jpg";
-	m_meshGroupSphere.Initialize(m_device, { sphere });
-	m_meshGroupSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
-	m_meshGroupSphere.m_specularResView = m_cubeMapping.m_specularResView;
+	{
+		Vector3 center(0.0f, 0.2f, 3.0f);
+		float radius = 1.0f;
+		MeshData sphere = GeometryGenerator::MakeSphere(radius, 20, 20);
+		sphere.textureFilename = EARTH_TEXTURE;
+		m_mainSphere.Initialize(m_device, { sphere });
+		m_mainSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
+		m_mainSphere.m_specularResView = m_cubeMapping.m_specularResView;
+
+		// 위치 초기화
+		Matrix modelMat = Matrix::CreateTranslation(center);
+		Matrix invTransposeRow = modelMat;
+		invTransposeRow.Translation(Vector3(0.0f));
+		invTransposeRow = invTransposeRow.Invert( ).Transpose( );
+		m_mainSphere.m_basicVertexConstantData.model = modelMat.Transpose( );
+		m_mainSphere.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+		m_mainSphere.m_basicPixelConstantData.useTexture = true;
+		m_mainSphere.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
+		m_mainSphere.m_basicPixelConstantData.material.specular = Vector3(0.3f);
+		m_mainSphere.UpdateConstantBuffers(m_device, m_context);
+
+		// 동일한 크기와 위치에 BoundingSphere 만들기
+		m_mainBoundingSphere = BoundingSphere(center, radius); 
+	}
+
+	// $cursor sphere 
+	// - main sphere와의 충돌이 감지되면 월드 공간에 작게 그려지는 구
+	{
+		MeshData sphere = GeometryGenerator::MakeSphere(0.05f, 10, 10);
+		m_cursorSphere.Initialize(m_device, { sphere });
+		m_cursorSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
+		m_cursorSphere.m_specularResView = m_cubeMapping.m_specularResView;
+
+		// 위치 초기화
+		Matrix modelMat = Matrix::CreateTranslation({ 0.0f, 0.0f, 0.0f });
+		Matrix invTransposeRow = modelMat;
+		invTransposeRow.Translation(Vector3(0.0f));
+		invTransposeRow = invTransposeRow.Invert( ).Transpose( );
+		m_cursorSphere.m_basicVertexConstantData.model = modelMat.Transpose( );
+		m_cursorSphere.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+		m_cursorSphere.m_basicPixelConstantData.useTexture = false;
+		m_cursorSphere.m_basicPixelConstantData.material.diffuse = Vector3(0.0f, 1.0f, 1.0f);
+		m_cursorSphere.m_basicPixelConstantData.material.specular = Vector3(0.0f);
+		m_cursorSphere.UpdateConstantBuffers(m_device, m_context);
+	}
 
 	// $character
 	m_meshGroupCharacter.Initialize(
@@ -34,13 +75,13 @@ bool KuskApp::Initialize() {
 
 	// $ground
 	MeshData ground = GeometryGenerator::MakeSquare(2.0f);
-	ground.textureFilename = BLENDER_UV_GRID_2K;
+	ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 	m_meshGroupGround.Initialize(m_device, { ground });
 	m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 	m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
 
 	// 바닥으로 사용하기 위해 회전
-	Matrix modelMat = Matrix::CreateRotationX(DirectX::XM_PIDIV2);
+	Matrix modelMat = Matrix::CreateRotationX(DirectX::XM_PIDIV2) * Matrix::CreateTranslation(Vector3(0.0f, -0.5f, 0.0f));
 	Matrix invTransposeRow = modelMat;
 	invTransposeRow.Translation(Vector3(0.0f));
 	invTransposeRow = invTransposeRow.Invert( ).Transpose( );
@@ -75,49 +116,98 @@ void KuskApp::Update(float dt) {
 	Matrix projRow = m_camera.GetProjRow( );
 	Vector3 eyeWorld = m_camera.GetEyePos( );
 
-	auto& visibleMeshGroup = m_visibleMeshIndex == 0 ? m_meshGroupSphere : m_meshGroupCharacter;
+#pragma region visibleMeshGroup_Transform_COMMENTED_OUT
+	//auto& visibleMeshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
 
-	auto modelRow = Matrix::CreateScale(m_modelScaling) *
-					Matrix::CreateRotationY(m_modelRotation.y) *
-					Matrix::CreateRotationX(m_modelRotation.x) *
-					Matrix::CreateRotationZ(m_modelRotation.z) *
-					Matrix::CreateTranslation(m_modelTranslation);
+	//auto modelRow = Matrix::CreateScale(m_modelScaling) *
+	//				Matrix::CreateRotationY(m_modelRotation.y) *
+	//				Matrix::CreateRotationX(m_modelRotation.x) *
+	//				Matrix::CreateRotationZ(m_modelRotation.z) *
+	//				Matrix::CreateTranslation(m_modelTranslation);
 
-	auto invTransposeRow = modelRow;
-	invTransposeRow.Translation(Vector3(0.0f));
-	invTransposeRow = invTransposeRow.Invert( ).Transpose( );
+	//auto invTransposeRow = modelRow;
+	//invTransposeRow.Translation(Vector3(0.0f));
+	//invTransposeRow = invTransposeRow.Invert( ).Transpose( );
 
-	const float aspect = AppBase::GetAspectRatio( );
+	//const float aspect = AppBase::GetAspectRatio( );
 
-	// MeshGroup의 ConstantBuffers 업데이트
-	for (int i = 0; i < MAX_LIGHTS; i++) {
-		// 다른 조명 끄기
-		if (i != m_lightType) {
-			visibleMeshGroup.m_basicPixelConstantData.lights[ i ].strength *= 0.0f;
-		}
-		else
-		{
-			visibleMeshGroup.m_basicPixelConstantData.lights[ i ] = m_lightFromGUI;
-		}
-	}
+	//// MeshGroup의 ConstantBuffers 업데이트
+	//for (int i = 0; i < MAX_LIGHTS; i++) {
+	//	// 다른 조명 끄기
+	//	if (i != m_lightType) {
+	//		visibleMeshGroup.m_basicPixelConstantData.lights[ i ].strength *= 0.0f;
+	//	}
+	//	else
+	//	{
+	//		visibleMeshGroup.m_basicPixelConstantData.lights[ i ] = m_lightFromGUI;
+	//	}
+	//}
 
-	visibleMeshGroup.m_basicVertexConstantData.model = modelRow.Transpose( );
-	visibleMeshGroup.m_basicVertexConstantData.view = viewRow.Transpose( );
-	visibleMeshGroup.m_basicVertexConstantData.proj = projRow.Transpose( );
-	visibleMeshGroup.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
-	visibleMeshGroup.m_basicPixelConstantData.eyeWorld = eyeWorld;
-	visibleMeshGroup.m_basicPixelConstantData.material.diffuse = Vector3(m_materialDiffuse);
-	visibleMeshGroup.m_basicPixelConstantData.material.specular = Vector3(m_materialSpecular);
-	visibleMeshGroup.UpdateConstantBuffers(m_device, m_context);
+	//visibleMeshGroup.m_basicVertexConstantData.model = modelRow.Transpose( );
+	//visibleMeshGroup.m_basicVertexConstantData.view = viewRow.Transpose( );
+	//visibleMeshGroup.m_basicVertexConstantData.proj = projRow.Transpose( );
+	//visibleMeshGroup.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+	//visibleMeshGroup.m_basicPixelConstantData.eyeWorld = eyeWorld;
+	//visibleMeshGroup.m_basicPixelConstantData.material.diffuse = Vector3(m_materialDiffuse);
+	//visibleMeshGroup.m_basicPixelConstantData.material.specular = Vector3(m_materialSpecular);
+	//visibleMeshGroup.UpdateConstantBuffers(m_device, m_context);
+#pragma endregion
 
 	// 큐브매핑을 위한 constantBuffers 업데이트
 	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, viewRow.Transpose( ), projRow.Transpose( ));
 
+	// 다른 물체들 Constant Buffer 업데이트
 	m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
 	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );
 	m_meshGroupGround.m_basicVertexConstantData.proj = projRow.Transpose( );
 	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
+
+	m_mainSphere.m_basicPixelConstantData.eyeWorld = eyeWorld;
+	m_mainSphere.m_basicVertexConstantData.view = viewRow.Transpose( );
+	m_mainSphere.m_basicVertexConstantData.proj = projRow.Transpose( );
+	m_mainSphere.UpdateConstantBuffers(m_device, m_context);
+
+	// 마우스 클릭했을 때만 업데이트
+	if (m_leftButton)
+	{
+		// OnMouseMove에서 m_mouseNdcX, m_mouseNdxY 저장
+
+		// ViewFrustum에서 가까운 면 위의 커서 위치 (z값 유의)
+		Vector3 cursorNdcNear = Vector3(m_cursorNdcX, m_cursorNdcY, 0.0f);
+		
+		// ViewFrustum에서 먼 면 위의 커서 위치 (z값 유의)
+		Vector3 cursorNdcFar = Vector3(m_cursorNdcX, m_cursorNdcY, 1.0f);
+
+		// NDC 커서 위치를 월드 좌표계로 역변환 해주는 행렬
+		Matrix inverseProjView = (viewRow * projRow).Invert( );
+
+		// ViewFrustum 안에서 PickingRay의 방향 구하기
+		Vector3 worldNear = Vector3::Transform(cursorNdcNear, inverseProjView);
+		Vector3 worldFar = Vector3::Transform(cursorNdcFar, inverseProjView);
+		Vector3 dir = worldFar - worldNear;
+		dir.Normalize( );
+
+		// 광선을 만들고 충돌 감지
+		SimpleMath::Ray curRay = SimpleMath::Ray(worldNear, dir);
+		float dist = 0.0f;
+		m_selected = curRay.Intersects(m_mainBoundingSphere, dist);
+
+		if (m_selected) {
+			m_cursorSphere.m_basicPixelConstantData.eyeWorld = eyeWorld;
+
+			// 충돌 지점에 작은 구 그리기
+			Matrix modelMat = Matrix::CreateTranslation(worldNear + dist * dir);
+			Matrix invTransposeRow = modelMat;
+			invTransposeRow.Translation(Vector3(0.0f));
+			invTransposeRow = invTransposeRow.Invert( ).Transpose( );
+			m_cursorSphere.m_basicVertexConstantData.model = modelMat.Transpose();
+			m_cursorSphere.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+			m_cursorSphere.m_basicVertexConstantData.view = viewRow.Transpose( );
+			m_cursorSphere.m_basicVertexConstantData.proj = projRow.Transpose( );
+			m_cursorSphere.UpdateConstantBuffers(m_device, m_context);
+		}
+	}
 
 	if (m_dirtyFlag) {
 		assert(m_filters.size( ) > 1);
@@ -151,11 +241,14 @@ void KuskApp::Render() {
 
 	// 물체들
 	if (m_visibleMeshIndex == 0) {
-		m_meshGroupSphere.Render(m_context);
+		m_mainSphere.Render(m_context);
 	}
 	else {
 		m_meshGroupCharacter.Render(m_context);
 	}
+
+	if (m_leftButton && m_selected)
+		m_cursorSphere.Render(m_context);
 
 	m_meshGroupGround.Render(m_context);
 
@@ -163,10 +256,12 @@ void KuskApp::Render() {
 	m_cubeMapping.Render(m_context);
 
 	// 후처리 필터
-	for (auto& f : m_filters) {
-		f->Render(m_context);
+	if (m_usePostProcessing) {
+		for (auto& f : m_filters) {
+			f->Render(m_context);
+		}
 	}
-
+	
 }
 
 void KuskApp::BuildFilters( ) {
@@ -233,8 +328,9 @@ void KuskApp::BuildFilters( ) {
 void KuskApp::UpdateGUI() {
 
 	ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
+	ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
 	
-	auto& meshGroup = m_visibleMeshIndex == 0 ? m_meshGroupSphere : m_meshGroupCharacter;
+	auto& meshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
 
 	if (ImGui::RadioButton("Sphere", m_visibleMeshIndex == 0)) {
 		m_visibleMeshIndex = 0;
@@ -254,11 +350,15 @@ void KuskApp::UpdateGUI() {
 	ImGui::SliderFloat("Rim Power", &meshGroup.m_basicPixelConstantData.rimPower,
 					   0.01f, 10.0f);
 
-	m_dirtyFlag +=
-		ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
-	m_dirtyFlag +=
-		ImGui::SliderFloat("Bloom Strength", &m_strength, 0.0f, 3.0f);
-
+	// 후 처리 필터 사용시에만 옵션 보여주기
+	if (m_usePostProcessing)
+	{
+		m_dirtyFlag +=
+			ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
+		m_dirtyFlag +=
+			ImGui::SliderFloat("Bloom Strength", &m_strength, 0.0f, 3.0f);
+	}
+	
 	ImGui::Checkbox("Use Texture",
 					&meshGroup.m_basicPixelConstantData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
@@ -269,9 +369,10 @@ void KuskApp::UpdateGUI() {
 		meshGroup.m_drawNormalsDirtyFlag = true;
 	}
 
-	ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
+	//
+	/*ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
 	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
-	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);
+	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);*/
 	
 	ImGui::SliderFloat3("Material FresnelR0",
 						&meshGroup.m_basicPixelConstantData.material.fresnelR0.x, 0.0f, 1.0f);

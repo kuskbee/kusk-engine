@@ -25,4 +25,5 @@
 
 
 // Textures
-#define BLENDER_UV_GRID_2K "./Assets/Textures/blender_uv_grid_2k.png"
+#define BLENDER_UV_GRID_2K_TEXTURE "./Assets/Textures/blender_uv_grid_2k.png"
+#define EARTH_TEXTURE "./Assets/Textures/earth.jpg";

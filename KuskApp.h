@@ -14,6 +14,7 @@
 namespace kusk {
 
 using DirectX::SimpleMath::Vector3;
+using DirectX::BoundingSphere;
 
 class KuskApp : public AppBase
 {
@@ -28,14 +29,17 @@ public:
 	void BuildFilters( );
 
 protected:
-	BasicMeshGroup m_meshGroupSphere;
+	BasicMeshGroup m_mainSphere;
+	BoundingSphere m_mainBoundingSphere;	//
+	BasicMeshGroup m_cursorSphere;			//
+
 	BasicMeshGroup m_meshGroupCharacter;
 	BasicMeshGroup m_meshGroupGround;
 	CubeMapping m_cubeMapping;
 
-	Vector3 m_modelTranslation = Vector3(0.0f, 0.2f, 0.6f);
+	/*Vector3 m_modelTranslation = Vector3(0.0f, 0.2f, 0.6f);
 	Vector3 m_modelRotation = Vector3(0.0f, 0.0f, 0.0f);
-	Vector3 m_modelScaling = Vector3(1.8f);
+	Vector3 m_modelScaling = Vector3(1.8f);*/
 
 	int m_lightType = 0;
 	Light m_lightFromGUI;
