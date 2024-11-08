@@ -19,7 +19,12 @@ public:
                                ComPtr<ID3D11DeviceContext>& context);
 
     void Render(ComPtr<ID3D11DeviceContext>& context);
+
+    void UpdateModelWorld(const Matrix& modelToWorldRow);
 public:
+    Matrix m_modelWorldRow = Matrix( );
+    Matrix m_invTransposeRow = Matrix( );
+
 	// ExampleApp::Update()에서 접근
     BasicVertexConstantData m_basicVertexConstantData;
     BasicPixelConstantData m_basicPixelConstantData;

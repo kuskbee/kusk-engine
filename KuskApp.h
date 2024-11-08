@@ -5,16 +5,16 @@
 #include <memory>
 
 #include "AppBase.h"
+#include "BasicMeshGroup.h"
 #include "CubeMapping.h"
 #include "GeometryGenerator.h"
-#include "Light.h"
-#include "BasicMeshGroup.h"
 #include "ImageFilter.h"
+#include "Light.h"
 
 namespace kusk {
 
-using DirectX::SimpleMath::Vector3;
 using DirectX::BoundingSphere;
+using DirectX::SimpleMath::Vector3;
 
 class KuskApp : public AppBase
 {
@@ -54,7 +54,8 @@ protected:
 	int m_dirtyFlag = 1; // 처음 한 번만 실행
 	int m_down = 16;
 	int m_repeat = 5;
-	float m_threshold = 0.95f;
-	float m_strength = 0.3f;
+	float m_threshold = 0.0f;
+	float m_strength = 0.8f;
+
 };
 } // namespace kusk

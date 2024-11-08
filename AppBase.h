@@ -71,6 +71,7 @@ public:
 	// 현재 키보드가 눌렸는지 상태를 저장하는 배열
 	bool m_keyPressed[ 256 ] = { false };
 	bool m_leftButton = false;
+	bool m_dragStartFlag = false;
 	bool m_selected = false;
 
 	D3D11_VIEWPORT m_screenViewport;

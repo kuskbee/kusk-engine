@@ -177,6 +177,8 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
+        if (!m_leftButton)
+            m_dragStartFlag = true;
         m_leftButton = true;
         break;
     case WM_RBUTTONDOWN:

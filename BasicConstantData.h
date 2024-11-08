@@ -11,7 +11,7 @@ using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
 struct BasicVertexConstantData {
-	Matrix model;
+	Matrix modelWorld;
 	Matrix invTranspose;
 	Matrix view;
 	Matrix proj;

@@ -2,7 +2,7 @@
 
 cbuffer BasicVertexConstantData : register(b0)
 {
-    matrix model;
+    matrix modelWorld;
     matrix invTranspose;
     matrix view;
     matrix projection;
@@ -23,7 +23,7 @@ PixelShaderInput main(VertexShaderInput input)
     output.normalWorld = mul(normal, invTranspose).xyz;
     output.normalWorld = normalize(output.normalWorld);
     
-    pos = mul(pos, model);
+    pos = mul(pos, modelWorld);
     
     float t = input.texcoord.x; // 끝점만 그려지게끔.
     pos.xyz += output.normalWorld * t * scale;

@@ -2,7 +2,7 @@
 
 cbuffer BasicVertexConstantData : register(b0)
 {
-    matrix model;
+    matrix modelWorld;
     matrix invTranspose;
     matrix view;
     matrix projection;
@@ -13,7 +13,7 @@ PixelShaderInput main(VertexShaderInput input)
     PixelShaderInput output;
     output.posModel = input.posModel;
     float4 pos = float4(input.posModel, 1.0f);
-    pos = mul(pos, model);
+    pos = mul(pos, modelWorld);
     
     output.posWorld = pos.xyz;
     
