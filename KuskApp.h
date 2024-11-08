@@ -6,6 +6,7 @@
 
 #include "AppBase.h"
 #include "BasicMeshGroup.h"
+#include "BillboardPoints.h"
 #include "CubeMapping.h"
 #include "GeometryGenerator.h"
 #include "ImageFilter.h"
@@ -29,6 +30,7 @@ public:
 	void BuildFilters( );
 
 protected:
+	BillboardPoints m_billboardPoints;
 	BasicMeshGroup m_mainSphere;
 	BoundingSphere m_mainBoundingSphere;	//
 	BasicMeshGroup m_cursorSphere;			//
@@ -55,7 +57,7 @@ protected:
 	int m_down = 16;
 	int m_repeat = 5;
 	float m_threshold = 0.0f;
-	float m_strength = 0.8f;
+	float m_strength = 0.6f;
 
 };
 } // namespace kusk

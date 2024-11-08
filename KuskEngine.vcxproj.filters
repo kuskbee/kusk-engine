@@ -45,6 +45,9 @@
     <ClCompile Include="ImageFilter.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="BillboardPoints.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -95,6 +98,9 @@
     <ClInclude Include="Camera.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="BillboardPoints.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicPixelShader.hlsl" />
@@ -108,6 +114,9 @@
     <FxCompile Include="CombinePixelShader.hlsl" />
     <FxCompile Include="SamplingVertexShader.hlsl" />
     <FxCompile Include="SamplingPixelShader.hlsl" />
+    <FxCompile Include="BillboardPointsVertexShader.hlsl" />
+    <FxCompile Include="BillboardPointsGeometryShader.hlsl" />
+    <FxCompile Include="BillboardPointsPixelShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

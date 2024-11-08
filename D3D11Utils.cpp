@@ -135,6 +135,33 @@ void D3D11Utils::CreateIndexBuffer(ComPtr<ID3D11Device>& device,
     device->CreateBuffer(&bufferDesc, &indexBufferData, indexBuffer.GetAddressOf( ));
 }
 
+void D3D11Utils::CreateGeometryShader(
+    ComPtr<ID3D11Device>& device,
+    const wstring& filename,
+    ComPtr<ID3D11GeometryShader>& geometryShader) {
+
+    ComPtr<ID3DBlob> shaderBlob;
+    ComPtr<ID3DBlob> errorBlob;
+
+    UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    // 쉐이더의 시작점의 이름이 "main"인 함수로 지정
+    // D3D_COMPILE_STANDARD_FILE_INCLUDE 추가 : 쉐이더에서 include 사용
+    HRESULT hr = D3DCompileFromFile(
+        filename.c_str( ), 0, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main",
+        "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+
+    // CheckResult(hr, errorBlob.Get());
+
+    device->CreateGeometryShader(shaderBlob->GetBufferPointer( ),
+                                 shaderBlob->GetBufferSize( ), NULL,
+                                 &geometryShader);
+
+}
+
 void D3D11Utils::CreateTexture(
     ComPtr<ID3D11Device>& device,
     const std::string filename,

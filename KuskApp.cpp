@@ -19,12 +19,19 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
+	// 포인트로 빌보드 만들기
+	m_billboardPoints.Initialize(m_device, {{-0.5f, 0.3f, 0.0f, 1.0f},
+											{-0.25f, 0.3f, 0.0f, 1.0f},
+											{0.0f, 0.3f, 0.0f, 1.0f},
+											{0.25f, 0.3f, 0.0f, 1.0f},
+											{0.5f, 0.3f, 0.0f, 1.0f}});
+
 	m_cubeMapping.Initialize(m_device, SKYBOX_ORGN_DDS, SKYBOX_DIFF_DDS, SKYBOX_SPEC_DDS);
 
 	// $sphere
 	{
-		Vector3 center(0.0f, 0.3f, 3.0f);
-		float radius = 1.3f;
+		Vector3 center(0.0f, 0.3f, 2.0f);
+		float radius = 0.3f;
 		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100);
 		sphere.textureFilename = EARTH_TEXTURE;
 		m_mainSphere.Initialize(m_device, { sphere });
@@ -77,24 +84,17 @@ bool KuskApp::Initialize() {
 	}
 	
 	// $ground
-	MeshData ground = GeometryGenerator::MakeSquare(2.0f);
-	ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
-	m_meshGroupGround.Initialize(m_device, { ground });
-	m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
-	m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
-
-	// 바닥으로 사용하기 위해 회전
-	Matrix modelMat = Matrix::CreateRotationX(DirectX::XM_PIDIV2) * Matrix::CreateTranslation(Vector3(0.0f, -0.5f, 0.0f));
-	Matrix invTransposeRow = modelMat;
-	invTransposeRow.Translation(Vector3(0.0f));
-	invTransposeRow = invTransposeRow.Invert( ).Transpose( );
-
-	// ConstantBuffer 초기화
-	m_meshGroupGround.m_basicVertexConstantData.modelWorld = modelMat.Transpose( );
-	m_meshGroupGround.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
-	m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
-	m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
-	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
+	{
+		MeshData ground = GeometryGenerator::MakeSquare(2.0f);
+		ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
+		m_meshGroupGround.Initialize(m_device, { ground });
+		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
+		m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
+		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2) * Matrix::CreateTranslation(Vector3(0.0f, -0.5f, 0.0f)));
+		m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
+		m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
+		m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
+	}
 
 	BuildFilters( );
 
@@ -162,7 +162,6 @@ void KuskApp::Update(float dt) {
 	// 다른 물체들 Constant Buffer 업데이트
 	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );
 	m_meshGroupGround.m_basicVertexConstantData.proj = projRow.Transpose( );
-	m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
 	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 
@@ -170,6 +169,11 @@ void KuskApp::Update(float dt) {
 	m_meshGroupCharacter.m_basicVertexConstantData.proj = projRow.Transpose( );
 	m_meshGroupCharacter.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
+
+	m_billboardPoints.m_constantData.eyeWorld = eyeWorld;
+	m_billboardPoints.m_constantData.view = viewRow.Transpose( );
+	m_billboardPoints.m_constantData.proj = projRow.Transpose( );
+	D3D11Utils::UpdateBuffer(m_device, m_context, m_billboardPoints.m_constantData, m_billboardPoints.m_constantBuffer);
 
 	// mainSphere의 회전 및 이동 계산용
 	static float prevRatio = 0.0f;
@@ -263,7 +267,6 @@ void KuskApp::Update(float dt) {
 	m_mainSphere.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_mainSphere.UpdateConstantBuffers(m_device, m_context);
 
-
 	if (m_dirtyFlag) {
 		assert(m_filters.size( ) > 1);
 		m_filters[ 1 ]->m_pixelConstData.threshold = m_threshold;
@@ -293,6 +296,8 @@ void KuskApp::Render() {
 		m_context->RSSetState(m_wireRasterizerState.Get( ));
 	else
 		m_context->RSSetState(m_solidRasterizerState.Get( ));
+
+	m_billboardPoints.Render(m_context);
 
 	// 물체들
 	if (m_visibleMeshIndex == 0) {

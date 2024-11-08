@@ -33,6 +33,10 @@ public:
 		ComPtr<ID3D11Device>& device,
 		const vector<uint32_t>& indices,
 		ComPtr<ID3D11Buffer>& indexBuffer);
+	static void CreateGeometryShader(
+		ComPtr<ID3D11Device>& device,
+		const wstring& filename,
+		ComPtr<ID3D11GeometryShader>& geometryShader);
 
 	template <typename T_VERTEX>
 	static void CreateVertexBuffer(
