@@ -40,4 +40,16 @@ struct NormalVertexConstantData {
 	float dummy[ 3 ];
 };
 
+struct GeometryConstantData {
+	Matrix modelWorld;
+	Matrix invTranspose;
+	Matrix view;
+	Matrix proj;
+	float scale = 0.1f;
+	float dummy[ 3 ];
+};
+
+static_assert((sizeof(GeometryConstantData) % 16) == 0,
+	"Constant Buffer size must be 16-byte aligned");
+
 } // namespace kusk

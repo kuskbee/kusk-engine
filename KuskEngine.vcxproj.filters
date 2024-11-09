@@ -117,6 +117,7 @@
     <FxCompile Include="BillboardPointsVertexShader.hlsl" />
     <FxCompile Include="BillboardPointsGeometryShader.hlsl" />
     <FxCompile Include="BillboardPointsPixelShader.hlsl" />
+    <FxCompile Include="NormalGeometryShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

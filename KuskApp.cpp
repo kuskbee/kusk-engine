@@ -32,8 +32,8 @@ bool KuskApp::Initialize() {
 
 	// $sphere
 	{
-		Vector3 center(0.0f, 0.3f, 4.0f);
-		float radius = 0.3f;
+		Vector3 center(0.0f, 0.5f, 0.3f);
+		float radius = 0.5f;
 		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100);
 		sphere.textureFilename = EARTH_TEXTURE;
 		m_mainSphere.Initialize(m_device, { sphere });
@@ -54,7 +54,7 @@ bool KuskApp::Initialize() {
 	// $cursor sphere 
 	// - main sphere와의 충돌이 감지되면 월드 공간에 작게 그려지는 구
 	{
-		MeshData sphere = GeometryGenerator::MakeSphere(0.05f, 10, 10);
+		MeshData sphere = GeometryGenerator::MakeSphere(0.02f, 10, 10);
 		m_cursorSphere.Initialize(m_device, { sphere });
 		m_cursorSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_cursorSphere.m_specularResView = m_cubeMapping.m_specularResView;
@@ -260,8 +260,7 @@ void KuskApp::Update(float dt) {
 	m_mainSphere.m_modelWorldRow.Translation(Vector3(0.0f));
 	m_mainSphere.UpdateModelWorld(m_mainSphere.m_modelWorldRow *
 							  Matrix::CreateFromQuaternion(q) *
-							  Matrix::CreateTranslation(dragTranslation) *
-							  Matrix::CreateTranslation(translation));
+							  Matrix::CreateTranslation(dragTranslation + translation));
 	//Bounding Sphere도 같이 이동
 	m_mainBoundingSphere.Center = m_mainSphere.m_modelWorldRow.Translation( );
 	m_mainSphere.m_basicVertexConstantData.view = viewRow.Transpose( );
@@ -426,8 +425,7 @@ void KuskApp::UpdateGUI() {
 					&meshGroup.m_basicPixelConstantData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
 	ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals);
-	if (ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals) 
-		|| ImGui::SliderFloat("Normal scale",	&meshGroup.m_normalVertexConstantData.scale, 0.0f, 1.0f)) {
+	if (ImGui::SliderFloat("Normal scale",	&meshGroup.m_normalVertexConstantData.scale, 0.0f, 1.0f)) {
 		meshGroup.m_drawNormalsDirtyFlag = true;
 	}
 

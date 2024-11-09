@@ -33,14 +33,14 @@ void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
     PixelShaderInput output;
     
     // Triangle Strips 순서로 생성
-    output.pos = input[0].pos + -hw * right - hw * up;
+    output.pos = input[0].pos - hw * right - hw * up;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(0.0, 1.0);
     output.primID = primID;
     outputStream.Append(output);
     
-    output.pos = input[0].pos + -hw * right + hw * up;
+    output.pos = input[0].pos - hw * right + hw * up;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(0.0, 0.0);
@@ -61,5 +61,5 @@ void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
     output.primID = primID;
     outputStream.Append(output);
     
-    // outputStream.RestartStrip(); // Strip을 다시 시작
+    outputStream.RestartStrip(); // Strip을 다시 시작
 }
