@@ -109,6 +109,12 @@ public:
 					   const std::string filename,
 					   ComPtr<ID3D11Texture2D>& texture,
 					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
+
+	static void CreateTextureArray(ComPtr<ID3D11Device>& device, 
+							const std::vector<std::string> filenames,
+							ComPtr<ID3D11Texture2D>& texture, 
+							ComPtr<ID3D11ShaderResourceView>& textureResourceView);
+
 	static void CreateCubemapTexture(ComPtr<ID3D11Device>& device,
 							 const wchar_t* filename,
 							 ComPtr<ID3D11ShaderResourceView>& texResView);

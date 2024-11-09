@@ -20,17 +20,19 @@ bool KuskApp::Initialize() {
 		return false;
 
 	// 포인트로 빌보드 만들기
-	m_billboardPoints.Initialize(m_device, {{-0.5f, 0.3f, 0.0f, 1.0f},
-											{-0.25f, 0.3f, 0.0f, 1.0f},
-											{0.0f, 0.3f, 0.0f, 1.0f},
-											{0.25f, 0.3f, 0.0f, 1.0f},
-											{0.5f, 0.3f, 0.0f, 1.0f}});
+	vector<Vector4> points;
+	Vector4 p = { -4.0f, 1.0f, 2.0f, 1.0f };
+	for (int i = 0; i < 5; i++) {
+		points.push_back(p);
+		p.x += 1.8f;
+	}
+	m_billboardPoints.Initialize(m_device, points);
 
 	m_cubeMapping.Initialize(m_device, SKYBOX_ORGN_DDS, SKYBOX_DIFF_DDS, SKYBOX_SPEC_DDS);
 
 	// $sphere
 	{
-		Vector3 center(0.0f, 0.3f, 2.0f);
+		Vector3 center(0.0f, 0.3f, 4.0f);
 		float radius = 0.3f;
 		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100);
 		sphere.textureFilename = EARTH_TEXTURE;
@@ -85,12 +87,12 @@ bool KuskApp::Initialize() {
 	
 	// $ground
 	{
-		MeshData ground = GeometryGenerator::MakeSquare(2.0f);
+		MeshData ground = GeometryGenerator::MakeSquare(4.0f);
 		ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 		m_meshGroupGround.Initialize(m_device, { ground });
 		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
-		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2) * Matrix::CreateTranslation(Vector3(0.0f, -0.5f, 0.0f)));
+		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2));
 		m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
 		m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
 		m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
@@ -424,9 +426,8 @@ void KuskApp::UpdateGUI() {
 					&meshGroup.m_basicPixelConstantData.useTexture);
 	ImGui::Checkbox("Wireframe", &m_drawAsWire);
 	ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals);
-	if (ImGui::SliderFloat("Normal scale",
-		&meshGroup.m_normalVertexConstantData.scale, 0.0f,
-		1.0f)) {
+	if (ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals) 
+		|| ImGui::SliderFloat("Normal scale",	&meshGroup.m_normalVertexConstantData.scale, 0.0f, 1.0f)) {
 		meshGroup.m_drawNormalsDirtyFlag = true;
 	}
 

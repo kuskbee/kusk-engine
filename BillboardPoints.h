@@ -42,6 +42,9 @@ protected:
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 
 	uint32_t m_indexCount = 0;
+
+	ComPtr<ID3D11Texture2D> m_texArray;
+	ComPtr<ID3D11ShaderResourceView> m_texArraySRV;
 };
 }
 

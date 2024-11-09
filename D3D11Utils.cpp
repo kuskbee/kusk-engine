@@ -162,6 +162,35 @@ void D3D11Utils::CreateGeometryShader(
 
 }
 
+void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& width, int& height) {
+    
+    int channels;
+
+    unsigned char* img = stbi_load(filename.c_str( ), &width, &height, &channels, 0);
+
+    // 4채널로 만들어서 복사
+    image.resize(width * height * 4);
+
+    if (channels == 3) {
+        for (size_t i = 0; i < width * height; i++) {
+            for (size_t c = 0; c < 3; c++) {
+                image[ 4 * i + c ] = img[ i * channels + c ];
+            }
+            image[ 4 * i + 3 ] = 255;
+        }
+    }
+    else if (channels == 4) {
+        for (size_t i = 0; i < width * height; i++) {
+            for (size_t c = 0; c < 4; c++) {
+                image[ 4 * i + c ] = img[ i * channels + c ];
+            }
+        }
+    }
+    else {
+        std::cout << "Read 3 or 4 channels images only." << channels << " channels" << endl;
+    }
+}
+
 void D3D11Utils::CreateTexture(
     ComPtr<ID3D11Device>& device,
     const std::string filename,
@@ -203,6 +232,61 @@ void D3D11Utils::CreateTexture(
 
     device->CreateTexture2D(&txtDesc, &initData, texture.GetAddressOf( ));
     device->CreateShaderResourceView(texture.Get( ), nullptr, textureResourceView.GetAddressOf( ));
+}
+
+void D3D11Utils::CreateTextureArray(
+    ComPtr<ID3D11Device>& device, const std::vector<std::string> filenames,
+    ComPtr<ID3D11Texture2D>& texture, ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
+
+    // 모든 이미지의 width 와 height가 같다고 가정
+
+    int width = 0, height = 0;
+    std::vector<uint8_t> imageArray;
+    for (const auto& f : filenames) {
+        cout << f << endl;
+
+        std::vector<uint8_t> image;
+        
+        ReadImage(f, image, width, height);
+        
+        imageArray.insert(imageArray.begin( ), image.begin( ), image.end( ));
+    }
+
+    // Create Texture
+    D3D11_TEXTURE2D_DESC txtDesc;
+    ZeroMemory(&txtDesc, sizeof(txtDesc));
+    txtDesc.Width = UINT(width);
+    txtDesc.Height = UINT(height);
+    txtDesc.MipLevels = 1;
+    txtDesc.ArraySize = UINT(filenames.size( )); // texture array
+    txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    txtDesc.SampleDesc.Count = 1;
+    txtDesc.SampleDesc.Quality = 0;
+    txtDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+    // SUBRESOURCE_DATA의 배열
+    std::vector<D3D11_SUBRESOURCE_DATA> initData(filenames.size( ));
+    size_t offset = 0;
+    for (auto& i : initData) {
+        i.pSysMem = imageArray.data( ) + offset;
+        i.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * 4;
+        i.SysMemSlicePitch = txtDesc.Width * txtDesc.Height * sizeof(uint8_t) * 4;
+        offset += i.SysMemSlicePitch;
+    }
+
+    device->CreateTexture2D(&txtDesc, initData.data( ), texture.GetAddressOf( ));
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Format = txtDesc.Format;
+    desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+    desc.Texture2DArray.MostDetailedMip = 0;
+    desc.Texture2DArray.MipLevels = txtDesc.MipLevels;
+    desc.Texture2DArray.FirstArraySlice = 0;
+    desc.Texture2DArray.ArraySize = txtDesc.ArraySize;
+
+    device->CreateShaderResourceView(texture.Get( ), &desc, textureResourceView.GetAddressOf( ));
 }
 
 void D3D11Utils::CreateCubemapTexture(

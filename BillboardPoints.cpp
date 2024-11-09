@@ -23,7 +23,7 @@ void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
 
 	m_indexCount = uint32_t(points.size( ));
 
-	m_constantData.width = 0.1f;
+	m_constantData.width = 2.4f;
 	D3D11Utils::CreateConstantBuffer(device, m_constantData, m_constantBuffer);
 
 	// Geometry shader 초기화하기
@@ -35,6 +35,15 @@ void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVertexShader.hlsl", inputElements,
 												 m_vertexShader, m_inputLayout);
 	D3D11Utils::CreatePixelShader(device, L"BillboardPointsPixelShader.hlsl", m_pixelShader);
+
+	std::vector<std::string> filenames = {
+		"./Assets/Textures/TreeBillboards/1.png",
+		"./Assets/Textures/TreeBillboards/2.png",
+		"./Assets/Textures/TreeBillboards/3.png",
+		"./Assets/Textures/TreeBillboards/4.png",
+		"./Assets/Textures/TreeBillboards/5.png" };
+
+	D3D11Utils::CreateTextureArray(device, filenames, m_texArray, m_texArraySRV);
 }
 
 void BillboardPoints::Render(ComPtr<ID3D11DeviceContext>& context) {
@@ -42,6 +51,7 @@ void BillboardPoints::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->VSSetShader(m_vertexShader.Get( ), 0, 0);
 	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
 	context->PSSetShader(m_pixelShader.Get( ), 0, 0);
+	context->PSSetShaderResources(0, 1, m_texArraySRV.GetAddressOf( ));
 	
 	context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf( ));
 	context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf( ));
