@@ -1,7 +1,6 @@
 struct PixelShaderInput
 {
     float4 pos : SV_POSITION;
-    // uint primID : SV_PrimitiveID;
     float3 color : COLOR;
 };
 

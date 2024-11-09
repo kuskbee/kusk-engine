@@ -3,7 +3,9 @@ SamplerState g_sampler : register(s0);
 
 struct PixelShaderInput
 {
-    float4 posProj : SV_POSITION; // Screen Position
+    float4 pos : SV_POSITION; // Screen Position
+    float4 posWorld : POSITION0;
+    float4 center : POSITION1;
     float2 texCoord : TEXCOORD;
     uint primID : SV_PrimitiveID;
 };

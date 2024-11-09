@@ -1,11 +1,15 @@
-cbuffer GeometryConstantData : register(b0)
+cbuffer BasicVertexConstantData : register(b0)
 {
-    Matrix modelWorld;
-    Matrix invTranspose;
-    Matrix view;
-    Matrix proj;
-    float scale;
-}
+    matrix modelWorld;
+    matrix invTranspose;
+    matrix view;
+    matrix proj;
+};
+
+cbuffer NormalVertexConstantData : register(b1)
+{
+    float scale; // 그려지는 선분의 길이 조절
+};
 
 struct GeometryShaderInput
 {
@@ -16,32 +20,25 @@ struct GeometryShaderInput
 struct PixelShaderInput
 {
     float4 pos : SV_POSITION;
-    //uint primID : SV_PrimitiveID;
     float3 color : COLOR;
 };
 
 [maxvertexcount(2)]
-void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
-                              inout LineStream<PixelShaderInput> outputStream)
+void main(point GeometryShaderInput input[1], inout LineStream<PixelShaderInput> outputStream)
 {
     PixelShaderInput output;
     
-    output.pos = input[0].posModel;
-    output.pos = mul(output.pos, modelWorld);
-    output.pos = mul(output.pos, view);
+    float4 posWorld = mul(input[0].posModel, modelWorld);
+    float4 normalModel = float4(input[0].normalModel, 0.0);
+    float4 normalWorld = mul(normalModel, invTranspose);
+    normalWorld = float4(normalize(normalWorld.xyz), 0.0);
+    
+    output.pos = mul(posWorld, view);
     output.pos = mul(output.pos, proj);
     output.color = float3(1.0, 1.0, 0.0);
     outputStream.Append(output);
     
-    float4 normalModel = float4(input[0].normalModel, 0.0);
-    float3 normalWorld = mul(normalModel, invTranspose).xyz;
-    normalWorld = normalize(normalWorld);
-    
-    output.pos = input[0].posModel;
-    output.pos = mul(output.pos, modelWorld);
-    output.pos.xyz += normalWorld * scale;
-    
-    output.pos = mul(output.pos, view);
+    output.pos = mul(posWorld + scale * normalWorld, view);
     output.pos = mul(output.pos, proj);
     output.color = float3(1.0, 0.0, 0.0);
     outputStream.Append(output);

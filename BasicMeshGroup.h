@@ -28,10 +28,11 @@ public:
 	// ExampleApp::Update()에서 접근
     BasicVertexConstantData m_basicVertexConstantData;
     BasicPixelConstantData m_basicPixelConstantData;
-    GeometryConstantData m_basicGeometryConstantData;
+
 	// ExampleApp::Initialize()에서 접근
     ComPtr<ID3D11ShaderResourceView> m_diffuseResView;
     ComPtr<ID3D11ShaderResourceView> m_specularResView;
+
     // GUI에서 업데이트할 때 사용
     NormalVertexConstantData m_normalVertexConstantData;
     bool m_drawNormalsDirtyFlag = true;
@@ -48,19 +49,15 @@ private:
 
     ComPtr<ID3D11Buffer> m_vertexConstantBuffer;
     ComPtr<ID3D11Buffer> m_pixelConstantBuffer;
-    ComPtr<ID3D11Buffer> m_geometryConstantBuffer;
 
     // 메쉬의 노멀 벡터 그리기
     ComPtr<ID3D11VertexShader> m_normalVertexShader;
     ComPtr<ID3D11PixelShader> m_normalPixelShader;
-
-    //shared_ptr<Mesh> m_normalLines;
+    ComPtr<ID3D11GeometryShader> m_normalGeometryShader;
 
     ComPtr<ID3D11Buffer> m_normalVertexConstantBuffer;
     ComPtr<ID3D11Buffer> m_normalPixelConstantBuffer;
 
-    // Geometry
-    ComPtr<ID3D11GeometryShader> m_geometryShader;
 };
 
 }

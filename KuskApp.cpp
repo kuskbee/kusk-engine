@@ -19,22 +19,32 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
-	// 포인트로 빌보드 만들기
+	// 배경 나무 텍스쳐
 	vector<Vector4> points;
-	Vector4 p = { -4.0f, 1.0f, 2.0f, 1.0f };
-	for (int i = 0; i < 5; i++) {
+	Vector4 p = { -40.0f, 1.0f, 20.0f, 1.0f };
+	for (int i = 0; i < 100; i++) {
 		points.push_back(p);
-		p.x += 1.8f;
+		p.x += 2.0f;
 	}
-	m_billboardPoints.Initialize(m_device, points);
+	std::vector<std::string> treeTextureFilenames = {
+	"./Assets/Textures/TreeBillboards/1.png",
+	"./Assets/Textures/TreeBillboards/2.png",
+	"./Assets/Textures/TreeBillboards/3.png",
+	"./Assets/Textures/TreeBillboards/4.png",
+	"./Assets/Textures/TreeBillboards/5.png" };
+
+	m_billboardPoints.Initialize(m_device, points, 2.4f, L"BillboardPointsPixelShader.hlsl", treeTextureFilenames);
+
+	// Shadertoy Media Files
+	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
 
 	m_cubeMapping.Initialize(m_device, SKYBOX_ORGN_DDS, SKYBOX_DIFF_DDS, SKYBOX_SPEC_DDS);
 
 	// $sphere
 	{
-		Vector3 center(0.0f, 0.5f, 0.3f);
-		float radius = 0.5f;
-		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100);
+		Vector3 center(0.0f, 1.0f, 4.0f);
+		float radius = 1.0f;
+		MeshData sphere = GeometryGenerator::MakeSphere(radius, 50, 50);
 		sphere.textureFilename = EARTH_TEXTURE;
 		m_mainSphere.Initialize(m_device, { sphere });
 		m_mainSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
@@ -87,7 +97,7 @@ bool KuskApp::Initialize() {
 	
 	// $ground
 	{
-		MeshData ground = GeometryGenerator::MakeSquare(4.0f);
+		MeshData ground = GeometryGenerator::MakeSquare(20.0f);
 		ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 		m_meshGroupGround.Initialize(m_device, { ground });
 		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
@@ -159,7 +169,9 @@ void KuskApp::Update(float dt) {
 #pragma endregion
 
 	// 큐브매핑을 위한 constantBuffers 업데이트
-	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, viewRow.Transpose( ), projRow.Transpose( ));
+	Matrix viewEnvRow = viewRow;
+	viewEnvRow.Translation(Vector3(0.0f)); // 이동 취소
+	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, viewEnvRow.Transpose( ), projRow.Transpose( ));
 
 	// 다른 물체들 Constant Buffer 업데이트
 	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );

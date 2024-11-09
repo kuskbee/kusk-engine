@@ -17,6 +17,8 @@ struct BillboardPointsConstantData {
 	Matrix modelWorld;
 	Matrix view;
 	Matrix proj;
+	float time = 0.0f;
+	Vector3 padding;
 };
 
 static_assert((sizeof(BillboardPointsConstantData) % 16) == 0,
@@ -25,7 +27,11 @@ static_assert((sizeof(BillboardPointsConstantData) % 16) == 0,
 class BillboardPoints
 {
 public:
-	void Initialize(ComPtr<ID3D11Device>& device, const std::vector<Vector4>& points);
+	void Initialize(ComPtr<ID3D11Device>& device, 
+					const std::vector<Vector4>& points,
+					const float width,
+					const std::wstring pixelShaderFilename = L"BillboardPointsPixelShader.hlsl",
+					std::vector<std::string> filenames = {});
 	void Render(ComPtr<ID3D11DeviceContext>& context);
 public:
 	BillboardPointsConstantData m_constantData;
@@ -37,7 +43,7 @@ protected:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11SamplerState> m_samplerState;
 	ComPtr<ID3D11VertexShader> m_vertexShader;
-	ComPtr<ID3D11GeometryShader> m_geometryShader;
+	ComPtr<ID3D11GeometryShader> m_normalGeometryShader;
 	ComPtr<ID3D11PixelShader> m_pixelShader;
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 

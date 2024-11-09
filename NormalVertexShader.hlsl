@@ -1,16 +1,8 @@
-#include "Common.hlsli"
-
-cbuffer BasicVertexConstantData : register(b0)
+struct VertexShaderInput
 {
-    matrix modelWorld;
-    matrix invTranspose;
-    matrix view;
-    matrix projection;
-};
-
-cbuffer NormalVertexConstantData : register(b1)
-{
-    float scale; // 그려지는 선분의 길이 조절
+    float3 posModel : POSITION;
+    float3 normalModel : NORMAL;
+    float2 texcoord : TEXCOORD0;
 };
 
 struct GeometryShaderInput

@@ -19,7 +19,7 @@ public:
 	void SetAspectRatio(float aspect);
 
 private:
-	Vector3 m_position = Vector3(0.0f, 0.4f, -1.0f);
+	Vector3 m_position = Vector3(0.0f, 0.4f, 0.0f);
 	Vector3 m_viewDir = Vector3(0.0f, 0.0f, 1.0f);
 	Vector3 m_upDir = Vector3(0.0f, 1.0f, 0.0f);
 	Vector3 m_rightDir = Vector3(1.0f, 0.0f, 0.0f);

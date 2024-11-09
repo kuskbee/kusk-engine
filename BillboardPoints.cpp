@@ -5,8 +5,10 @@
 namespace kusk {
 
 void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
-								 const std::vector<Vector4>& points)
-{
+								 const std::vector<Vector4>& points,
+								 const float width,
+								 const std::wstring pixelShaderFilename,
+								 std::vector<std::string> filenames) {
 	// Sampler 만들기
 	D3D11_SAMPLER_DESC sampDesc;
 	ZeroMemory(&sampDesc, sizeof(sampDesc));
@@ -23,25 +25,18 @@ void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
 
 	m_indexCount = uint32_t(points.size( ));
 
-	m_constantData.width = 2.4f;
+	m_constantData.width = width;
 	D3D11Utils::CreateConstantBuffer(device, m_constantData, m_constantBuffer);
 
 	// Geometry shader 초기화하기
-	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGeometryShader.hlsl", m_geometryShader);
+	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGeometryShader.hlsl", m_normalGeometryShader);
 
 	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}};
 
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVertexShader.hlsl", inputElements,
 												 m_vertexShader, m_inputLayout);
-	D3D11Utils::CreatePixelShader(device, L"BillboardPointsPixelShader.hlsl", m_pixelShader);
-
-	std::vector<std::string> filenames = {
-		"./Assets/Textures/TreeBillboards/1.png",
-		"./Assets/Textures/TreeBillboards/2.png",
-		"./Assets/Textures/TreeBillboards/3.png",
-		"./Assets/Textures/TreeBillboards/4.png",
-		"./Assets/Textures/TreeBillboards/5.png" };
+	D3D11Utils::CreatePixelShader(device, pixelShaderFilename, m_pixelShader);
 
 	D3D11Utils::CreateTextureArray(device, filenames, m_texArray, m_texArraySRV);
 }
@@ -58,7 +53,7 @@ void BillboardPoints::Render(ComPtr<ID3D11DeviceContext>& context) {
 
 	// Geometry Shader
 	context->GSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf( ));
-	context->GSSetShader(m_geometryShader.Get( ), 0, 0);
+	context->GSSetShader(m_normalGeometryShader.Get( ), 0, 0);
 
 	context->IASetInputLayout(m_inputLayout.Get( ));
 

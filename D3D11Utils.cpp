@@ -238,6 +238,9 @@ void D3D11Utils::CreateTextureArray(
     ComPtr<ID3D11Device>& device, const std::vector<std::string> filenames,
     ComPtr<ID3D11Texture2D>& texture, ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
 
+    if (filenames.empty( ))
+        return;
+
     // 모든 이미지의 width 와 height가 같다고 가정
 
     int width = 0, height = 0;

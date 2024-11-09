@@ -14,7 +14,9 @@ struct GeometryShaderInput
 
 struct PixelShaderInput
 {
-    float4 pos : SV_POSITION;
+    float4 pos : SV_POSITION; // Screen positon
+    float4 posWorld : POSITION0;
+    float4 center : POSITION1;
     float2 texCoord : TEXCOORD;
     uint primID : SV_PrimitiveID;
 };
@@ -32,29 +34,35 @@ void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
     
     PixelShaderInput output;
     
+    output.center = input[0].pos; // 빌보드의 중심
+    
     // Triangle Strips 순서로 생성
-    output.pos = input[0].pos - hw * right - hw * up;
+    output.posWorld = input[0].pos - hw * right - hw * up;
+    output.pos = output.posWorld;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(0.0, 1.0);
     output.primID = primID;
     outputStream.Append(output);
     
-    output.pos = input[0].pos - hw * right + hw * up;
+    output.posWorld = input[0].pos - hw * right + hw * up;
+    output.pos = output.posWorld;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(0.0, 0.0);
     output.primID = primID;
     outputStream.Append(output);
     
-    output.pos = input[0].pos + hw * right - hw * up;
+    output.posWorld = input[0].pos + hw * right - hw * up;
+    output.pos = output.posWorld;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(1.0, 1.0);
     output.primID = primID;
     outputStream.Append(output);
     
-    output.pos = input[0].pos + hw * right + hw * up;
+    output.posWorld = input[0].pos + hw * right + hw * up;
+    output.pos = output.posWorld;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(1.0, 0.0);

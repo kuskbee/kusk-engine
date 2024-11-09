@@ -16,7 +16,7 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 									 m_cubeMesh->vertexConstantBuffer);
 
 	// MeshData cubeMeshData = GeometryGenerator::MakeBox(20.0f);
-	MeshData cubeMeshData = GeometryGenerator::MakeSphere(10.0f, 10, 10);
+	MeshData cubeMeshData = GeometryGenerator::MakeSphere(50.0f, 10, 10);
 	std::reverse(cubeMeshData.indices.begin( ), cubeMeshData.indices.end( ));
 
 	D3D11Utils::CreateVertexBuffer(device, cubeMeshData.vertices,
