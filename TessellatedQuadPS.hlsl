@@ -1,4 +1,4 @@
-Texture2DArray g_texArray : register(t0);
+Texture2D g_texArray : register(t0);
 SamplerState g_sampler : register(s0);
 
 struct DomainOut

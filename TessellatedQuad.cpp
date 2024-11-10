@@ -57,6 +57,10 @@ void TessellatedQuad::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->PSSetShader(m_pixelShader.Get( ), 0, 0);
 	context->PSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf( ));
 	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	ID3D11ShaderResourceView* resViews[ 3 ] = { m_texArraySRV.Get( ), 
+												m_diffuseResView.Get( ), 
+												m_specularResView.Get( ) };
+	context->PSSetShaderResources(0, 3, resViews);
 
 	// Hull Shader
 	context->HSSetShader(m_hullShader.Get( ), 0, 0);

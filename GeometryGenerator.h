@@ -1,11 +1,11 @@
 #pragma once
 
 #include <directxtk/SimpleMath.h>
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "Vertex.h"
 #include "MeshData.h"
+#include "Vertex.h"
 
 namespace kusk {
 
@@ -14,7 +14,7 @@ class GeometryGenerator
 public:
 	static vector<MeshData> ReadFromFile(std::string basePath,
 										 std::string filename);
-	static MeshData MakeSquare(const float scale = 1.0f);
+	static MeshData MakeSquare(const float scale = 1.0f, const float texScale = 1.0f);
 	static MeshData MakeBox(const float scale = 1.0f);
 	static MeshData MakeGrid(const float width, const float height,
 							const int numSlices, const int numStacks);

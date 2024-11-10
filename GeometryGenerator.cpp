@@ -8,7 +8,7 @@ using namespace std;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
-MeshData GeometryGenerator::MakeSquare(const float scale) {
+MeshData GeometryGenerator::MakeSquare(const float scale, const float texScale) {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
@@ -38,7 +38,7 @@ MeshData GeometryGenerator::MakeSquare(const float scale) {
 		Vertex v;
 		v.position = positions[ i ];
 		v.normal = normals[ i ];
-		v.texcoord = texcoords[ i ];
+		v.texcoord = texcoords[ i ] * texScale;
 		meshData.vertices.push_back(v);
 	}
 

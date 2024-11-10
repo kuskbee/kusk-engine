@@ -20,9 +20,9 @@ bool KuskApp::Initialize() {
 		return false;
 
 	// $tessellatedQuad
-	m_tessellatedQuad.Initialize(m_device);
+	/*m_tessellatedQuad.Initialize(m_device);
 	m_tessellatedQuad.m_diffuseResView = m_cubeMapping.m_diffuseResView;
-	m_tessellatedQuad.m_specularResView = m_cubeMapping.m_specularResView;
+	m_tessellatedQuad.m_specularResView = m_cubeMapping.m_specularResView;*/
 
 	// 배경 나무 텍스쳐
 	vector<Vector4> points;
@@ -38,7 +38,7 @@ bool KuskApp::Initialize() {
 	"./Assets/Textures/TreeBillboards/4.png",
 	"./Assets/Textures/TreeBillboards/5.png" };
 
-	m_billboardPoints.Initialize(m_device, points, 2.4f, L"BillboardPointsPixelShader.hlsl", treeTextureFilenames);
+	m_billboardPoints.Initialize(m_device, m_context, points, 2.4f, L"BillboardPointsPixelShader.hlsl", treeTextureFilenames);
 
 	// Shadertoy Media Files
 	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
@@ -47,11 +47,11 @@ bool KuskApp::Initialize() {
 
 	// $sphere
 	{
-		Vector3 center(0.0f, 1.0f, 4.0f);
-		float radius = 1.0f;
+		Vector3 center(0.0f, 0.5f, 1.0f);
+		float radius = 0.4f;
 		MeshData sphere = GeometryGenerator::MakeSphere(radius, 50, 50);
 		sphere.textureFilename = EARTH_TEXTURE;
-		m_mainSphere.Initialize(m_device, { sphere });
+		m_mainSphere.Initialize(m_device, m_context, { sphere });
 		m_mainSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_mainSphere.m_specularResView = m_cubeMapping.m_specularResView;
 
@@ -70,7 +70,7 @@ bool KuskApp::Initialize() {
 	// - main sphere와의 충돌이 감지되면 월드 공간에 작게 그려지는 구
 	{
 		MeshData sphere = GeometryGenerator::MakeSphere(0.02f, 10, 10);
-		m_cursorSphere.Initialize(m_device, { sphere });
+		m_cursorSphere.Initialize(m_device, m_context, { sphere });
 		m_cursorSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_cursorSphere.m_specularResView = m_cubeMapping.m_specularResView;
 
@@ -85,7 +85,7 @@ bool KuskApp::Initialize() {
 	// $character
 	{
 		m_meshGroupCharacter.Initialize(
-		m_device, "c:/workspaces/honglab/models/zelda/", "zeldaPosed001.fbx");
+		m_device, m_context, "c:/workspaces/honglab/models/zelda/", "zeldaPosed001.fbx");
 		m_meshGroupCharacter.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_meshGroupCharacter.m_specularResView = m_cubeMapping.m_specularResView;
 		Matrix modelMat = Matrix::CreateTranslation({ 0.0f, 0.2f, 3.0f });
@@ -102,9 +102,9 @@ bool KuskApp::Initialize() {
 	
 	// $ground
 	{
-		MeshData ground = GeometryGenerator::MakeSquare(20.0f);
+		MeshData ground = GeometryGenerator::MakeSquare(20.0f, 8.0f);
 		ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
-		m_meshGroupGround.Initialize(m_device, { ground });
+		m_meshGroupGround.Initialize(m_device, m_context, { ground });
 		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
 		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2));
@@ -286,11 +286,11 @@ void KuskApp::Update(float dt) {
 	m_mainSphere.UpdateConstantBuffers(m_device, m_context);
 
 	// $tessellatedQuad
-	m_tessellatedQuad.m_constantData.eyeWorld = eyeWorld;
+	/*m_tessellatedQuad.m_constantData.eyeWorld = eyeWorld;
 	m_tessellatedQuad.m_constantData.model = Matrix( );
 	m_tessellatedQuad.m_constantData.view = viewRow.Transpose( );
 	m_tessellatedQuad.m_constantData.proj = projRow.Transpose( );
-	D3D11Utils::UpdateBuffer(m_device, m_context, m_tessellatedQuad.m_constantData, m_tessellatedQuad.m_constantBuffer);
+	D3D11Utils::UpdateBuffer(m_device, m_context, m_tessellatedQuad.m_constantData, m_tessellatedQuad.m_constantBuffer);*/
 
 	if (m_dirtyFlag) {
 		assert(m_filters.size( ) > 1);
@@ -323,7 +323,7 @@ void KuskApp::Render() {
 		m_context->RSSetState(m_solidRasterizerState.Get( ));
 
 	m_billboardPoints.Render(m_context);
-	m_tessellatedQuad.Render(m_context);
+	//m_tessellatedQuad.Render(m_context);
 
 	// 물체들
 	if (m_visibleMeshIndex == 0) {
@@ -418,7 +418,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
 
 	// $m_tessellatedQuad
-	int flag = 0;
+	/*int flag = 0;
 	flag += ImGui::SliderFloat4(
 		"Edges", &m_tessellatedQuad.m_constantData.edges.x, 1, 8);
 	flag += ImGui::SliderFloat2(
@@ -427,8 +427,8 @@ void KuskApp::UpdateGUI() {
 		D3D11Utils::UpdateBuffer(m_device, m_context,
 								 m_tessellatedQuad.m_constantData,
 								 m_tessellatedQuad.m_constantBuffer);
-	}
-	
+	}*/
+
 	auto& meshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
 
 	if (ImGui::RadioButton("Sphere", m_visibleMeshIndex == 0)) {
@@ -438,6 +438,8 @@ void KuskApp::UpdateGUI() {
 	if (ImGui::RadioButton("Character", m_visibleMeshIndex == 1)) {
 		m_visibleMeshIndex = 1;
 	}
+
+	ImGui::SliderFloat("Mipmaps Level", &m_mainSphere.m_basicPixelConstantData.mipmapLevel, 0.0f, 10.0f);
 
 	ImGui::SliderFloat("Rim Strength",
 				   &meshGroup.m_basicPixelConstantData.rimStrength, 0.0f,

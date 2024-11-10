@@ -18,7 +18,8 @@ struct PixelShaderOutput
 PixelShaderOutput main(PixelShaderInput input)
 {
     float3 uvw = float3(input.texCoord, float(input.primID % 5));
-    float4 pixelColor = g_texArray.Sample(g_sampler, uvw);
+    float4 pixelColor = g_texArray.SampleLevel(g_sampler, uvw, 4);
+    //float4 pixelColor = g_texArray.Sample(g_sampler, uvw);
     
     // 1. alpha 값이 있는 이미지에서 불투명도가 0.9보다 작으면 clip
     // 2. 픽셀의 값이 흰색에 가까운 배경 색이면 clip

@@ -117,11 +117,13 @@ public:
 	}
 
 	static void CreateTexture(ComPtr<ID3D11Device>& device,
+					   ComPtr<ID3D11DeviceContext>& context,
 					   const std::string filename,
 					   ComPtr<ID3D11Texture2D>& texture,
 					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
 
 	static void CreateTextureArray(ComPtr<ID3D11Device>& device, 
+							ComPtr<ID3D11DeviceContext>& context,
 							const std::vector<std::string> filenames,
 							ComPtr<ID3D11Texture2D>& texture, 
 							ComPtr<ID3D11ShaderResourceView>& textureResourceView);

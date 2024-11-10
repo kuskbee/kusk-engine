@@ -29,7 +29,8 @@ struct BasicPixelConstantData {
 	float rimPower;
 	float rimStrength = 0.0f;
 	bool useSmoothstep = false;
-	float dummy[ 2 ];
+	float mipmapLevel = 0.0f;
+	float dummy[ 1 ];
 };
 
 static_assert((sizeof(BasicPixelConstantData) % 16) == 0,

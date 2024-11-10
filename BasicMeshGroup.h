@@ -1,18 +1,21 @@
 #pragma once
 
 #include "BasicConstantData.h"
+#include "D3D11Utils.h"
 #include "Mesh.h"
 #include "MeshData.h"
-#include "D3D11Utils.h"
 
 namespace kusk {
 class BasicMeshGroup
 {
 public:
-    void Initialize(ComPtr<ID3D11Device>& device, const std::string& basePath,
+    void Initialize(ComPtr<ID3D11Device>& device, 
+                ComPtr<ID3D11DeviceContext>& context,
+                const std::string& basePath,
                 const std::string& filename);
 
     void Initialize(ComPtr<ID3D11Device>& device,
+                    ComPtr<ID3D11DeviceContext>& context,
                     const std::vector<MeshData>& meshes);
 
     void UpdateConstantBuffers(ComPtr<ID3D11Device>& device,
@@ -37,10 +40,10 @@ public:
     NormalVertexConstantData m_normalVertexConstantData;
     bool m_drawNormalsDirtyFlag = true;
     bool m_drawNormals = false;
-private:
-    // 메쉬 그리기
-    std::vector<shared_ptr<Mesh>> m_meshes;
 
+    std::vector<shared_ptr<Mesh>> m_meshes; // Mipmaps 생성을 위해 임시로
+private:
+    
     ComPtr<ID3D11VertexShader> m_basicVertexShader;
     ComPtr<ID3D11PixelShader> m_basicPixelShader;
     ComPtr<ID3D11InputLayout> m_basicInputLayout;

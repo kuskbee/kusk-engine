@@ -4,21 +4,24 @@
 
 namespace kusk {
  void BasicMeshGroup::Initialize(ComPtr<ID3D11Device>& device,
+                            ComPtr<ID3D11DeviceContext>& context,
                             const std::string& basePath,
                             const std::string& filename) {
 
      auto meshes = GeometryGenerator::ReadFromFile(basePath, filename);
 
-     Initialize(device, meshes);
+     Initialize(device, context, meshes);
  }
 
  void BasicMeshGroup::Initialize(ComPtr<ID3D11Device>& device,
+                            ComPtr<ID3D11DeviceContext>& context,
                             const std::vector<MeshData>& meshes) {
 
      // Sampler 만들기
      D3D11_SAMPLER_DESC sampDesc;
      ZeroMemory(&sampDesc, sizeof(sampDesc));
      sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+     //sampDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT; // 테스트용
      sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
      sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
      sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -50,7 +53,7 @@ namespace kusk {
          if (!meshData.textureFilename.empty( )) {
 
              std::cout << meshData.textureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, meshData.textureFilename,
+             D3D11Utils::CreateTexture(device, context, meshData.textureFilename,
                                        newMesh->texture,
                                        newMesh->textureResourceView);
          }

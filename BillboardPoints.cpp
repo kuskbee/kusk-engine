@@ -5,6 +5,7 @@
 namespace kusk {
 
 void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
+								 ComPtr<ID3D11DeviceContext>& context,
 								 const std::vector<Vector4>& points,
 								 const float width,
 								 const std::wstring pixelShaderFilename,
@@ -38,7 +39,7 @@ void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
 												 m_vertexShader, m_inputLayout);
 	D3D11Utils::CreatePixelShader(device, pixelShaderFilename, m_pixelShader);
 
-	D3D11Utils::CreateTextureArray(device, filenames, m_texArray, m_texArraySRV);
+	D3D11Utils::CreateTextureArray(device, context, filenames, m_texArray, m_texArraySRV);
 }
 
 void BillboardPoints::Render(ComPtr<ID3D11DeviceContext>& context) {

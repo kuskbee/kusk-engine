@@ -235,60 +235,101 @@ void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& wid
     }
 }
 
+ComPtr<ID3D11Texture2D> CreateStagingTexture(ComPtr<ID3D11Device>& device,
+                                             ComPtr<ID3D11DeviceContext>& context, 
+                                             const int width, const int height, 
+                                             const std::vector<uint8_t>& image,
+                                             const int mipLevels = 1, const int arraySize = 1) {
+    // 스테이징 텍스쳐 만들기
+    D3D11_TEXTURE2D_DESC txtDesc;
+    ZeroMemory(&txtDesc, sizeof(txtDesc));
+    txtDesc.Width = width;
+    txtDesc.Height = height;
+    txtDesc.MipLevels = mipLevels;
+    txtDesc.ArraySize = arraySize;
+    txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    txtDesc.SampleDesc.Count = 1;
+    txtDesc.Usage = D3D11_USAGE_STAGING;
+    txtDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+
+    ComPtr<ID3D11Texture2D> stagingTexture;
+    if (FAILED(device->CreateTexture2D(&txtDesc, nullptr, stagingTexture.GetAddressOf( )))) {
+        cout << "Failed()" << endl;
+    }
+
+    // CPU에서 이미지 데이터 복사
+    D3D11_MAPPED_SUBRESOURCE ms;
+    context->Map(stagingTexture.Get( ), NULL, D3D11_MAP_WRITE, NULL, &ms);
+    uint8_t* pData = ( uint8_t* ) ms.pData;
+    for (UINT h = 0; h < UINT(height); h++) { // 가로줄 한 줄씩 복사
+        memcpy(&pData[ h * ms.RowPitch ], &image[ h * width * 4 ], width * sizeof(uint8_t) * 4);
+    }
+    context->Unmap(stagingTexture.Get( ), NULL);
+
+    return stagingTexture;
+}
+
 void D3D11Utils::CreateTexture(
     ComPtr<ID3D11Device>& device,
+    ComPtr<ID3D11DeviceContext>& context,
     const std::string filename,
     ComPtr<ID3D11Texture2D>& texture,
     ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
 
-    int width, height, channels;
-
-    unsigned char* img =
-        stbi_load(filename.c_str( ), &width, &height, &channels, 0);
-
-    //assert(channels == 4);
-
+    int width, height;
     std::vector<uint8_t> image;
-    // 4채널로 만들어서 복사
-    image.resize(width * height * 4);
-    for (size_t i = 0; i < width * height; i++) {
-        for (size_t c = 0; c < 3; c++) {
-            image[ 4 * i + c ] = img[ i * channels + c ];
-        }
-        image[ 4 * i + 3 ] = 255;
-    }
 
-    // Create texture
-    D3D11_TEXTURE2D_DESC txtDesc = {};
+    ReadImage(filename, image, width, height);
+
+    // 스테이징 텍스쳐 만들고 CPU의 이미지를 복사합니다.
+    ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image);
+
+    // 실제로 사용할 텍스쳐 설정
+    D3D11_TEXTURE2D_DESC txtDesc;
+    ZeroMemory(&txtDesc, sizeof(txtDesc));
     txtDesc.Width = width;
     txtDesc.Height = height;
-    txtDesc.MipLevels = txtDesc.ArraySize = 1;
+    txtDesc.MipLevels = 0; // 밉맵 레벨 최대
+    txtDesc.ArraySize = 1;
     txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     txtDesc.SampleDesc.Count = 1;
-    txtDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    txtDesc.Usage = D3D11_USAGE_DEFAULT; // 스테이징 텍스쳐로부터 복사 가능하도록
+    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    txtDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS; // 밉맵 사용
+    txtDesc.CPUAccessFlags = 0;
 
-    // Fill in the subresource data
-    D3D11_SUBRESOURCE_DATA initData;
-    initData.pSysMem = image.data( );
-    initData.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * 4;
-    // initData.SysMemSlicePitch = 0;
+    // 초기 데이터 없이 텍스쳐 생성 (전부 검은색)
+    device->CreateTexture2D(&txtDesc, nullptr, texture.GetAddressOf( ));
 
-    device->CreateTexture2D(&txtDesc, &initData, texture.GetAddressOf( ));
-    device->CreateShaderResourceView(texture.Get( ), nullptr, textureResourceView.GetAddressOf( ));
+    // 실제로 생성된 MipLevels 확인용
+    /*texture->GetDesc(&txtDesc);
+    cout << txtDesc.MipLevels << endl;*/
+
+    // 스테이징 텍스쳐로부터 가장 해상도가 높은 이미지 복사
+    context->CopySubresourceRegion(texture.Get( ), 0, 0, 0, 0, stagingTexture.Get( ), 0, nullptr);
+
+    // ResourceView 만들기
+    device->CreateShaderResourceView(texture.Get( ), 0, textureResourceView.GetAddressOf( ));
+
+    // 해상도를 낮춰가며 밉맵 생성
+    context->GenerateMips(textureResourceView.Get( ));
 }
 
 void D3D11Utils::CreateTextureArray(
-    ComPtr<ID3D11Device>& device, const std::vector<std::string> filenames,
-    ComPtr<ID3D11Texture2D>& texture, ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
+    ComPtr<ID3D11Device>& device, 
+    ComPtr<ID3D11DeviceContext>& context, 
+    const std::vector<std::string> filenames,
+    ComPtr<ID3D11Texture2D>& texture, 
+    ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
 
     if (filenames.empty( ))
         return;
 
     // 모든 이미지의 width 와 height가 같다고 가정
 
+    // 파일로부터 이미지 여러 개를 읽어들입니다.
     int width = 0, height = 0;
-    std::vector<uint8_t> imageArray;
+    std::vector<vector<uint8_t>> imageArray;
     for (const auto& f : filenames) {
         cout << f << endl;
 
@@ -296,44 +337,45 @@ void D3D11Utils::CreateTextureArray(
         
         ReadImage(f, image, width, height);
         
-        imageArray.insert(imageArray.begin( ), image.begin( ), image.end( ));
+        imageArray.push_back(image);
     }
 
-    // Create Texture
+    UINT size = UINT(filenames.size( ));
+
+    // Texture2DArray 생성. 이 때 데이터를 CPU로 부터 복사하지 않음.
     D3D11_TEXTURE2D_DESC txtDesc;
     ZeroMemory(&txtDesc, sizeof(txtDesc));
     txtDesc.Width = UINT(width);
     txtDesc.Height = UINT(height);
-    txtDesc.MipLevels = 1;
-    txtDesc.ArraySize = UINT(filenames.size( )); // texture array
+    txtDesc.MipLevels = 0; // 밉맵 레벨 최대
+    txtDesc.ArraySize = size;
     txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     txtDesc.SampleDesc.Count = 1;
     txtDesc.SampleDesc.Quality = 0;
-    txtDesc.Usage = D3D11_USAGE_IMMUTABLE;
-    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    txtDesc.Usage = D3D11_USAGE_DEFAULT; // 스테이징 텍스쳐로부터 복사 가능
+    txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+    txtDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS; // 밉맵 사용
 
-    // SUBRESOURCE_DATA의 배열
-    std::vector<D3D11_SUBRESOURCE_DATA> initData(filenames.size( ));
-    size_t offset = 0;
-    for (auto& i : initData) {
-        i.pSysMem = imageArray.data( ) + offset;
-        i.SysMemPitch = txtDesc.Width * sizeof(uint8_t) * 4;
-        i.SysMemSlicePitch = txtDesc.Width * txtDesc.Height * sizeof(uint8_t) * 4;
-        offset += i.SysMemSlicePitch;
+    // 초기 데이터 없이 텍스쳐를 만들기
+    device->CreateTexture2D(&txtDesc, nullptr, texture.GetAddressOf( ));
+    texture->GetDesc(&txtDesc);
+
+    // StagingTexture를 만들어서 하나씩 복사
+    for (size_t i = 0; i < imageArray.size( ); i++) {
+
+        auto& image = imageArray[ i ];
+
+        ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image, 1, 1);
+
+        // 스테이징 텍스쳐를 텍스쳐 배열의 해당 위치에 복사
+        UINT subresourceIndex = D3D11CalcSubresource(0, UINT(i), txtDesc.MipLevels);
+
+        context->CopySubresourceRegion(texture.Get( ), subresourceIndex, 0, 0, 0, stagingTexture.Get( ), 0, nullptr);
     }
 
-    device->CreateTexture2D(&txtDesc, initData.data( ), texture.GetAddressOf( ));
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
-    desc.Format = txtDesc.Format;
-    desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-    desc.Texture2DArray.MostDetailedMip = 0;
-    desc.Texture2DArray.MipLevels = txtDesc.MipLevels;
-    desc.Texture2DArray.FirstArraySlice = 0;
-    desc.Texture2DArray.ArraySize = txtDesc.ArraySize;
-
-    device->CreateShaderResourceView(texture.Get( ), &desc, textureResourceView.GetAddressOf( ));
+    device->CreateShaderResourceView(texture.Get( ), nullptr, textureResourceView.GetAddressOf( ));
+    
+    context->GenerateMips(textureResourceView.Get( ));
 }
 
 void D3D11Utils::CreateCubemapTexture(

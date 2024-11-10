@@ -15,6 +15,7 @@ cbuffer BasicPixelConstantData : register(b0)
     float rimPower;
     float rimStrength;
     bool useSmoothstep;
+    float mipmapLevel;
 };
 
 float3 SchlickFresnel(float3 fresnelR0, float3 normal, float3 toEye)
@@ -71,7 +72,12 @@ float4 main(PixelShaderInput input) : SV_TARGET {
     
     if(useTexture)
     {
-        diffuse *= g_texture0.Sample(g_sampler, input.texcoord);
+        float dist = length(eyeWorld - input.posWorld);
+        float distMin = 2;
+        float distMax = 10;
+        float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));
+        diffuse *= g_texture0.SampleLevel(g_sampler, input.texcoord, mipmapLevel);
+        //diffuse *= g_texture0.Sample(g_sampler, input.texcoord);
     }
     
     float4 finalColor = float4(color, 1.0) + diffuse + specular;
