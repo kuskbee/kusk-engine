@@ -22,12 +22,15 @@ void Camera::UpdateMouse(float mouseNdcX, float mouseNdcY) {
 	m_viewDir = Vector3::Transform(Vector3(0.0f, 0.0f, 1.0f),
 								   Matrix::CreateRotationY(this->m_yaw));
 	m_rightDir = m_upDir.Cross(m_viewDir);
+
 }
 
 void Camera::MoveForward(float dt) {
 	// 이동 후의 위치 = 현재 위치 + 이동방향 * 속도 * 시간 차이
 	m_position += m_viewDir * m_speed * dt;
 }
+
+void Camera::MoveUp(float dt) { m_position += m_upDir * m_speed * dt; }
 
 void Camera::MoveRight(float dt) { m_position += m_rightDir * m_speed * dt; }
 

@@ -13,7 +13,10 @@ using std::vector;
 struct MeshData {
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
-	std::string textureFilename;
+	std::string albedoTextureFilename;
+	std::string normalTextureFilename;
+	std::string heightTextureFilename;
+	std::string aoTextureFilename; // Ambient Occlusion
 };
 
 } // namespace kusk

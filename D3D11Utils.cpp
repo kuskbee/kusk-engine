@@ -215,7 +215,15 @@ void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& wid
     // 4채널로 만들어서 복사
     image.resize(width * height * 4);
 
-    if (channels == 3) {
+    if (channels == 1) {
+        for (size_t i = 0; i < width * height; i++) {
+            uint8_t g = img[ i * channels + 0 ];
+            for (size_t c = 0; c < 4; c++) {
+                image[ 4 * i + c ] = g;
+            }
+        }
+    }
+    else if (channels == 3) {
         for (size_t i = 0; i < width * height; i++) {
             for (size_t c = 0; c < 3; c++) {
                 image[ 4 * i + c ] = img[ i * channels + c ];
@@ -231,7 +239,7 @@ void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& wid
         }
     }
     else {
-        std::cout << "Read 3 or 4 channels images only." << channels << " channels" << endl;
+        std::cout << "Cannot read " << channels << " channels" << endl;
     }
 }
 

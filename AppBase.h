@@ -59,7 +59,7 @@ public:
 	ComPtr<ID3D11RasterizerState> m_solidRasterizerState;
 	ComPtr<ID3D11RasterizerState> m_wireRasterizerState;
 	bool m_drawAsWire = false;
-	bool m_usePostProcessing = true;
+	bool m_usePostProcessing = false;
 
 	// Depth Buffer
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;

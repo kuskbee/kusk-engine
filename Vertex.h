@@ -10,8 +10,10 @@ using DirectX::SimpleMath::Vector3;
 
 struct Vertex {
 	Vector3 position;
-	Vector3 normal;
+	Vector3 normalModel;
 	Vector2 texcoord;
+	Vector3 tangentModel;
+	// biTangent는 쉐이더에서 계산
 };
 
 }

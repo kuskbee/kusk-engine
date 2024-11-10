@@ -49,8 +49,22 @@ bool KuskApp::Initialize() {
 	{
 		Vector3 center(0.0f, 0.5f, 1.0f);
 		float radius = 0.4f;
-		MeshData sphere = GeometryGenerator::MakeSphere(radius, 50, 50);
-		sphere.textureFilename = EARTH_TEXTURE;
+		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100, {1.0f, 1.0f});
+		//
+		sphere.albedoTextureFilename =
+			GREY_POROUS_ROCK_TEXTURE_DIR
+			GERY_POROUS_ROCK_TEXTURE_DIFFUSE;
+		sphere.normalTextureFilename = 
+			GREY_POROUS_ROCK_TEXTURE_DIR
+			GERY_POROUS_ROCK_TEXTURE_NORMAL;
+		sphere.heightTextureFilename = 
+			GREY_POROUS_ROCK_TEXTURE_DIR
+			GERY_POROUS_ROCK_TEXTURE_HEIGHT;
+		sphere.aoTextureFilename = 
+			GREY_POROUS_ROCK_TEXTURE_DIR
+			GERY_POROUS_ROCK_TEXTURE_AO;
+		m_mainSphere.m_basicPixelConstantData.reverseNormalMapY = true;
+
 		m_mainSphere.Initialize(m_device, m_context, { sphere });
 		m_mainSphere.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_mainSphere.m_specularResView = m_cubeMapping.m_specularResView;
@@ -59,7 +73,7 @@ bool KuskApp::Initialize() {
 		m_mainSphere.UpdateModelWorld(Matrix::CreateTranslation(center));
 		m_mainSphere.m_basicPixelConstantData.useTexture = true;
 		m_mainSphere.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
-		m_mainSphere.m_basicPixelConstantData.material.specular = Vector3(0.3f);
+		m_mainSphere.m_basicPixelConstantData.material.specular = Vector3(0.0f);
 		m_mainSphere.UpdateConstantBuffers(m_device, m_context);
 
 		// 동일한 크기와 위치에 BoundingSphere 만들기
@@ -76,7 +90,10 @@ bool KuskApp::Initialize() {
 
 		// 위치 초기화
 		m_cursorSphere.UpdateModelWorld(Matrix::CreateTranslation({ 0.0f, 0.0f, 0.0f }));
-		m_cursorSphere.m_basicPixelConstantData.useTexture = false;
+		m_cursorSphere.m_basicPixelConstantData.useTexture = 0;
+		m_cursorSphere.m_basicPixelConstantData.useNormalMap = 0;
+		m_cursorSphere.m_basicPixelConstantData.useAOMap = 0;
+		m_cursorSphere.m_basicVertexConstantData.useHeightMap = 0;
 		m_cursorSphere.m_basicPixelConstantData.material.diffuse = Vector3(0.0f, 1.0f, 1.0f);
 		m_cursorSphere.m_basicPixelConstantData.material.specular = Vector3(0.0f);
 		m_cursorSphere.UpdateConstantBuffers(m_device, m_context);
@@ -94,7 +111,10 @@ bool KuskApp::Initialize() {
 		invTransposeRow = invTransposeRow.Invert( ).Transpose( );
 		m_meshGroupCharacter.m_basicVertexConstantData.modelWorld = modelMat.Transpose( );
 		m_meshGroupCharacter.m_basicVertexConstantData.invTranspose = invTransposeRow.Transpose( );
+		m_meshGroupCharacter.m_basicVertexConstantData.useHeightMap = false;
 		m_meshGroupCharacter.m_basicPixelConstantData.useTexture = true;
+		m_meshGroupCharacter.m_basicPixelConstantData.useNormalMap = false;
+		m_meshGroupCharacter.m_basicPixelConstantData.useAOMap = false;
 		m_meshGroupCharacter.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
 		m_meshGroupCharacter.m_basicPixelConstantData.material.specular = Vector3(1.0f);
 		m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
@@ -102,13 +122,32 @@ bool KuskApp::Initialize() {
 	
 	// $ground
 	{
-		MeshData ground = GeometryGenerator::MakeSquare(20.0f, 8.0f);
-		ground.textureFilename = BLENDER_UV_GRID_2K_TEXTURE;
+		//MeshData ground = GeometryGenerator::MakeSquare(20.0f, {40.0f, 40.0f});
+		MeshData ground = GeometryGenerator::MakeSquareGrid(4096, 4096, 20.0f, { 40.0f, 40.0f });
+		ground.albedoTextureFilename =
+			BRICK_TEXTURE_DIR
+			BRICK_TEXTURE_DIFFUSE;
+		ground.normalTextureFilename =
+			BRICK_TEXTURE_DIR
+			BRICK_TEXTURE_NORMAL;
+		ground.heightTextureFilename =
+			BRICK_TEXTURE_DIR
+			BRICK_TEXTURE_HEIGHT;
+		ground.aoTextureFilename =
+			BRICK_TEXTURE_DIR
+			BRICK_TEXTURE_AO;
 		m_meshGroupGround.Initialize(m_device, m_context, { ground });
 		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
+		/*m_meshGroupGround.UpdateModelWorld(
+			Matrix::CreateScale(2.0f, 2.0f, 2.0f) * 
+			Matrix::CreateRotationX(0.0f) *
+			Matrix::CreateTranslation(0.0f, 0.0f, 3.0f));*/
 		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2));
 		m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
+		//m_meshGroupGround.m_basicPixelConstantData.useNormalMap = true;
+		m_meshGroupGround.m_basicPixelConstantData.useAOMap = false;
+		m_meshGroupGround.m_basicVertexConstantData.useHeightMap= false;
 		m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
 		m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 	}
@@ -130,6 +169,10 @@ void KuskApp::Update(float dt) {
 			m_camera.MoveRight(dt);
 		if (m_keyPressed[ 65 ]) // a
 			m_camera.MoveRight(-dt);
+		if (m_keyPressed[ 81 ]) // q
+			m_camera.MoveUp(dt);
+		if (m_keyPressed[ 69 ]) // e
+			m_camera.MoveUp(-dt);
 	}
 
 	Matrix viewRow = m_camera.GetViewRow( );
@@ -177,22 +220,6 @@ void KuskApp::Update(float dt) {
 	Matrix viewEnvRow = viewRow;
 	viewEnvRow.Translation(Vector3(0.0f)); // 이동 취소
 	m_cubeMapping.UpdateConstantBuffers(m_device, m_context, viewEnvRow.Transpose( ), projRow.Transpose( ));
-
-	// 다른 물체들 Constant Buffer 업데이트
-	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );
-	m_meshGroupGround.m_basicVertexConstantData.proj = projRow.Transpose( );
-	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
-	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
-
-	m_meshGroupCharacter.m_basicVertexConstantData.view = viewRow.Transpose( );
-	m_meshGroupCharacter.m_basicVertexConstantData.proj = projRow.Transpose( );
-	m_meshGroupCharacter.m_basicPixelConstantData.eyeWorld = eyeWorld;
-	m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
-
-	m_billboardPoints.m_constantData.eyeWorld = eyeWorld;
-	m_billboardPoints.m_constantData.view = viewRow.Transpose( );
-	m_billboardPoints.m_constantData.proj = projRow.Transpose( );
-	D3D11Utils::UpdateBuffer(m_device, m_context, m_billboardPoints.m_constantData, m_billboardPoints.m_constantBuffer);
 
 	// mainSphere의 회전 및 이동 계산용
 	static float prevRatio = 0.0f;
@@ -292,6 +319,31 @@ void KuskApp::Update(float dt) {
 	m_tessellatedQuad.m_constantData.proj = projRow.Transpose( );
 	D3D11Utils::UpdateBuffer(m_device, m_context, m_tessellatedQuad.m_constantData, m_tessellatedQuad.m_constantBuffer);*/
 
+	// 포인트 라이트 효과
+	Light pointLight;
+	pointLight.position = m_lightFromGUI.position;
+	pointLight.strength = Vector3(2.0f);
+	pointLight.fallOffEnd = 20.0f;
+
+	m_meshGroupGround.m_basicPixelConstantData.lights[ 1 ] = pointLight;
+	m_mainSphere.m_basicPixelConstantData.lights[ 1 ] = pointLight;
+	m_cursorSphere.m_basicPixelConstantData.lights[ 1 ] = pointLight;
+
+	m_meshGroupGround.m_basicVertexConstantData.view = viewRow.Transpose( );
+	m_meshGroupGround.m_basicVertexConstantData.proj = projRow.Transpose( );
+	m_meshGroupGround.m_basicPixelConstantData.eyeWorld = eyeWorld;
+	m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
+
+	m_meshGroupCharacter.m_basicVertexConstantData.view = viewRow.Transpose( );
+	m_meshGroupCharacter.m_basicVertexConstantData.proj = projRow.Transpose( );
+	m_meshGroupCharacter.m_basicPixelConstantData.eyeWorld = eyeWorld;
+	m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
+
+	m_billboardPoints.m_constantData.eyeWorld = eyeWorld;
+	m_billboardPoints.m_constantData.view = viewRow.Transpose( );
+	m_billboardPoints.m_constantData.proj = projRow.Transpose( );
+	D3D11Utils::UpdateBuffer(m_device, m_context, m_billboardPoints.m_constantData, m_billboardPoints.m_constantBuffer);
+
 	if (m_dirtyFlag) {
 		assert(m_filters.size( ) > 1);
 		m_filters[ 1 ]->m_pixelConstData.threshold = m_threshold;
@@ -322,7 +374,7 @@ void KuskApp::Render() {
 	else
 		m_context->RSSetState(m_solidRasterizerState.Get( ));
 
-	m_billboardPoints.Render(m_context);
+	//m_billboardPoints.Render(m_context);
 	//m_tessellatedQuad.Render(m_context);
 
 	// 물체들
@@ -339,7 +391,7 @@ void KuskApp::Render() {
 	m_meshGroupGround.Render(m_context);
 
 	// 물체 렌더링 후 큐브매핑
-	m_cubeMapping.Render(m_context);
+	//m_cubeMapping.Render(m_context);
 
 	// 후처리 필터
 	if (m_usePostProcessing) {
@@ -414,8 +466,81 @@ void KuskApp::BuildFilters( ) {
 
 void KuskApp::UpdateGUI() {
 
-	ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
-	ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("General")) {
+		ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
+		ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
+		if (ImGui::Checkbox("Draw Normals", &m_mainSphere.m_drawNormals)) {
+			m_mainSphere.m_drawNormalsDirtyFlag = true;
+		}
+		ImGui::Checkbox("Wireframe", &m_drawAsWire);
+
+		ImGui::TreePop( );
+	}
+
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Light")) {
+		ImGui::SliderFloat3("Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+		ImGui::TreePop( );
+	}
+
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Sphere")) {
+		bool temp = bool(m_mainSphere.m_basicPixelConstantData.useTexture);
+		if (ImGui::Checkbox("Use AlbedoTexture", &temp)) {
+			m_mainSphere.m_basicPixelConstantData.useTexture = int(temp);
+		}
+
+		temp = bool(m_mainSphere.m_basicPixelConstantData.useNormalMap);
+		if (ImGui::Checkbox("Use NormalMapping", &temp)) {
+			m_mainSphere.m_basicPixelConstantData.useNormalMap = int(temp);
+		}
+
+		temp = bool(m_mainSphere.m_basicPixelConstantData.useAOMap);
+		if (ImGui::Checkbox("Use AO", &temp)) {
+			m_mainSphere.m_basicPixelConstantData.useAOMap = int(temp);
+		}
+
+		temp = bool(m_mainSphere.m_basicVertexConstantData.useHeightMap);
+		if (ImGui::Checkbox("Use HeightMapping", &temp)) {
+			m_mainSphere.m_basicVertexConstantData.useHeightMap = int(temp);
+		}
+
+		ImGui::SliderFloat("HeightScale",
+						   &m_mainSphere.m_basicVertexConstantData.heightScale,
+						   0.0f, 0.1f);
+
+		ImGui::TreePop( );
+	}
+	
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Ground")) {
+		bool temp = bool(m_meshGroupGround.m_basicPixelConstantData.useTexture);
+		if (ImGui::Checkbox("Use AlbedoTexture2", &temp)) {
+			m_meshGroupGround.m_basicPixelConstantData.useTexture = int(temp);
+		}
+
+		temp = bool(m_meshGroupGround.m_basicPixelConstantData.useNormalMap);
+		if (ImGui::Checkbox("Use NormalMapping2", &temp)) {
+			m_meshGroupGround.m_basicPixelConstantData.useNormalMap = int(temp);
+		}
+
+		temp = bool(m_meshGroupGround.m_basicPixelConstantData.useAOMap);
+		if (ImGui::Checkbox("Use AO2", &temp)) {
+			m_meshGroupGround.m_basicPixelConstantData.useAOMap = int(temp);
+		}
+
+		temp = bool(m_meshGroupGround.m_basicVertexConstantData.useHeightMap);
+		if (ImGui::Checkbox("Use HeightMapping2", &temp)) {
+			m_meshGroupGround.m_basicVertexConstantData.useHeightMap = int(temp);
+		}
+
+		ImGui::SliderFloat("HeightScale2",
+						   &m_meshGroupGround.m_basicVertexConstantData.heightScale,
+						   0.0f, 0.1f);
+
+		ImGui::TreePop( );
+	}
 
 	// $m_tessellatedQuad
 	/*int flag = 0;
@@ -429,80 +554,78 @@ void KuskApp::UpdateGUI() {
 								 m_tessellatedQuad.m_constantBuffer);
 	}*/
 
-	auto& meshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
+	//auto& meshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
 
-	if (ImGui::RadioButton("Sphere", m_visibleMeshIndex == 0)) {
-		m_visibleMeshIndex = 0;
-	}
-	ImGui::SameLine( );
-	if (ImGui::RadioButton("Character", m_visibleMeshIndex == 1)) {
-		m_visibleMeshIndex = 1;
-	}
+	//if (ImGui::RadioButton("Sphere", m_visibleMeshIndex == 0)) {
+	//	m_visibleMeshIndex = 0;
+	//}
+	//ImGui::SameLine( );
+	//if (ImGui::RadioButton("Character", m_visibleMeshIndex == 1)) {
+	//	m_visibleMeshIndex = 1;
+	//}
 
-	ImGui::SliderFloat("Mipmaps Level", &m_mainSphere.m_basicPixelConstantData.mipmapLevel, 0.0f, 10.0f);
+	//ImGui::SliderFloat("Mipmaps Level", &m_mainSphere.m_basicPixelConstantData.mipmapLevel, 0.0f, 10.0f);
 
-	ImGui::SliderFloat("Rim Strength",
-				   &meshGroup.m_basicPixelConstantData.rimStrength, 0.0f,
-				   10.0f);
-	ImGui::Checkbox("Use Smoothstep",
-					&meshGroup.m_basicPixelConstantData.useSmoothstep);
-	ImGui::SliderFloat3("Rim Color", &meshGroup.m_basicPixelConstantData.rimColor.x,
-						0.0f, 1.0f);
-	ImGui::SliderFloat("Rim Power", &meshGroup.m_basicPixelConstantData.rimPower,
-					   0.01f, 10.0f);
+	//ImGui::SliderFloat("Rim Strength",
+	//			   &meshGroup.m_basicPixelConstantData.rimStrength, 0.0f,
+	//			   10.0f);
+	//ImGui::Checkbox("Use Smoothstep",
+	//				&meshGroup.m_basicPixelConstantData.useSmoothstep);
+	//ImGui::SliderFloat3("Rim Color", &meshGroup.m_basicPixelConstantData.rimColor.x,
+	//					0.0f, 1.0f);
+	//ImGui::SliderFloat("Rim Power", &meshGroup.m_basicPixelConstantData.rimPower,
+	//				   0.01f, 10.0f);
 
-	// 후 처리 필터 사용시에만 옵션 보여주기
-	if (m_usePostProcessing)
-	{
-		m_dirtyFlag +=
-			ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
-		m_dirtyFlag +=
-			ImGui::SliderFloat("Bloom Strength", &m_strength, 0.0f, 3.0f);
-	}
-	
-	ImGui::Checkbox("Use Texture",
-					&meshGroup.m_basicPixelConstantData.useTexture);
-	ImGui::Checkbox("Wireframe", &m_drawAsWire);
-	ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals);
-	if (ImGui::SliderFloat("Normal scale",	&meshGroup.m_normalVertexConstantData.scale, 0.0f, 1.0f)) {
-		meshGroup.m_drawNormalsDirtyFlag = true;
-	}
+	//// 후 처리 필터 사용시에만 옵션 보여주기
+	//if (m_usePostProcessing)
+	//{
+	//	m_dirtyFlag +=
+	//		ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
+	//	m_dirtyFlag +=
+	//		ImGui::SliderFloat("Bloom Strength", &m_strength, 0.0f, 3.0f);
+	//}
 
+	//ImGui::Checkbox("Wireframe", &m_drawAsWire);
+	//ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals);
+	//if (ImGui::SliderFloat("Normal scale",	&meshGroup.m_normalVertexConstantData.scale, 0.0f, 1.0f)) {
+	//	meshGroup.m_drawNormalsDirtyFlag = true;
+	//}
+
+	////
+	///*ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
+	//ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
+	//ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);*/
 	//
-	/*ImGui::SliderFloat3("m_modelTranslation", &m_modelTranslation.x, -2.0f, 2.0f);
-	ImGui::SliderFloat3("m_modelRotation", &m_modelRotation.x, -3.14f, 3.14f);
-	ImGui::SliderFloat3("m_modelScaling", &m_modelScaling.x, 0.1f, 2.0f);*/
-	
-	ImGui::SliderFloat3("Material FresnelR0",
-						&meshGroup.m_basicPixelConstantData.material.fresnelR0.x, 0.0f, 1.0f);
+	//ImGui::SliderFloat3("Material FresnelR0",
+	//					&meshGroup.m_basicPixelConstantData.material.fresnelR0.x, 0.0f, 1.0f);
 
-	ImGui::SliderFloat("Material Diffuse", &m_materialDiffuse, 0.0f, 3.0f);
-	ImGui::SliderFloat("Material Specular", &m_materialSpecular, 0.0f, 3.0f);
+	//ImGui::SliderFloat("Material Diffuse", &m_materialDiffuse, 0.0f, 3.0f);
+	//ImGui::SliderFloat("Material Specular", &m_materialSpecular, 0.0f, 3.0f);
 
-	ImGui::SliderFloat("Material Shininess",
-					   &meshGroup.m_basicPixelConstantData.material.shininess, 0.01f, 20.0f);
+	//ImGui::SliderFloat("Material Shininess",
+	//				   &meshGroup.m_basicPixelConstantData.material.shininess, 0.01f, 20.0f);
 
-	if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
-		m_lightType = 0;
-	}
-	ImGui::SameLine( );
-	if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
-		m_lightType = 1;
-	}
-	ImGui::SameLine( );
-	if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
-		m_lightType = 2;
-	}
+	//if (ImGui::RadioButton("Directional Light", m_lightType == 0)) {
+	//	m_lightType = 0;
+	//}
+	//ImGui::SameLine( );
+	//if (ImGui::RadioButton("Point Light", m_lightType == 1)) {
+	//	m_lightType = 1;
+	//}
+	//ImGui::SameLine( );
+	//if (ImGui::RadioButton("Spot Light", m_lightType == 2)) {
+	//	m_lightType = 2;
+	//}
 
-	ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, 0.0f, 0.1f);
+	//ImGui::SliderFloat3("Light Strength", &m_lightFromGUI.strength.x, 0.0f, 0.1f);
 
-	ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
+	//ImGui::SliderFloat3("Light Position", &m_lightFromGUI.position.x, -5.0f, 5.0f);
 
-	ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
+	//ImGui::SliderFloat("Light fallOffStart", &m_lightFromGUI.fallOffStart, 0.0f, 5.0f);
 
-	ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
+	//ImGui::SliderFloat("Light fallOffEnd", &m_lightFromGUI.fallOffEnd, 0.0f, 10.0f);
 
-	ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
+	//ImGui::SliderFloat("Light spotPower", &m_lightFromGUI.spotPower, 1.0f, 512.0f);
 	
 }
 

@@ -50,12 +50,36 @@ namespace kusk {
          D3D11Utils::CreateIndexBuffer(device, meshData.indices,
                                        newMesh->indexBuffer);
 
-         if (!meshData.textureFilename.empty( )) {
+         if (!meshData.albedoTextureFilename.empty( )) {
 
-             std::cout << meshData.textureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.textureFilename,
-                                       newMesh->texture,
-                                       newMesh->textureResourceView);
+             std::cout << meshData.albedoTextureFilename << std::endl;
+             D3D11Utils::CreateTexture(device, context, meshData.albedoTextureFilename,
+                                       newMesh->albedoTexture,
+                                       newMesh->albedoTextureResourceView);
+         }
+
+         if (!meshData.normalTextureFilename.empty( )) {
+
+             std::cout << meshData.normalTextureFilename << std::endl;
+             D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename,
+                                       newMesh->normalTexture,
+                                       newMesh->normalTextureResourceView);
+         }
+
+         if (!meshData.heightTextureFilename.empty( )) {
+
+             std::cout << meshData.heightTextureFilename << std::endl;
+             D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename,
+                                       newMesh->heightTexture,
+                                       newMesh->heightTextureResourceView);
+         }
+
+         if (!meshData.aoTextureFilename.empty( )) {
+
+             std::cout << meshData.aoTextureFilename << std::endl;
+             D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename,
+                                       newMesh->aoTexture,
+                                       newMesh->aoTextureResourceView);
          }
 
          newMesh->vertexConstantBuffer = m_vertexConstantBuffer;
@@ -65,12 +89,10 @@ namespace kusk {
      }
 
      vector<D3D11_INPUT_ELEMENT_DESC> basicInputElements = {
-         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
-          D3D11_INPUT_PER_VERTEX_DATA, 0},
-         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3,
-          D3D11_INPUT_PER_VERTEX_DATA, 0},
-         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3,
-          D3D11_INPUT_PER_VERTEX_DATA, 0},
+         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+         {"TANGENT", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
      };
 
      D3D11Utils::CreateVertexShaderAndInputLayout(
@@ -112,17 +134,32 @@ namespace kusk {
      UINT offset = 0;
      for (const auto& mesh : m_meshes) {
          context->VSSetShader(m_basicVertexShader.Get( ), 0, 0);
+
+         // VertexShader도 Texture 사용
+         context->VSSetShaderResources(0, 1, mesh->heightTextureResourceView.GetAddressOf( ));
+         context->VSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+         context->VSSetConstantBuffers(0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
+
          context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
          context->PSSetShader(m_basicPixelShader.Get( ), 0, 0);
          
-         context->VSSetConstantBuffers(
-             0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
+         // 물체 렌더링할 때 여러가지 텍스쳐 사용
+         //vector<ID3D11ShaderResourceView*> resViews = { 
+         //    m_diffuseResView.Get( ),
+         //    m_specularResView.Get( ),
+         //    mesh->albedoTextureResourceView.Get(),
+         //    mesh->normalTextureResourceView.Get(),
+         //    mesh->aoTextureResourceView.Get(),
+         //};
 
-         // 물체 렌더링할 때 큐브맵도 같이 사용
-         ID3D11ShaderResourceView* resViews[ 3 ] = {
-             mesh->textureResourceView.Get( ), m_diffuseResView.Get( ),
-             m_specularResView.Get( ) };
-         context->PSSetShaderResources(0, 3, resViews);
+         vector<ID3D11ShaderResourceView*> resViews = {
+             nullptr, nullptr,
+             mesh->albedoTextureResourceView.Get( ),
+             mesh->normalTextureResourceView.Get( ),
+             mesh->aoTextureResourceView.Get( ),
+         };
+
+         context->PSSetShaderResources(0, UINT(resViews.size()), resViews.data());
 
          context->PSSetConstantBuffers(0, 1,
                                        mesh->pixelConstantBuffer.GetAddressOf( ));

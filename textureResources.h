@@ -27,3 +27,15 @@
 // Textures
 #define BLENDER_UV_GRID_2K_TEXTURE "./Assets/Textures/blender_uv_grid_2k.png"
 #define EARTH_TEXTURE "./Assets/Textures/earth.jpg";
+
+#define GREY_POROUS_ROCK_TEXTURE_DIR "./Assets/Textures/PBR/cgaxis_grey_porous_rock_40_56_4K/"
+#define GERY_POROUS_ROCK_TEXTURE_DIFFUSE "grey_porous_rock_40_56_diffuse.jpg"
+#define GERY_POROUS_ROCK_TEXTURE_NORMAL "grey_porous_rock_40_56_normal.jpg"
+#define GERY_POROUS_ROCK_TEXTURE_HEIGHT "grey_porous_rock_40_56_height.jpg"
+#define GERY_POROUS_ROCK_TEXTURE_AO "grey_porous_rock_40_56_ao.jpg"
+
+#define BRICK_TEXTURE_DIR "./Assets/Textures/PBR/Bricks075A_1K-PNG/"
+#define BRICK_TEXTURE_DIFFUSE "Bricks075A_1K_Color.png"
+#define BRICK_TEXTURE_NORMAL "Bricks075A_1K_NormalDX.png"
+#define BRICK_TEXTURE_HEIGHT "Bricks075A_1K_Displacement.png"
+#define BRICK_TEXTURE_AO "Bricks075A_1K_AmbientOcclusion.png"

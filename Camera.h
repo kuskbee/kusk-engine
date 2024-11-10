@@ -16,6 +16,7 @@ public:
 	void UpdateMouse(float mouseNdcX, float mouseNdcY);
 	void MoveForward(float dt);
 	void MoveRight(float dt);
+	void MoveUp(float dt);
 	void SetAspectRatio(float aspect);
 
 private:

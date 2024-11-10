@@ -8,6 +8,7 @@
 namespace kusk {
 
 using DirectX::SimpleMath::Matrix;
+using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 
 struct BasicVertexConstantData {
@@ -15,22 +16,28 @@ struct BasicVertexConstantData {
 	Matrix invTranspose;
 	Matrix view;
 	Matrix proj;
+	int useHeightMap = 1;
+	float heightScale = 0.0f;
+	Vector2 dummy;
 };
 
 static_assert((sizeof(BasicVertexConstantData) % 16) == 0,
 	"Constant Buffer size must be 16-byte aligned");
 
 struct BasicPixelConstantData {
-	Vector3 eyeWorld;		// 12
-	bool useTexture = true;		// bool 1 + 3 padding
-	Material material;		// 48
-	Light lights[ MAX_LIGHTS ]; // 48 * MAX_LIGHTS
-	Vector3 rimColor = Vector3(1.0f);
-	float rimPower;
-	float rimStrength = 0.0f;
-	bool useSmoothstep = false;
-	float mipmapLevel = 0.0f;
-	float dummy[ 1 ];
+	Vector3 eyeWorld;					// 12
+	float mipmapLevel = 0.0f;			//4
+	Material material;					// 48
+	Light lights[ MAX_LIGHTS ];			// 48 * MAX_LIGHTS
+	Vector3 rimColor = Vector3(1.0f);	// 12
+	float rimPower;						// 4
+	float rimStrength = 0.0f;			// 4
+	bool useSmoothstep = false;			// 4
+	int useTexture = 0;					// 4
+	int useNormalMap = 1;				// 4
+	int useAOMap = 1;					// 4
+	int reverseNormalMapY = 0;			// 4
+	Vector2 dummy;
 };
 
 static_assert((sizeof(BasicPixelConstantData) % 16) == 0,

@@ -8,7 +8,7 @@ using namespace std;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
-MeshData GeometryGenerator::MakeSquare(const float scale, const float texScale) {
+MeshData GeometryGenerator::MakeSquare(const float scale, const Vector2 texScale) {
 	vector<Vector3> positions;
 	vector<Vector3> colors;
 	vector<Vector3> normals;
@@ -37,8 +37,9 @@ MeshData GeometryGenerator::MakeSquare(const float scale, const float texScale) 
 	for (size_t i = 0; i < positions.size( ); i++) {
 		Vertex v;
 		v.position = positions[ i ];
-		v.normal = normals[ i ];
+		v.normalModel = normals[ i ];
 		v.texcoord = texcoords[ i ] * texScale;
+		v.tangentModel = Vector3(1.0f, 0.0f, 0.0f);
 		meshData.vertices.push_back(v);
 	}
 
@@ -176,7 +177,7 @@ MeshData GeometryGenerator::MakeBox(const float scale) {
 	for (size_t i = 0; i < positions.size( ); i++) {
 		Vertex v;
 		v.position = positions[ i ];
-		v.normal = normals[ i ];
+		v.normalModel = normals[ i ];
 		v.texcoord = texcoords[ i ];
 		meshData.vertices.push_back(v);
 	}
@@ -193,19 +194,23 @@ MeshData GeometryGenerator::MakeBox(const float scale) {
 	return meshData;
 }
 
-MeshData GeometryGenerator::MakeGrid(const float width, const float height,
-									 const int numSlices, const int numStacks) {
+MeshData GeometryGenerator::MakeSquareGrid(const int numSlices, const int numStacks,
+										   const float scale, const Vector2 texScale) {
 	// x-y 평면 (z = 0) 위에 격자 구조로 평면 만들기
 
-	const float dx = width / numSlices;
-	const float dy = height / numStacks;
+	//const float dx = width / numSlices;
+	//const float dy = height / numStacks;
+	const float dx = 2.0f / numSlices;
+	const float dy = 2.0f / numStacks;
+
 
 	MeshData meshData;
 
 	vector<Vertex>& vertices = meshData.vertices;
 	vector<uint32_t>& indices = meshData.indices;
 
-	Vector3 leftbottom = Vector3(-0.5f * width, -0.5 * height, 0.0f);
+	//Vector3 leftbottom = Vector3(-0.5f * width, -0.5f * height, 0.0f);
+	Vector3 leftbottom = Vector3(-1.0f, -1.0f, 0.0f);
 
 	for (int j = 0; j <= numStacks; j++) {
 		Vector3 stackStartPoint = Vector3::Transform(
@@ -215,15 +220,16 @@ MeshData GeometryGenerator::MakeGrid(const float width, const float height,
 			Vertex v;
 
 			// x-y 평면에서 시작점을 x 방향으로 이동
-			v.position = Vector3::Transform(
-				stackStartPoint,
+			v.position = Vector3::Transform(stackStartPoint, 
 				Matrix::CreateTranslation(Vector3(dx * float(i), 0.0f, 0.0f)));
+			v.position *= scale;
 
 			// 시점을 향하는 방향
-			v.normal = Vector3(0.0f, 0.0f, -1.0f);
+			v.normalModel = Vector3(0.0f, 0.0f, -1.0f);
 
 			v.texcoord =
-				Vector2(float(i) / numSlices, 1.0f - float(j) / numStacks);
+				Vector2(float(i) / numSlices, 1.0f - float(j) / numStacks) * texScale;
+			v.tangentModel = Vector3(1.0f, 0.0f, 0.0f);
 
 			vertices.push_back(v);
 
@@ -265,8 +271,8 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 		Vertex v;
 
 		v.position = Vector3::Transform(startPoint, Matrix::CreateRotationY(dTheta * float(i)));
-		v.normal = v.position - center;
-		v.normal.Normalize( );
+		v.normalModel = v.position - center;
+		v.normalModel.Normalize( );
 		v.texcoord = Vector2(float(i) / numSlices, 1.0f);
 
 		vertices.push_back(v);
@@ -279,8 +285,8 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 		Vertex v;
 
 		v.position = Vector3::Transform(startPoint, Matrix::CreateRotationY(dTheta * float(i)));
-		v.normal = v.position - center;
-		v.normal.Normalize( );
+		v.normalModel = v.position - center;
+		v.normalModel.Normalize( );
 		v.texcoord = Vector2(float(i) / numSlices, 0.0f);
 		vertices.push_back(v);
 	}
@@ -300,7 +306,9 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 	return meshData;
 }
 
-MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, const int numSlices) {
+MeshData GeometryGenerator::MakeSphere(const float radius, 
+									   const int numStacks, const int numSlices, 
+									   const Vector2 texScale) {
 
 	// Texture 좌표계때문에 (numSlices + 1) 개의 vertex 사용 (마지막에 닫아주는 vertex가 중복)
 	// Stack은 y축 양의 방향으로 쌓아가는 방식
@@ -323,9 +331,18 @@ MeshData GeometryGenerator::MakeSphere(const float radius, const int numStacks, 
 			// 시작점을 x-z평면에서 회전시키면서 원을 만드는 구조
 			v.position = Vector3::Transform(
 				stackStartPoint, Matrix::CreateRotationY(dTheta * float(i)));
-			v.normal = v.position; // 원점이 구의 중심이므로
-			v.normal.Normalize( );
-			v.texcoord = Vector2(float(i) / numSlices, 1.0f - float(j) / numStacks);
+			v.normalModel = v.position; // 원점이 구의 중심이므로
+			v.normalModel.Normalize( );
+			v.texcoord = Vector2(float(i) / numSlices, 1.0f - float(j) / numStacks) * texScale;
+
+			Vector3 biTangent = Vector3(0.0f, 1.0f, 0.0f);
+
+			Vector3 normalOrth = v.normalModel - biTangent.Dot(v.normalModel) * v.normalModel;
+			normalOrth.Normalize( );
+
+			v.tangentModel = biTangent.Cross(normalOrth);
+			v.tangentModel.Normalize( );
+
 			vertices.push_back(v);
 		}
 	}
@@ -379,8 +396,8 @@ MeshData GeometryGenerator::MakeTetrahedron() {
 
 		Vertex v;
 		v.position = points[ i ];
-		v.normal = v.position; // 중심이 원점
-		v.normal.Normalize( );
+		v.normalModel = v.position; // 중심이 원점
+		v.normalModel.Normalize( );
 
 		meshData.vertices.push_back(v);
 	}
@@ -406,8 +423,8 @@ MeshData GeometryGenerator::MakeIcosahedron( ) {
 	for (size_t i = 0; i < pos.size( ); i++) {
 		Vertex v;
 		v.position = pos[ i ];
-		v.normal = v.position;
-		v.normal.Normalize( );
+		v.normalModel = v.position;
+		v.normalModel.Normalize( );
 
 		newMesh.vertices.push_back(v);
 	}
@@ -427,9 +444,9 @@ MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshD
 	
 	// 구의 표면으로 옮기고 노멀과 texture 좌표 계산
 	auto ProjectVertex = [&](Vertex& v) {
-		v.normal = v.position;
-		v.normal.Normalize( );
-		v.position = v.normal * radius;
+		v.normalModel = v.position;
+		v.normalModel.Normalize( );
+		v.position = v.normalModel * radius;
 
 		// 텍스쳐 좌표를 역산정하는 로직
 		/*const float theta = atan2f(v.position.z, v.position.x);
@@ -443,9 +460,9 @@ MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshD
 		auto faceNormal =
 			(v1.position - v0.position).Cross(v2.position - v0.position);
 		faceNormal.Normalize( );
-		v0.normal = faceNormal;
-		v1.normal = faceNormal;
-		v2.normal = faceNormal;
+		v0.normalModel = faceNormal;
+		v1.normalModel = faceNormal;
+		v2.normalModel = faceNormal;
 	};
 
 	// Vertex가 중복되는 구조로 구현

@@ -1,9 +1,4 @@
-struct VertexShaderInput
-{
-    float3 posModel : POSITION;
-    float3 normalModel : NORMAL;
-    float2 texcoord : TEXCOORD0;
-};
+#include "Common.hlsli"
 
 struct GeometryShaderInput
 {
