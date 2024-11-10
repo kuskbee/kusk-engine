@@ -48,6 +48,9 @@
     <ClCompile Include="BillboardPoints.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="TessellatedQuad.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -101,6 +104,9 @@
     <ClInclude Include="BillboardPoints.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="TessellatedQuad.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BasicPixelShader.hlsl" />
@@ -118,6 +124,10 @@
     <FxCompile Include="BillboardPointsGeometryShader.hlsl" />
     <FxCompile Include="BillboardPointsPixelShader.hlsl" />
     <FxCompile Include="NormalGeometryShader.hlsl" />
+    <FxCompile Include="TessellatedQuadVS.hlsl" />
+    <FxCompile Include="TessellatedQuadPS.hlsl" />
+    <FxCompile Include="TessellatedQuadHS.hlsl" />
+    <FxCompile Include="TessellatedQuadDS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

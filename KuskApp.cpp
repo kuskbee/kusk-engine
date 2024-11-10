@@ -19,6 +19,11 @@ bool KuskApp::Initialize() {
 	if (!AppBase::Initialize())
 		return false;
 
+	// $tessellatedQuad
+	m_tessellatedQuad.Initialize(m_device);
+	m_tessellatedQuad.m_diffuseResView = m_cubeMapping.m_diffuseResView;
+	m_tessellatedQuad.m_specularResView = m_cubeMapping.m_specularResView;
+
 	// 배경 나무 텍스쳐
 	vector<Vector4> points;
 	Vector4 p = { -40.0f, 1.0f, 20.0f, 1.0f };
@@ -280,6 +285,13 @@ void KuskApp::Update(float dt) {
 	m_mainSphere.m_basicPixelConstantData.eyeWorld = eyeWorld;
 	m_mainSphere.UpdateConstantBuffers(m_device, m_context);
 
+	// $tessellatedQuad
+	m_tessellatedQuad.m_constantData.eyeWorld = eyeWorld;
+	m_tessellatedQuad.m_constantData.model = Matrix( );
+	m_tessellatedQuad.m_constantData.view = viewRow.Transpose( );
+	m_tessellatedQuad.m_constantData.proj = projRow.Transpose( );
+	D3D11Utils::UpdateBuffer(m_device, m_context, m_tessellatedQuad.m_constantData, m_tessellatedQuad.m_constantBuffer);
+
 	if (m_dirtyFlag) {
 		assert(m_filters.size( ) > 1);
 		m_filters[ 1 ]->m_pixelConstData.threshold = m_threshold;
@@ -311,6 +323,7 @@ void KuskApp::Render() {
 		m_context->RSSetState(m_solidRasterizerState.Get( ));
 
 	m_billboardPoints.Render(m_context);
+	m_tessellatedQuad.Render(m_context);
 
 	// 물체들
 	if (m_visibleMeshIndex == 0) {
@@ -403,6 +416,18 @@ void KuskApp::UpdateGUI() {
 
 	ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
 	ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
+
+	// $m_tessellatedQuad
+	int flag = 0;
+	flag += ImGui::SliderFloat4(
+		"Edges", &m_tessellatedQuad.m_constantData.edges.x, 1, 8);
+	flag += ImGui::SliderFloat2(
+		"Inside", &m_tessellatedQuad.m_constantData.inside.x, 1, 8);
+	if (flag) {
+		D3D11Utils::UpdateBuffer(m_device, m_context,
+								 m_tessellatedQuad.m_constantData,
+								 m_tessellatedQuad.m_constantBuffer);
+	}
 	
 	auto& meshGroup = m_visibleMeshIndex == 0 ? m_mainSphere : m_meshGroupCharacter;
 

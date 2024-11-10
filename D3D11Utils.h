@@ -25,18 +25,29 @@ public:
 		const vector<D3D11_INPUT_ELEMENT_DESC>& inputElements,
 		ComPtr<ID3D11VertexShader>& m_vertexShader,
 		ComPtr<ID3D11InputLayout>& m_inputLayout);
-	static void CreatePixelShader(
-		ComPtr<ID3D11Device>& device,
-		const wstring& filename,
-		ComPtr<ID3D11PixelShader>& m_pixelShader);
-	static void CreateIndexBuffer(
-		ComPtr<ID3D11Device>& device,
-		const vector<uint32_t>& indices,
-		ComPtr<ID3D11Buffer>& indexBuffer);
+
+	static void CreateHullShader(ComPtr<ID3D11Device>& device,
+								 const wstring& filename,
+								 ComPtr<ID3D11HullShader>& hullShader);
+
+	static void CreateDomainShader(ComPtr<ID3D11Device>& device,
+								   const wstring& filename,
+								   ComPtr<ID3D11DomainShader>& domainShader);
+
 	static void CreateGeometryShader(
 		ComPtr<ID3D11Device>& device,
 		const wstring& filename,
 		ComPtr<ID3D11GeometryShader>& geometryShader);
+	
+	static void CreatePixelShader(
+		ComPtr<ID3D11Device>& device,
+		const wstring& filename,
+		ComPtr<ID3D11PixelShader>& m_pixelShader);
+
+	static void CreateIndexBuffer(
+		ComPtr<ID3D11Device>& device,
+		const vector<uint32_t>& indices,
+		ComPtr<ID3D11Buffer>& indexBuffer);
 
 	template <typename T_VERTEX>
 	static void CreateVertexBuffer(

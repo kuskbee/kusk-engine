@@ -66,7 +66,7 @@ void BillboardPoints::Render(ComPtr<ID3D11DeviceContext>& context) {
 	// POINTLIST는 연결관계가 필요없기 때문에 DrawIndexed() 대신 Draw() 사용
 	context->Draw(m_indexCount, 0);
 
-	// Geometry Shader를 쓰지 않는 다른 물체들을 위해 nullptr로 설정
+	// Geometry Shader를 사용하지 않는 다른 물체들을 위해 nullptr로 설정
 	context->GSSetShader(nullptr, 0, 0);
 
 }

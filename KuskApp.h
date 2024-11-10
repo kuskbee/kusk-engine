@@ -11,6 +11,7 @@
 #include "GeometryGenerator.h"
 #include "ImageFilter.h"
 #include "Light.h"
+#include "TessellatedQuad.h"
 
 namespace kusk {
 
@@ -29,7 +30,8 @@ public:
 
 	void BuildFilters( );
 
-protected:
+protected: 
+	TessellatedQuad m_tessellatedQuad;
 	BillboardPoints m_billboardPoints;
 	BasicMeshGroup m_mainSphere;
 	BoundingSphere m_mainBoundingSphere;	//
