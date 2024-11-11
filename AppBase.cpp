@@ -29,7 +29,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return S_OK;
 }
 
-// 생성자
 AppBase::AppBase()
     : m_screenWidth(1280), m_screenHeight(720), m_mainWindow(0),
       m_screenViewport(D3D11_VIEWPORT())
@@ -96,7 +95,7 @@ int AppBase::Run() {
             ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI 렌더링
 
             // Switch the back buffer and the front buffer
-            // 주의 : ImGui RenderDrawData() 다음에 Present() 호출
+            // ImGui RenderDrawData() 다음에 Present() 호출
             m_swapChain->Present(1, 0);
             
         }
@@ -147,24 +146,24 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
     case WM_SIZE :
-        // Reset and resize swapchain
+        // 화면 해상도가 바뀌면 SwapChain을 다시 생성
         if (m_swapChain) { // 처음 실행이 아닌 지 확인
             m_screenWidth = int(LOWORD(lParam));
             m_screenHeight = int(HIWORD(lParam));
             m_guiWidth = 0;
 
-            m_renderTargetView.Reset( );
+            m_backBufferRTV.Reset( );
             m_swapChain->ResizeBuffers( 0,   // 현재 개수 유지
                                         ( UINT ) LOWORD(lParam), // 해상도 변경
                                         ( UINT ) HIWORD(lParam),
                                         DXGI_FORMAT_UNKNOWN, // 현재 포맷 유지
                                         0);
-            CreateRenderTargetView( );
-            D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, m_numQualityLevels, m_depthStencilView);
+            CreateBuffers( );
             SetViewport( );
 
             // 화면 해상도가 바뀌면 카메라 aspect ratio도 같이 변경
             m_camera.SetAspectRatio(this->GetAspectRatio());
+            m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
         }
         break;
     case WM_SYSCOMMAND :
@@ -177,14 +176,16 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
-        if (!m_leftButton && !m_rightButton)
+        if (!m_leftButton && !m_rightButton) {
             m_dragStartFlag = true;
+        }
         m_leftButton = true;
         break;
     case WM_RBUTTONDOWN:
         // cout << "WM_RBUTTONDOWN Right mouse button" << endl;
-        if (!m_rightButton && !m_leftButton)
+        if (!m_rightButton && !m_leftButton) {
             m_dragStartFlag = true;
+        }
         m_rightButton = true;
         break;
     case WM_LBUTTONUP:
@@ -196,19 +197,23 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         m_rightButton = false;
         break;
     case WM_KEYDOWN:
-        // cout << "WM_KEYDOWN " << (int)wParam << endl;
-        
         // 키보드 키 눌림 갱신
         m_keyPressed[ wParam ] = true;
         
-        if (wParam == 27) {
-            // esc
+        if (wParam == 27) { // esc 키 종료
             DestroyWindow(hWnd);
-        }         
+        }
+        // cout << "WM_KEYDOWN " << (int)wParam << endl;
         break;
     case WM_KEYUP :
-        if (wParam == 70) { // 'f' 키
+        if (wParam == 70) { // 'f' 키, 일인칭 시점 On/Off
             m_useFirstPersonView = !m_useFirstPersonView;
+        }
+
+        if (wParam == 67) { // 'c'키, 화면 캡쳐
+            ComPtr<ID3D11Texture2D> backBuffer;
+            m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
+            D3D11Utils::WriteToFile(m_device, m_context, backBuffer, "captured.png");
         }
 
         // 키보드 키 해제 갱신
@@ -248,11 +253,9 @@ bool AppBase::InitMainWindow() {
 
     RECT wr = { 0, 0, m_screenWidth, m_screenHeight };
 
-    // 필요한 윈도우 크기(해상도) 계산
-    // wr 값이 바뀜
+    // 필요한 윈도우 크기(해상도) 계산. wr 값이 조정됨.
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
-    // 위에서 계산한 wr을 이용하여 윈도우를 만듦.
     m_mainWindow = CreateWindow(wc.lpszClassName, L"KuskEngine Window",
                                 WS_OVERLAPPEDWINDOW,
                                 100,
@@ -292,79 +295,36 @@ bool AppBase::InitDirect3D() {
     };
     D3D_FEATURE_LEVEL featureLevel;
 
-    if (FAILED(D3D11CreateDevice(
-        nullptr,
+    DXGI_SWAP_CHAIN_DESC sd;
+    ZeroMemory(&sd, sizeof(sd));
+    sd.BufferDesc.Width = m_screenWidth;
+    sd.BufferDesc.Height = m_screenHeight;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.BufferCount = 2;
+    sd.BufferDesc.RefreshRate.Numerator = 60;
+    sd.BufferDesc.RefreshRate.Denominator = 1;
+    
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.OutputWindow = m_mainWindow;                     // the window to be used
+    sd.Windowed = TRUE;                                 // Windowed/full-screen mode
+    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;  // allow full-screen switching
+    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    sd.SampleDesc.Count = 1;
+    sd.SampleDesc.Quality = 0;
+
+    ThrowIfFailed(D3D11CreateDeviceAndSwapChain(0, // Default adapter
         driverType,
-        0,
-        createDeviceFlags,
-        featureLevels,
-        ARRAYSIZE(featureLevels),
-        D3D11_SDK_VERSION,
-        device.GetAddressOf(),
-        &featureLevel,
-        context.GetAddressOf()
-    ))) {
-        cout << "D3D11CreateDevice() failed." << endl;
-        return false;
-    }
+        0, // No Software device
+        createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION, &sd,
+        m_swapChain.GetAddressOf( ), m_device.GetAddressOf( ), &featureLevel,
+        m_context.GetAddressOf( )));
 
     if (featureLevel != D3D_FEATURE_LEVEL_11_0) {
         cout << "D3D Feature Level 11 unsupported." << endl;
         return false;
     }
 
-    // 4X MSAA 지원하는 지 확인
-    device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m_numQualityLevels);
-    if (m_numQualityLevels <= 0) {
-        cout << "MSAA not supported." << endl;
-    }
-
-    //m_numQualityLevels = 0; // MSAA 강제로 끄기
-
-    if (FAILED(device.As(&m_device))) {
-        cout << "device.As() failed." << endl;
-        return false;
-    }
-
-    if (FAILED(context.As(&m_context))) {
-        cout << "context.As() failed." << endl;
-        return false;
-    }
-
-    DXGI_SWAP_CHAIN_DESC sd;
-    ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Width = m_screenWidth;                // back buffer width
-    sd.BufferDesc.Height = m_screenHeight;              // back buffer height
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // use 32-bit color
-    sd.BufferCount = 2;                                 // Double-buffering
-    sd.BufferDesc.RefreshRate.Numerator = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    // DXGI_USAGE_SHADER_INPUT 쉐이더에 입력으로 넣어주기 위해 필요
-    sd.BufferUsage = DXGI_USAGE_SHADER_INPUT | DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = m_mainWindow;                     // the window to be used
-    sd.Windowed = TRUE;                                 // Windowed/full-screen mode
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;  // allow full-screen switching
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-    if (m_numQualityLevels > 0) {
-        sd.SampleDesc.Count = 4; // how many multisamples
-        sd.SampleDesc.Quality = m_numQualityLevels - 1;
-    }
-    else {
-        sd.SampleDesc.Count = 1;
-        sd.SampleDesc.Quality = 0;
-    }
-
-    if (FAILED(D3D11CreateDeviceAndSwapChain(0, // Default adapter
-                                             driverType,
-                                             0, // No Software device
-                                             createDeviceFlags, featureLevels, 1, D3D11_SDK_VERSION, &sd, 
-                                             m_swapChain.GetAddressOf(), m_device.GetAddressOf(), &featureLevel, 
-                                             m_context.GetAddressOf()))) {
-        cout << "D3D11CreateDeviceAndSwapChain() failed." << endl;
-        return false;
-    }
-
-    CreateRenderTargetView( );
+    CreateBuffers( );
     SetViewport( );
 
     // Create a rasterize state
@@ -376,23 +336,12 @@ bool AppBase::InitDirect3D() {
     rastDesc.FrontCounterClockwise = false;
     rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
 
-    m_device->CreateRasterizerState(&rastDesc, m_solidRasterizerState.GetAddressOf());
+    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_solidRasterizerState.GetAddressOf()));
 
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
-    m_device->CreateRasterizerState(&rastDesc, m_wireRasterizerState.GetAddressOf( ));
+    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_wireRasterizerState.GetAddressOf( )));
 
-    D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, m_numQualityLevels, m_depthStencilView);
-
-    // Create depth stencil state
-    D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-    ZeroMemory(&depthStencilDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
-    depthStencilDesc.DepthEnable = true;
-    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
-    depthStencilDesc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
-    if (FAILED(m_device->CreateDepthStencilState(
-        &depthStencilDesc, m_depthStencilState.GetAddressOf()))) {
-        cout << "CreateDepthStencilState() failed." << endl;
-    }
+    m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
 
     return true;
 }
@@ -432,25 +381,60 @@ void AppBase::SetViewport( ) {
         m_screenViewport.Width = float(m_screenWidth - m_guiWidth);
         m_screenViewport.Height = float(m_screenHeight);
         m_screenViewport.MinDepth = 0.0f;
-        m_screenViewport.MaxDepth = 1.0f; // Note: important for depth buffering
+        m_screenViewport.MaxDepth = 1.0f;
 
         m_context->RSSetViewports(1, &m_screenViewport);
     }
 }
 
-bool AppBase::CreateRenderTargetView( ) {
-    // CreateRenderTarget
+void AppBase::CreateBuffers( ) {
+    
+    // 레스터화 -> float/depthBuffer(MSAA) -> resolved -> backBuffer
+
+    // BackBuffer는 화면으로 최종 출력되기 때문에 RTV만 필요하고 SRV는 불필요
+
     ComPtr<ID3D11Texture2D> backBuffer;
-    m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
-    if (backBuffer) {
-        m_device->CreateRenderTargetView(backBuffer.Get( ), nullptr, m_renderTargetView.GetAddressOf( ));
-        m_device->CreateShaderResourceView(backBuffer.Get( ), nullptr, m_shaderResourceView.GetAddressOf( ));
+    ThrowIfFailed(m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( ))));
+    
+    ThrowIfFailed(m_device->CreateRenderTargetView(backBuffer.Get( ), nullptr, m_backBufferRTV.GetAddressOf( )));
+
+    // FLOAT MSAA RenderTargetView/ShaderResourceView
+    ThrowIfFailed(m_device->CheckMultisampleQualityLevels(DXGI_FORMAT_R16G16B16A16_FLOAT, 4, &m_numQualityLevels));
+
+    D3D11_TEXTURE2D_DESC desc;
+    backBuffer->GetDesc(&desc);
+    desc.MipLevels = desc.ArraySize = 1;
+    desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    desc.Usage = D3D11_USAGE_DEFAULT; // 스테이징 텍스쳐로부터 복사 가능
+    desc.MiscFlags = 0;
+    desc.CPUAccessFlags = 0;
+    if (m_useMSAA && m_numQualityLevels) {
+        desc.SampleDesc.Count = 4;
+        desc.SampleDesc.Quality = m_numQualityLevels - 1;
+    } else {
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
     }
-    else {
-        cout << "CreateRenderTargetView() failed." << endl;
-        return false;
-    }
-    return true;
+
+    ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_floatBuffer.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateShaderResourceView(m_floatBuffer.Get( ), NULL, m_floatSRV.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateRenderTargetView(m_floatBuffer.Get( ), NULL, m_floatRTV.GetAddressOf( )));
+
+    // D3D11_RENDER_TARGET_VIEW_DESC viewDesc;
+    // m_floatRTV->GetDesc(&viewDesc);
+
+    D3D11Utils::CreateDepthBuffer(m_device, m_screenWidth, m_screenHeight, UINT(m_useMSAA ? m_numQualityLevels : 0), m_depthStencilView);
+    
+    // FLOAT MSAA를 Resolve해서 저장할 SRV/RTV
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+
+    ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_resolvedBuffer.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateShaderResourceView(m_resolvedBuffer.Get( ), NULL, m_resolvedSRV.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateRenderTargetView(m_resolvedBuffer.Get( ), NULL, m_resolvedRTV.GetAddressOf( )));
+
+    // m_resolvedRTV->GetDesc(&viewDesc);
 }
 
 

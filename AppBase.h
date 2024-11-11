@@ -9,6 +9,7 @@
 
 #include "Camera.h"
 #include "D3D11Utils.h"
+#include "PostProcess.h"
 
 namespace kusk {
 
@@ -22,44 +23,49 @@ public :
 	AppBase();
 	virtual ~AppBase();
 
+	int Run( );
 	float GetAspectRatio() const;
-	int Run();
-
+	
 	virtual bool Initialize();
 	virtual void UpdateGUI() = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Render() = 0;
-
-	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-	// 마우스를 다루기 위한 편의성 재정의
 	virtual void OnMouseMove(WPARAM btnState, int x, int y);
+	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 protected:
 	bool InitMainWindow();
 	bool InitDirect3D();
 	bool InitGUI();
-
+	void CreateBuffers( );
 	void SetViewport( );
-	bool CreateRenderTargetView( );
-
+	
 public:
 	int m_screenWidth; // 렌더링할 최종 화면의 해상도
 	int m_screenHeight;
 	int m_guiWidth = 0;
 	HWND m_mainWindow;
+	bool m_useMSAA = true;
 	UINT m_numQualityLevels = 0;
+	bool m_drawAsWire = false;
+	bool m_usePostProcessing = false;
 
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
-	ComPtr<ID3D11RenderTargetView> m_renderTargetView;
-	ComPtr<ID3D11ShaderResourceView> m_shaderResourceView;
 	ComPtr<IDXGISwapChain> m_swapChain;
+	ComPtr<ID3D11RenderTargetView> m_backBufferRTV;
 
+	// 삼각형 레스터화 -> float(MSAA) -> resolved(No MSAA)
+	// -> 후처리(블룸, 톤매핑) -> backBuffer(최종 SwapChain Present)
+	ComPtr<ID3D11Texture2D> m_floatBuffer;
+	ComPtr<ID3D11Texture2D> m_resolvedBuffer;
+	ComPtr<ID3D11RenderTargetView> m_floatRTV;
+	ComPtr<ID3D11RenderTargetView> m_resolvedRTV;
+	ComPtr<ID3D11ShaderResourceView> m_floatSRV;
+	ComPtr<ID3D11ShaderResourceView> m_resolvedSRV;
+	
 	ComPtr<ID3D11RasterizerState> m_solidRasterizerState;
 	ComPtr<ID3D11RasterizerState> m_wireRasterizerState;
-	bool m_drawAsWire = false;
-	bool m_usePostProcessing = false;
 
 	// Depth Buffer
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
@@ -78,10 +84,11 @@ public:
 	D3D11_VIEWPORT m_screenViewport;
 
 	// 마우스 커서 위치 저장 (Picking에 사용)
-	int m_cursorX = 0;
-	int m_cursorY = 0;
 	float m_cursorNdcX = 0.0f;
 	float m_cursorNdcY = 0.0f;
+
+	// 후처리 필터
+	PostProcess m_postProcess;
 };
 
 } // namespace kusk

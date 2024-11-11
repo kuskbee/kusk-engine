@@ -37,7 +37,8 @@ struct BasicPixelConstantData {
 	int useNormalMap = 1;				// 4
 	int useAOMap = 1;					// 4
 	int reverseNormalMapY = 0;			// 4
-	Vector2 dummy;
+	float expose = 1.0f;				// 4
+	float gamma = 1.0f;					// 4
 };
 
 static_assert((sizeof(BasicPixelConstantData) % 16) == 0,

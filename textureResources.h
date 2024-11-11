@@ -39,3 +39,7 @@
 #define BRICK_TEXTURE_NORMAL "Bricks075A_1K_NormalDX.png"
 #define BRICK_TEXTURE_HEIGHT "Bricks075A_1K_Displacement.png"
 #define BRICK_TEXTURE_AO "Bricks075A_1K_AmbientOcclusion.png"
+
+#define BRICK_TEXTURE_4K_HDRI "./Assets/Textures/PBR/Bricks075A_4K-PNG/Bricks075A_4K_Color.png"
+
+#define SKY_TEXTURE_HDRI "./Assets/Textures/Cubemaps/HDRI/DaySkyHDRI015A_4K-HDR.exr"

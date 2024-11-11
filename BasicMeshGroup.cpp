@@ -53,15 +53,15 @@ namespace kusk {
          if (!meshData.albedoTextureFilename.empty( )) {
 
              std::cout << meshData.albedoTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.albedoTextureFilename,
-                                       newMesh->albedoTexture,
+             D3D11Utils::CreateTexture(device, context, meshData.albedoTextureFilename, true,
+                                       newMesh->albedoTexture, 
                                        newMesh->albedoTextureResourceView);
          }
 
          if (!meshData.normalTextureFilename.empty( )) {
 
              std::cout << meshData.normalTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename,
+             D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename, false,
                                        newMesh->normalTexture,
                                        newMesh->normalTextureResourceView);
          }
@@ -69,7 +69,7 @@ namespace kusk {
          if (!meshData.heightTextureFilename.empty( )) {
 
              std::cout << meshData.heightTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename,
+             D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename, false,
                                        newMesh->heightTexture,
                                        newMesh->heightTextureResourceView);
          }
@@ -77,7 +77,7 @@ namespace kusk {
          if (!meshData.aoTextureFilename.empty( )) {
 
              std::cout << meshData.aoTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename,
+             D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename, false,
                                        newMesh->aoTexture,
                                        newMesh->aoTextureResourceView);
          }
@@ -95,17 +95,15 @@ namespace kusk {
          {"TANGENT", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
      };
 
-     D3D11Utils::CreateVertexShaderAndInputLayout(
-         device, L"BasicVertexShader.hlsl", basicInputElements,
-         m_basicVertexShader, m_basicInputLayout);
+     D3D11Utils::CreateVertexShaderAndInputLayout( 
+         device, L"BasicVS.hlsl", basicInputElements, m_basicVertexShader, m_basicInputLayout);
 
-     D3D11Utils::CreatePixelShader(device, L"BasicPixelShader.hlsl",
-                                   m_basicPixelShader);
+     D3D11Utils::CreatePixelShader(device, L"BasicPS.hlsl", m_basicPixelShader);
 
      D3D11Utils::CreateVertexShaderAndInputLayout(
-         device, L"NormalVertexShader.hlsl", basicInputElements, m_normalVertexShader, m_basicInputLayout);
-     D3D11Utils::CreatePixelShader(device, L"NormalPixelShader.hlsl", m_normalPixelShader);
-     D3D11Utils::CreateGeometryShader(device, L"NormalGeometryShader.hlsl", m_normalGeometryShader);
+         device, L"NormalVS.hlsl", basicInputElements, m_normalVertexShader, m_basicInputLayout);
+     D3D11Utils::CreatePixelShader(device, L"NormalPS.hlsl", m_normalPixelShader);
+     D3D11Utils::CreateGeometryShader(device, L"NormalGS.hlsl", m_normalGeometryShader);
 
      D3D11Utils::CreateConstantBuffer(device, m_normalVertexConstantData,
                                       m_normalVertexConstantBuffer);

@@ -51,6 +51,9 @@
     <ClCompile Include="TessellatedQuad.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="PostProcess.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -107,27 +110,30 @@
     <ClInclude Include="TessellatedQuad.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="PostProcess.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="BasicPixelShader.hlsl" />
-    <FxCompile Include="BasicVertexShader.hlsl" />
-    <FxCompile Include="NormalVertexShader.hlsl" />
-    <FxCompile Include="NormalPixelShader.hlsl" />
-    <FxCompile Include="CubeMappingPixelShader.hlsl" />
-    <FxCompile Include="CubeMappingVertexShader.hlsl" />
-    <FxCompile Include="BlurXPixelShader.hlsl" />
-    <FxCompile Include="BlurYPixelShader.hlsl" />
-    <FxCompile Include="CombinePixelShader.hlsl" />
-    <FxCompile Include="SamplingVertexShader.hlsl" />
-    <FxCompile Include="SamplingPixelShader.hlsl" />
-    <FxCompile Include="BillboardPointsVertexShader.hlsl" />
-    <FxCompile Include="BillboardPointsGeometryShader.hlsl" />
-    <FxCompile Include="BillboardPointsPixelShader.hlsl" />
-    <FxCompile Include="NormalGeometryShader.hlsl" />
+    <FxCompile Include="BloomDownPS.hlsl" />
+    <FxCompile Include="BloomUpPS.hlsl" />
     <FxCompile Include="TessellatedQuadVS.hlsl" />
     <FxCompile Include="TessellatedQuadPS.hlsl" />
     <FxCompile Include="TessellatedQuadHS.hlsl" />
     <FxCompile Include="TessellatedQuadDS.hlsl" />
+    <FxCompile Include="BasicPS.hlsl" />
+    <FxCompile Include="BasicVS.hlsl" />
+    <FxCompile Include="BillboardPointsPS.hlsl" />
+    <FxCompile Include="BillboardPointsVS.hlsl" />
+    <FxCompile Include="CombinePS.hlsl" />
+    <FxCompile Include="CubeMappingPS.hlsl" />
+    <FxCompile Include="CubeMappingVS.hlsl" />
+    <FxCompile Include="NormalGS.hlsl" />
+    <FxCompile Include="NormalPS.hlsl" />
+    <FxCompile Include="NormalVS.hlsl" />
+    <FxCompile Include="SamplingPS.hlsl" />
+    <FxCompile Include="SamplingVS.hlsl" />
+    <FxCompile Include="BillboardPointsGS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

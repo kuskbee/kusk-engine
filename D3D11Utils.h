@@ -13,11 +13,18 @@ namespace kusk {
 using namespace std;
 using Microsoft::WRL::ComPtr;
 
+inline void ThrowIfFailed(HRESULT hr) {
+	if (FAILED(hr)) {
+		// 디버깅할 때 여기에 breakpoint 설정
+		throw std::exception( );
+	}
+}
+
 class D3D11Utils
 {
 public:
-	static bool CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
-								  int screenHeight, UINT& numQualityLevels,
+	static void CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
+								  int screenHeight, UINT numQualityLevels,
 								  ComPtr<ID3D11DepthStencilView>& depthStencilView);
 	static void CreateVertexShaderAndInputLayout(
 		ComPtr<ID3D11Device>& device,
@@ -68,11 +75,7 @@ public:
 		vertexBufferData.SysMemPitch = 0;
 		vertexBufferData.SysMemSlicePitch = 0;
 
-		const HRESULT hr = device->CreateBuffer(
-			&bufferDesc, &vertexBufferData, vertexBuffer.GetAddressOf( ));
-		if (FAILED(hr)) {
-			std::cout << "(vertex) CreateBuffer() failed. " << std::hex << hr << std::endl;
-		}
+		ThrowIfFailed(device->CreateBuffer(&bufferDesc, &vertexBufferData, vertexBuffer.GetAddressOf( )));
 	}
 
 	template <typename T_CONSTANT>
@@ -80,6 +83,10 @@ public:
 		ComPtr<ID3D11Device>& device,
 		const T_CONSTANT& constantBufferData,
 		ComPtr<ID3D11Buffer>& constantBuffer) {
+
+		static_assert((sizeof(T_CONSTANT) % 16) == 0,
+					  "Constant Buffer size must be 16-byte aligned");
+
 		D3D11_BUFFER_DESC cbDesc;
 		cbDesc.ByteWidth = sizeof(constantBufferData);
 		cbDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -94,11 +101,7 @@ public:
 		initData.SysMemPitch = 0;
 		initData.SysMemSlicePitch = 0;
 
-		auto hr = device->CreateBuffer(&cbDesc, &initData,
-								constantBuffer.GetAddressOf( ));
-		if (FAILED(hr)) {
-			std::cout << "CreateConstantBuffer() CreateBuffer failed." << std::endl;
-		}
+		ThrowIfFailed(device->CreateBuffer(&cbDesc, &initData,constantBuffer.GetAddressOf( )));
 	}
 
 	template <typename T_DATA>
@@ -119,6 +122,7 @@ public:
 	static void CreateTexture(ComPtr<ID3D11Device>& device,
 					   ComPtr<ID3D11DeviceContext>& context,
 					   const std::string filename,
+					   const bool useSRGB,
 					   ComPtr<ID3D11Texture2D>& texture,
 					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
 
@@ -131,6 +135,12 @@ public:
 	static void CreateCubemapTexture(ComPtr<ID3D11Device>& device,
 							 const wchar_t* filename,
 							 ComPtr<ID3D11ShaderResourceView>& texResView);
+
+	// 텍스쳐를 이미지 파일로 저장
+	static void WriteToFile(ComPtr<ID3D11Device>& device,
+							ComPtr<ID3D11DeviceContext>& context,
+							ComPtr<ID3D11Texture2D>& textureToWrite,
+							const std::string filename);
 
 };
 

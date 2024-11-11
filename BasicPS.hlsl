@@ -23,6 +23,8 @@ cbuffer BasicPixelConstantData : register(b0)
     int useNormalMap;
     int useAOMap;       // Ambient Occlusion
     int reverseNormalMapY;
+    float exposure;
+    float gamma;
 };
 
 float3 SchlickFresnel(float3 fresnelR0, float3 normal, float3 toEye)
@@ -103,7 +105,11 @@ float4 main(PixelShaderInput input) : SV_TARGET {
     
     if (useAlbedoTexture)
     {
-        diffuse *= g_albedoTexture.SampleLevel(g_sampler, input.texcoord, lod);
+        // 임시로 색 대입
+        float3 albedo = g_albedoTexture.SampleLevel(g_sampler, input.texcoord, lod).rgb;
+        diffuse.rgb = albedo;
+        
+        //diffuse *= g_albedoTexture.SampleLevel(g_sampler, input.texcoord, lod);
         //diffuse *= g_albedoTexture.SampleLevel(g_sampler, input.texcoord, 0.0); // 가장 높은 해상도로 테스트
         //diffuse *= g_albedoTexture.Sample(g_sampler, input.texcoord);
     }
@@ -123,6 +129,14 @@ float4 main(PixelShaderInput input) : SV_TARGET {
     rim = pow(abs(rim), rimPower);
     
     float3 rimEffect = rim * rimColor * rimStrength;
+    
+    // 임시로 밝기 띠 표시
+    //if (input.texcoord.y < 0.2) {
+    //    finalColor = float4(float3(1, 1, 1) * floor(input.texcoord.x * 11.0) / 10.0, 1);
+    //}
+    //else {
+    //    finalColor = diffuse + specular;
+    //}
     
     return finalColor + float4(rimEffect, 1.0);
     //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0);

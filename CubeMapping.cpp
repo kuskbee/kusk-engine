@@ -33,9 +33,9 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 	};
 	
 	D3D11Utils::CreateVertexShaderAndInputLayout(
-		device, L"CubeMappingVertexShader.hlsl", basicInputElements, m_vertexShader, m_inputLayout);
+		device, L"CubeMappingVS.hlsl", basicInputElements, m_vertexShader, m_inputLayout);
 
-	D3D11Utils::CreatePixelShader(device, L"CubeMappingPixelShader.hlsl", m_pixelShader);
+	D3D11Utils::CreatePixelShader(device, L"CubeMappingPS.hlsl", m_pixelShader);
 
 	// Texture Sampler 만들기
 	D3D11_SAMPLER_DESC sampDesc;

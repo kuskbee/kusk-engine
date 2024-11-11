@@ -1,19 +1,26 @@
+#define _CRT_SECURE_NO_WARNINGS // stb_image_write compile error fix
+
 #include "D3D11Utils.h"
 
+#include <DirectXTexEXR.h> // EXR 형식 HDRI 읽기
+#include <algorithm>
 #include <directxtk/DDSTextureLoader.h> // 큐브맵 읽을 때 필요
 #include <dxgi.h>		// DXGIFactory
 #include <dxgi1_4.h>	// DXGIFactory4
+#include <fp16.h>
 #include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 namespace kusk {
 using namespace std;
 using namespace DirectX;
 
-bool D3D11Utils::CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
-                                  int screenHeight, UINT& numQualityLevels,
+void D3D11Utils::CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
+                                  int screenHeight, UINT numQualityLevels,
                                   ComPtr<ID3D11DepthStencilView>& depthStencilView) {
     // Create depth buffer
     D3D11_TEXTURE2D_DESC depthStencilBufferDesc;
@@ -37,18 +44,8 @@ bool D3D11Utils::CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth
 
     ComPtr<ID3D11Texture2D> depthStencilBuffer;
 
-    if (FAILED(device->CreateTexture2D(
-        &depthStencilBufferDesc, 0,
-        depthStencilBuffer.GetAddressOf( )))) {
-        cout << "CreateTexture2D() depthStencilBuffer failed." << endl;
-    }
-    if (FAILED(device->CreateDepthStencilView(
-        depthStencilBuffer.Get( ), 0,
-        depthStencilView.GetAddressOf( )))) {
-        cout << "CreateDepthStencilView() failed." << endl;
-    }
-
-    return true;
+    ThrowIfFailed(device->CreateTexture2D(&depthStencilBufferDesc, 0, depthStencilBuffer.GetAddressOf( )));
+    ThrowIfFailed(device->CreateDepthStencilView(depthStencilBuffer.Get( ), 0, depthStencilView.GetAddressOf( )));
 }
 
 void CheckResult(HRESULT hr, ID3DBlob* errorBlob) {
@@ -206,6 +203,45 @@ void D3D11Utils::CreateGeometryShader(
 
 }
 
+void ReadEXRImage(const std::string filename, std::vector<uint8_t>& image,
+    int& width, int& height, DXGI_FORMAT& pixelFormat) {
+
+    const std::wstring wFilename(filename.begin( ), filename.end( ));
+
+    TexMetadata metadata;
+    ThrowIfFailed(GetMetadataFromEXRFile(wFilename.c_str( ), metadata));
+
+    ScratchImage scratchImage;
+    ThrowIfFailed(LoadFromEXRFile(wFilename.c_str( ), nullptr, scratchImage));
+
+    width = static_cast< int >(metadata.width);
+    height = static_cast< int >(metadata.height);
+    pixelFormat = metadata.format;
+
+    cout << filename << " " << metadata.width << " " << metadata.height << " " 
+         << metadata.format << endl;
+
+    image.resize(scratchImage.GetPixelsSize( ));
+    memcpy(image.data( ), scratchImage.GetPixels( ), image.size( ));
+
+    // 데이터 범위 확인해보기
+    /*vector<float> f32(image.size( ) / 2);
+    uint16_t* f16 = ( uint16_t* ) image.data( );
+    for (int i = 0; i < image.size( ) / 2; i++) {
+        f32[ i ] = fp16_ieee_to_fp32_value(f16[ i ]);
+    }
+
+    const float minValue = *std::min_element(f32.begin( ), f32.end( ));
+    const float maxValue = *std::max_element(f32.begin( ), f32.end( ));
+
+    cout << "minValue : " << minValue << ", maxValue : " << maxValue << endl;
+
+    f16 = ( uint16_t* ) image.data( );
+    for (int i = 0; i < image.size( ) / 2; i++) {
+        f16[ i ] = fp16_ieee_from_fp32_value(f32[ i ] * 2.0f);
+    }*/
+}
+
 void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& width, int& height) {
     
     int channels;
@@ -247,6 +283,7 @@ ComPtr<ID3D11Texture2D> CreateStagingTexture(ComPtr<ID3D11Device>& device,
                                              ComPtr<ID3D11DeviceContext>& context, 
                                              const int width, const int height, 
                                              const std::vector<uint8_t>& image,
+                                             const DXGI_FORMAT pixelFormat = DXGI_FORMAT_R8G8B8A8_UNORM,
                                              const int mipLevels = 1, const int arraySize = 1) {
     // 스테이징 텍스쳐 만들기
     D3D11_TEXTURE2D_DESC txtDesc;
@@ -255,22 +292,24 @@ ComPtr<ID3D11Texture2D> CreateStagingTexture(ComPtr<ID3D11Device>& device,
     txtDesc.Height = height;
     txtDesc.MipLevels = mipLevels;
     txtDesc.ArraySize = arraySize;
-    txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    txtDesc.Format = pixelFormat;
     txtDesc.SampleDesc.Count = 1;
     txtDesc.Usage = D3D11_USAGE_STAGING;
     txtDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
 
     ComPtr<ID3D11Texture2D> stagingTexture;
-    if (FAILED(device->CreateTexture2D(&txtDesc, nullptr, stagingTexture.GetAddressOf( )))) {
-        cout << "Failed()" << endl;
-    }
-
+    ThrowIfFailed(device->CreateTexture2D(&txtDesc, nullptr, stagingTexture.GetAddressOf( )));
+    
     // CPU에서 이미지 데이터 복사
+    size_t pixelSize = sizeof(uint8_t) * 4;
+    if (pixelFormat == DXGI_FORMAT_R16G16B16A16_FLOAT) {
+        pixelSize = sizeof(uint16_t) * 4;
+    }
     D3D11_MAPPED_SUBRESOURCE ms;
     context->Map(stagingTexture.Get( ), NULL, D3D11_MAP_WRITE, NULL, &ms);
     uint8_t* pData = ( uint8_t* ) ms.pData;
     for (UINT h = 0; h < UINT(height); h++) { // 가로줄 한 줄씩 복사
-        memcpy(&pData[ h * ms.RowPitch ], &image[ h * width * 4 ], width * sizeof(uint8_t) * 4);
+        memcpy(&pData[ h * ms.RowPitch ], &image[ h * width * pixelSize ], width * pixelSize);
     }
     context->Unmap(stagingTexture.Get( ), NULL);
 
@@ -281,16 +320,26 @@ void D3D11Utils::CreateTexture(
     ComPtr<ID3D11Device>& device,
     ComPtr<ID3D11DeviceContext>& context,
     const std::string filename,
+    const bool useSRGB,
     ComPtr<ID3D11Texture2D>& texture,
     ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
 
-    int width, height;
+    int width = 0, height = 0;
     std::vector<uint8_t> image;
+    DXGI_FORMAT pixelFormat = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    ReadImage(filename, image, width, height);
+    string ext(filename.end( ) - 3, filename.end( ));
+    std::transform(ext.begin( ), ext.end( ), ext.begin( ), std::tolower);
+
+    if (ext == "exr") {
+        ReadEXRImage(filename, image, width, height, pixelFormat);
+    }
+    else {
+        ReadImage(filename, image, width, height);
+    }
 
     // 스테이징 텍스쳐 만들고 CPU의 이미지를 복사합니다.
-    ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image);
+    ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image, pixelFormat);
 
     // 실제로 사용할 텍스쳐 설정
     D3D11_TEXTURE2D_DESC txtDesc;
@@ -299,7 +348,7 @@ void D3D11Utils::CreateTexture(
     txtDesc.Height = height;
     txtDesc.MipLevels = 0; // 밉맵 레벨 최대
     txtDesc.ArraySize = 1;
-    txtDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    txtDesc.Format = pixelFormat;
     txtDesc.SampleDesc.Count = 1;
     txtDesc.Usage = D3D11_USAGE_DEFAULT; // 스테이징 텍스쳐로부터 복사 가능하도록
     txtDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
@@ -373,7 +422,7 @@ void D3D11Utils::CreateTextureArray(
 
         auto& image = imageArray[ i ];
 
-        ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image, 1, 1);
+        ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image, txtDesc.Format, 1, 1);
 
         // 스테이징 텍스쳐를 텍스쳐 배열의 해당 위치에 복사
         UINT subresourceIndex = D3D11CalcSubresource(0, UINT(i), txtDesc.MipLevels);
@@ -393,15 +442,64 @@ void D3D11Utils::CreateCubemapTexture(
     ComPtr<ID3D11Texture2D> texture;
 
     // https://github.com/microsoft/DirectXTK/wiki/DDSTextureLoader
-    auto hr = CreateDDSTextureFromFileEx(
+    ThrowIfFailed(CreateDDSTextureFromFileEx(
         device.Get( ), filename, 0, D3D11_USAGE_DEFAULT,
         D3D11_BIND_SHADER_RESOURCE, 0,
         D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
         DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
-        textureResourceView.GetAddressOf( ), nullptr);
+        textureResourceView.GetAddressOf( ), nullptr));
 
-    if (FAILED(hr)) {
-        std::cout << "CreateDDSTextureFromFileEx() failed" << std::endl;
+    //D3D11_TEXTURE2D_DESC desc;
+    //texture->GetDesc(&desc);
+}
+
+void D3D11Utils::WriteToFile(ComPtr<ID3D11Device>& device,
+                             ComPtr<ID3D11DeviceContext>& context,
+                             ComPtr<ID3D11Texture2D>& textureToWrite,
+                             const std::string filename) {
+
+    D3D11_TEXTURE2D_DESC desc;
+    textureToWrite->GetDesc(&desc);
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.BindFlags = 0;
+    desc.MiscFlags = 0;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    desc.Usage = D3D11_USAGE_STAGING;
+
+    ComPtr<ID3D11Texture2D> stagingTexture;
+    ThrowIfFailed(device->CreateTexture2D(&desc, nullptr, stagingTexture.GetAddressOf( )));
+
+    // 참고 : 전체 복사할 때
+    // context->CopyResource(stagingTexture.Get( ), textureToWrite.Get( ));
+
+    // 일부만 복사할 때 사용
+    D3D11_BOX box;
+    box.left = 0; box.top = 0;
+    box.right = desc.Width;
+    box.bottom = desc.Height;
+    box.front = 0;
+    box.back = 1;
+    context->CopySubresourceRegion(stagingTexture.Get( ), 0, 0, 0, 0, textureToWrite.Get( ), 0, &box);
+
+    // R8G8B8A8 이라고 가정
+    std::vector<uint8_t> pixels(desc.Width * desc.Height * 4);
+
+    D3D11_MAPPED_SUBRESOURCE ms;
+    context->Map(stagingTexture.Get( ), NULL, D3D11_MAP_READ, NULL, &ms);
+
+    // 텍스쳐가 작을 경우에는
+    // ms.RowPitch가 width * sizeof(uint8_t) * 4 보다 클 수도 있어서
+    // for문으로 가로줄 하나씩 복사
+    uint8_t* pData = ( uint8_t* ) ms.pData;
+    for (unsigned int h = 0; h < desc.Height; h++) {
+        memcpy(&pixels[ h * desc.Width * 4 ], &pData[ h * ms.RowPitch ], desc.Width * sizeof(uint8_t) * 4);
     }
+    context->Unmap(stagingTexture.Get( ), NULL);
+
+    stbi_write_png(filename.c_str( ), desc.Width, desc.Height, 4, pixels.data( ), desc.Width * 4);
+
+    cout << filename << endl;
+
 }
 }

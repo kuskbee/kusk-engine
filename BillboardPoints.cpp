@@ -30,12 +30,12 @@ void BillboardPoints::Initialize(ComPtr<ID3D11Device>& device,
 	D3D11Utils::CreateConstantBuffer(device, m_constantData, m_constantBuffer);
 
 	// Geometry shader 초기화하기
-	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGeometryShader.hlsl", m_normalGeometryShader);
+	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGS.hlsl", m_normalGeometryShader);
 
 	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0}};
 
-	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVertexShader.hlsl", inputElements,
+	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVS.hlsl", inputElements,
 												 m_vertexShader, m_inputLayout);
 	D3D11Utils::CreatePixelShader(device, pixelShaderFilename, m_pixelShader);
 

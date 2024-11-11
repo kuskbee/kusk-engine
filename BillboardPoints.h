@@ -31,7 +31,7 @@ public:
 					ComPtr<ID3D11DeviceContext>& context,
 					const std::vector<Vector4>& points,
 					const float width,
-					const std::wstring pixelShaderFilename = L"BillboardPointsPixelShader.hlsl",
+					const std::wstring pixelShaderFilename = L"BillboardPointsPS.hlsl",
 					std::vector<std::string> filenames = {});
 	void Render(ComPtr<ID3D11DeviceContext>& context);
 public:

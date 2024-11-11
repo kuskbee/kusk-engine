@@ -38,7 +38,7 @@ bool KuskApp::Initialize() {
 	"./Assets/Textures/TreeBillboards/4.png",
 	"./Assets/Textures/TreeBillboards/5.png" };
 
-	m_billboardPoints.Initialize(m_device, m_context, points, 2.4f, L"BillboardPointsPixelShader.hlsl", treeTextureFilenames);
+	m_billboardPoints.Initialize(m_device, m_context, points, 2.4f, L"BillboardPointsPS.hlsl", treeTextureFilenames);
 
 	// Shadertoy Media Files
 	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
@@ -51,7 +51,7 @@ bool KuskApp::Initialize() {
 		float radius = 0.4f;
 		MeshData sphere = GeometryGenerator::MakeSphere(radius, 100, 100, {1.0f, 1.0f});
 		//
-		sphere.albedoTextureFilename =
+		/*sphere.albedoTextureFilename =
 			GREY_POROUS_ROCK_TEXTURE_DIR
 			GERY_POROUS_ROCK_TEXTURE_DIFFUSE;
 		sphere.normalTextureFilename = 
@@ -62,7 +62,7 @@ bool KuskApp::Initialize() {
 			GERY_POROUS_ROCK_TEXTURE_HEIGHT;
 		sphere.aoTextureFilename = 
 			GREY_POROUS_ROCK_TEXTURE_DIR
-			GERY_POROUS_ROCK_TEXTURE_AO;
+			GERY_POROUS_ROCK_TEXTURE_AO;*/
 		m_mainSphere.m_basicPixelConstantData.reverseNormalMapY = true;
 
 		m_mainSphere.Initialize(m_device, m_context, { sphere });
@@ -72,6 +72,8 @@ bool KuskApp::Initialize() {
 		// 위치 초기화
 		m_mainSphere.UpdateModelWorld(Matrix::CreateTranslation(center));
 		m_mainSphere.m_basicPixelConstantData.useTexture = true;
+		m_mainSphere.m_basicPixelConstantData.useNormalMap = false;
+		m_mainSphere.m_basicPixelConstantData.useAOMap = false;
 		m_mainSphere.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
 		m_mainSphere.m_basicPixelConstantData.material.specular = Vector3(0.0f);
 		m_mainSphere.UpdateConstantBuffers(m_device, m_context);
@@ -123,8 +125,11 @@ bool KuskApp::Initialize() {
 	// $ground
 	{
 		//MeshData ground = GeometryGenerator::MakeSquare(20.0f, {40.0f, 40.0f});
-		MeshData ground = GeometryGenerator::MakeSquareGrid(4096, 4096, 20.0f, { 40.0f, 40.0f });
-		ground.albedoTextureFilename =
+		//MeshData ground = GeometryGenerator::MakeSquareGrid(2048, 2048, 20.0f, { 40.0f, 40.0f });
+		MeshData ground = GeometryGenerator::MakeSquare(0.4);
+		// HDRI 테스트
+		ground.albedoTextureFilename = BRICK_TEXTURE_4K_HDRI;
+		/*ground.albedoTextureFilename =
 			BRICK_TEXTURE_DIR
 			BRICK_TEXTURE_DIFFUSE;
 		ground.normalTextureFilename =
@@ -135,24 +140,23 @@ bool KuskApp::Initialize() {
 			BRICK_TEXTURE_HEIGHT;
 		ground.aoTextureFilename =
 			BRICK_TEXTURE_DIR
-			BRICK_TEXTURE_AO;
+			BRICK_TEXTURE_AO;*/
 		m_meshGroupGround.Initialize(m_device, m_context, { ground });
 		m_meshGroupGround.m_diffuseResView = m_cubeMapping.m_diffuseResView;
 		m_meshGroupGround.m_specularResView = m_cubeMapping.m_specularResView;
-		/*m_meshGroupGround.UpdateModelWorld(
-			Matrix::CreateScale(2.0f, 2.0f, 2.0f) * 
-			Matrix::CreateRotationX(0.0f) *
-			Matrix::CreateTranslation(0.0f, 0.0f, 3.0f));*/
-		m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2));
+		m_meshGroupGround.UpdateModelWorld(
+			Matrix::CreateScale(2.0f, 1.0f, 1.0f) * 
+			Matrix::CreateRotationX(DirectX::XM_PIDIV2 * 0.0f) *
+			Matrix::CreateTranslation(0.2f, 0.4f, 1.0f));
+		//m_meshGroupGround.UpdateModelWorld(Matrix::CreateRotationX(DirectX::XM_PIDIV2));
 		m_meshGroupGround.m_basicPixelConstantData.useTexture = true;
 		//m_meshGroupGround.m_basicPixelConstantData.useNormalMap = true;
 		m_meshGroupGround.m_basicPixelConstantData.useAOMap = false;
 		m_meshGroupGround.m_basicVertexConstantData.useHeightMap= false;
-		m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(1.0f);
+		m_meshGroupGround.m_basicVertexConstantData.heightScale= 0.02;
+		m_meshGroupGround.m_basicPixelConstantData.material.diffuse = Vector3(0.8f);
 		m_meshGroupGround.UpdateConstantBuffers(m_device, m_context);
 	}
-
-	BuildFilters( );
 
 	return true;
 }
@@ -322,7 +326,7 @@ void KuskApp::Update(float dt) {
 	// 포인트 라이트 효과
 	Light pointLight;
 	pointLight.position = m_lightFromGUI.position;
-	pointLight.strength = Vector3(2.0f);
+	pointLight.strength = Vector3(1.0f);
 	pointLight.fallOffEnd = 20.0f;
 
 	m_meshGroupGround.m_basicPixelConstantData.lights[ 1 ] = pointLight;
@@ -343,17 +347,6 @@ void KuskApp::Update(float dt) {
 	m_billboardPoints.m_constantData.view = viewRow.Transpose( );
 	m_billboardPoints.m_constantData.proj = projRow.Transpose( );
 	D3D11Utils::UpdateBuffer(m_device, m_context, m_billboardPoints.m_constantData, m_billboardPoints.m_constantBuffer);
-
-	if (m_dirtyFlag) {
-		assert(m_filters.size( ) > 1);
-		m_filters[ 1 ]->m_pixelConstData.threshold = m_threshold;
-		m_filters[ 1 ]->UpdateConstantBuffers(m_device, m_context);
-		m_filters.back( )->m_pixelConstData.strength = m_strength;
-		m_filters.back( )->UpdateConstantBuffers(m_device, m_context);
-
-		m_dirtyFlag = 0;
-	}
-
 }
 
 void KuskApp::Render() {
@@ -361,12 +354,13 @@ void KuskApp::Render() {
 	SetViewport( );
 	
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	m_context->ClearRenderTargetView(m_renderTargetView.Get(), clearColor);
+	m_context->ClearRenderTargetView(m_floatRTV.Get(), clearColor);
 	m_context->ClearDepthStencilView(m_depthStencilView.Get(),
 									 D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	//
-	m_context->OMSetRenderTargets(1, m_renderTargetView.GetAddressOf(), m_depthStencilView.Get());
+	vector<ID3D11RenderTargetView*> renderTargetViews = { m_floatRTV.Get( ) };
+	m_context->OMSetRenderTargets(UINT(renderTargetViews.size()), renderTargetViews.data(), m_depthStencilView.Get());
 	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
 	if (m_drawAsWire)
@@ -378,12 +372,12 @@ void KuskApp::Render() {
 	//m_tessellatedQuad.Render(m_context);
 
 	// 물체들
-	if (m_visibleMeshIndex == 0) {
+	/*if (m_visibleMeshIndex == 0) {
 		m_mainSphere.Render(m_context);
 	}
 	else {
 		m_meshGroupCharacter.Render(m_context);
-	}
+	}*/
 
 	if ((m_leftButton || m_rightButton) && m_selected)
 		m_cursorSphere.Render(m_context);
@@ -391,82 +385,35 @@ void KuskApp::Render() {
 	m_meshGroupGround.Render(m_context);
 
 	// 물체 렌더링 후 큐브매핑
-	//m_cubeMapping.Render(m_context);
+	m_cubeMapping.Render(m_context);
 
-	// 후처리 필터
-	if (m_usePostProcessing) {
-		for (auto& f : m_filters) {
-			f->Render(m_context);
-		}
-	}
-	
-}
+	// MSAA로 Texture2DMS에 렌더링된 결과를 Texture2D로 변환(Resolve)
+	m_context->ResolveSubresource(m_resolvedBuffer.Get( ), 0, m_floatBuffer.Get( ), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
-void KuskApp::BuildFilters( ) {
-
-	m_filters.clear( );
-
-	auto copyFilter =
-		make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"Sampling", m_screenWidth, m_screenHeight);
-	copyFilter->SetShaderResources({ this->m_shaderResourceView });
-	m_filters.push_back(copyFilter);
-	
-	// 해상도를 낮춰서 다운 샘플링
-	int resolution = 2;
-	while (resolution <= m_down) {
-		auto downFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"Sampling", m_screenWidth / resolution, m_screenHeight / resolution);
-		if (resolution == 2) {
-			downFilter->SetShaderResources({ this->m_shaderResourceView });
-			downFilter->m_pixelConstData.threshold = m_threshold;
-		}
-		else {
-			downFilter->SetShaderResources({ m_filters.back( )->m_shaderResourceView });
-			downFilter->m_pixelConstData.threshold = 0.0f;
-		}
-		downFilter->UpdateConstantBuffers(m_device, m_context);
-		m_filters.push_back(downFilter);
-
-		resolution *= 2;
-	}
-
-	resolution = m_down;
-	while (resolution >= 1) {
-		for (int i = 0; i < m_repeat; i++) {
-			auto& prevResource = m_filters.back( )->m_shaderResourceView;
-			auto blurXFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"BlurX", m_screenWidth / resolution, m_screenHeight / resolution);
-			blurXFilter->SetShaderResources({ prevResource });
-			m_filters.push_back(blurXFilter);
-
-			auto& prevResource2 = m_filters.back( )->m_shaderResourceView;
-			auto blurYFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"BlurY", m_screenWidth / resolution, m_screenHeight / resolution);
-			blurYFilter->SetShaderResources({ prevResource2 });
-			m_filters.push_back(blurYFilter);
-		}
-
-		if (resolution > 1) {
-			auto upFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"Sampling", m_screenWidth / resolution * 2, m_screenHeight / resolution * 2);
-			upFilter->SetShaderResources({ m_filters.back( )->m_shaderResourceView });
-			upFilter->m_pixelConstData.threshold = 0.0f;
-			upFilter->UpdateConstantBuffers(m_device, m_context);
-			m_filters.push_back(upFilter);
-		}
-
-		resolution /= 2;
-	}
-
-	auto combineFilter = make_shared<ImageFilter>(m_device, m_context, L"Sampling", L"Combine", m_screenWidth, m_screenHeight);
-	combineFilter->SetShaderResources({ m_filters.back( )->m_shaderResourceView, copyFilter->m_shaderResourceView });
-	combineFilter->SetRenderTargets({ this->m_renderTargetView });
-	combineFilter->m_pixelConstData.threshold = 0.0f;
-	combineFilter->m_pixelConstData.strength = m_strength;
-	combineFilter->UpdateConstantBuffers(m_device, m_context);
-	m_filters.push_back(combineFilter);
-
+	m_postProcess.Render(m_context);
 }
 
 void KuskApp::UpdateGUI() {
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Post Processing")) {
+
+		int flag = 0;
+
+		flag += ImGui::SliderFloat("Bloom Strength", &m_postProcess.m_combineFilter.m_constData.strength, 0.0f, 1.0f);
+		flag += ImGui::SliderFloat("Exposure", &m_postProcess.m_combineFilter.m_constData.exposure, 0.0f, 10.0f);
+		flag += ImGui::SliderFloat("Gamma", &m_postProcess.m_combineFilter.m_constData.gamma, 0.1f, 5.0f);
+
+		// 편의상 사용자 입력이 인식되면 바로 GPU 버퍼를 업데이트
+		if (flag) {
+			m_postProcess.m_combineFilter.UpdateConstantBuffers(m_device, m_context);
+		}
+
+
+		ImGui::TreePop( );
+	}
+
+	/*ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("General")) {
 		ImGui::Checkbox("Use FPV", &m_useFirstPersonView);
 		ImGui::Checkbox("Use PostProc", &m_usePostProcessing);
@@ -516,31 +463,31 @@ void KuskApp::UpdateGUI() {
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Ground")) {
 		bool temp = bool(m_meshGroupGround.m_basicPixelConstantData.useTexture);
-		if (ImGui::Checkbox("Use AlbedoTexture2", &temp)) {
+		if (ImGui::Checkbox("Use AlbedoTexture", &temp)) {
 			m_meshGroupGround.m_basicPixelConstantData.useTexture = int(temp);
 		}
 
 		temp = bool(m_meshGroupGround.m_basicPixelConstantData.useNormalMap);
-		if (ImGui::Checkbox("Use NormalMapping2", &temp)) {
+		if (ImGui::Checkbox("Use NormalMapping", &temp)) {
 			m_meshGroupGround.m_basicPixelConstantData.useNormalMap = int(temp);
 		}
 
 		temp = bool(m_meshGroupGround.m_basicPixelConstantData.useAOMap);
-		if (ImGui::Checkbox("Use AO2", &temp)) {
+		if (ImGui::Checkbox("Use AO", &temp)) {
 			m_meshGroupGround.m_basicPixelConstantData.useAOMap = int(temp);
 		}
 
 		temp = bool(m_meshGroupGround.m_basicVertexConstantData.useHeightMap);
-		if (ImGui::Checkbox("Use HeightMapping2", &temp)) {
+		if (ImGui::Checkbox("Use HeightMapping", &temp)) {
 			m_meshGroupGround.m_basicVertexConstantData.useHeightMap = int(temp);
 		}
 
-		ImGui::SliderFloat("HeightScale2",
+		ImGui::SliderFloat("HeightScale",
 						   &m_meshGroupGround.m_basicVertexConstantData.heightScale,
 						   0.0f, 0.1f);
 
 		ImGui::TreePop( );
-	}
+	}*/
 
 	// $m_tessellatedQuad
 	/*int flag = 0;
@@ -575,15 +522,6 @@ void KuskApp::UpdateGUI() {
 	//					0.0f, 1.0f);
 	//ImGui::SliderFloat("Rim Power", &meshGroup.m_basicPixelConstantData.rimPower,
 	//				   0.01f, 10.0f);
-
-	//// 후 처리 필터 사용시에만 옵션 보여주기
-	//if (m_usePostProcessing)
-	//{
-	//	m_dirtyFlag +=
-	//		ImGui::SliderFloat("Bloom Threshold", &m_threshold, 0.0f, 1.0f);
-	//	m_dirtyFlag +=
-	//		ImGui::SliderFloat("Bloom Strength", &m_strength, 0.0f, 3.0f);
-	//}
 
 	//ImGui::Checkbox("Wireframe", &m_drawAsWire);
 	//ImGui::Checkbox("Draw Normals", &meshGroup.m_drawNormals);

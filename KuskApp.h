@@ -28,8 +28,6 @@ public:
 	virtual void Update(float dt) override;
 	virtual void Render() override;
 
-	void BuildFilters( );
-
 protected: 
 	TessellatedQuad m_tessellatedQuad;
 	BillboardPoints m_billboardPoints;
@@ -51,15 +49,6 @@ protected:
 	float m_materialSpecular = 1.0f;
 	
 	int m_visibleMeshIndex = 0; // Sphere, Character
-
-	std::vector<shared_ptr<ImageFilter>> m_filters;
-
-	// Bloom 효과 옵션
-	int m_dirtyFlag = 1; // 처음 한 번만 실행
-	int m_down = 16;
-	int m_repeat = 5;
-	float m_threshold = 0.0f;
-	float m_strength = 0.6f;
 
 };
 } // namespace kusk
