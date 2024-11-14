@@ -63,6 +63,14 @@ namespace kusk {
                                        newMesh->albedoSRV);
          }
 
+         if (!meshData.emissiveTextureFilename.empty( )) {
+
+             std::cout << meshData.emissiveTextureFilename << std::endl;
+             D3D11Utils::CreateTexture(device, context, meshData.emissiveTextureFilename, false,
+                                       newMesh->emissiveTexture,
+                                       newMesh->emissiveSRV);
+         }
+
          if (!meshData.normalTextureFilename.empty( )) {
 
              std::cout << meshData.normalTextureFilename << std::endl;
@@ -167,7 +175,7 @@ namespace kusk {
          vector<ID3D11ShaderResourceView*> resViews = {
              m_specularSRV.Get(), m_irradianceSRV.Get(), m_brdfSRV.Get(),
              mesh->albedoSRV.Get( ), mesh->normalSRV.Get( ), mesh->aoSRV.Get( ),
-             mesh->metallicSRV.Get( ), mesh->roughnessSRV.Get( )};
+             mesh->metallicSRV.Get( ), mesh->roughnessSRV.Get( ), mesh->emissiveSRV.Get()};
           
          context->PSSetShaderResources(0, UINT(resViews.size()), resViews.data());
 

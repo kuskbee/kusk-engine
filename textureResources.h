@@ -48,7 +48,7 @@
 
 #define SKY_TEXTURE_HDRI "./Assets/Textures/Cubemaps/HDRI/DaySkyHDRI015A_4K-HDR.exr"
 
-// PBR textures
+// PBR textures 
 
 #define WORN_PAINTED_METAL_TEXTURE_DIR "./Assets/Textures/PBR/worn-painted-metal-ue/"
 
@@ -58,3 +58,10 @@
 #define WORN_PAINTED_METAL_TEXTURE_AO "worn-painted-metal_ao.png"
 #define WORN_PAINTED_METAL_TEXTURE_METALLIC "worn-painted-metal_metallic.png"
 #define WORN_PAINTED_METAL_TEXTURE_ROUGHNESS "worn-painted-metal_roughness.png"
+
+// models
+#define DAMAGED_HELMET_MODEL_DIR "./Assets/Models/damaged-helmet/"
+#define DAMAGED_HELMAT_MODEL_FILENAME "DamagedHelmet.gltf"
+
+#define ARMORED_FEMALE_SOLDIER_MODEL_DIR "./Assets/Characters/armored-female-future-soldier/"
+#define ARMORED_FEMALE_SOLDIER_MODEL_FILENAME "angel_armor.fbx"

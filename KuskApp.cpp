@@ -45,7 +45,32 @@ bool KuskApp::Initialize() {
 
 	m_cubeMapping.Initialize(m_device, OUTDOOR_ORGN_DDS, OUTDOOR_SPEC_DDS, OUTDOOR_DIFF_DDS, OUTDOOR_BRDF_DDS);
 
+	// $mainObj
+	{
+		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
+		auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME);
+		meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
+		meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
+		meshes[ 0 ].metallicTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_metalness.jpg");
+		meshes[ 0 ].normalTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_normal.jpg");
+		meshes[ 0 ].roughnessTextureFilename =
+			ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");
+
+		Vector3 center(0.0f, 0.0f, 1.0f);
+		m_mainObj.m_basicPixelConstData.invertNormalMapY = true;
+		m_mainObj.Initialize(m_device, m_context, meshes);
+		m_mainObj.m_irradianceSRV = m_cubeMapping.m_irradianceSRV;
+		m_mainObj.m_specularSRV = m_cubeMapping.m_specularSRV;
+		m_mainObj.m_brdfSRV = m_cubeMapping.m_brdfSRV;
+		m_mainObj.UpdateModelWorld(Matrix::CreateTranslation(center));
+		m_mainObj.UpdateConstantBuffers(m_device, m_context);
+
+		// 동일한 크기와 위치에 BoundingSphere 만들기
+		m_mainBoundingSphere = BoundingSphere(center, 0.4);
+	}
+
 	// $sphere
+	if(false)
 	{
 		Vector3 center(0.0f, 0.0f, 1.0f);
 		float radius = 0.4f;
@@ -311,27 +336,55 @@ void KuskApp::Update(float dt) {
 		}
 	}
 
-	// 원점의 위치를 옮기지 않기 위해 Translation 추출
-	Vector3 translation = m_mainSphere.m_modelWorldRow.Translation( );
-	m_mainSphere.m_modelWorldRow.Translation(Vector3(0.0f));
-	m_mainSphere.UpdateModelWorld(m_mainSphere.m_modelWorldRow *
-							  Matrix::CreateFromQuaternion(q) *
-							  Matrix::CreateTranslation(dragTranslation + translation));
-	//Bounding Sphere도 같이 이동
-	m_mainBoundingSphere.Center = m_mainSphere.m_modelWorldRow.Translation( );
-	m_mainSphere.m_basicVertexConstData.view = viewRow.Transpose( );
-	m_mainSphere.m_basicVertexConstData.proj = projRow.Transpose( );
-	m_mainSphere.m_basicPixelConstData.eyeWorld = eyeWorld;
+	// $sphere
+	if (false) {
+		// 원점의 위치를 옮기지 않기 위해 Translation 추출
+		Vector3 translation = m_mainSphere.m_modelWorldRow.Translation( );
+		m_mainSphere.m_modelWorldRow.Translation(Vector3(0.0f));
+		m_mainSphere.UpdateModelWorld(m_mainSphere.m_modelWorldRow *
+								  Matrix::CreateFromQuaternion(q) *
+								  Matrix::CreateTranslation(dragTranslation + translation));
+		//Bounding Sphere도 같이 이동
+		m_mainBoundingSphere.Center = m_mainSphere.m_modelWorldRow.Translation( );
+		m_mainSphere.m_basicVertexConstData.view = viewRow.Transpose( );
+		m_mainSphere.m_basicVertexConstData.proj = projRow.Transpose( );
+		m_mainSphere.m_basicPixelConstData.eyeWorld = eyeWorld;
+
+		// 포인트 라이트 효과
+		Light pointLight;
+		pointLight.position = m_lightFromGUI.position;
+		pointLight.radiance = Vector3(1.0f); // Strength
+		pointLight.fallOffEnd = 20.0f;
+		m_mainSphere.m_basicPixelConstData.lights[ 1 ] = pointLight;
+
+		m_mainSphere.UpdateConstantBuffers(m_device, m_context);
+	}
 
 	// 포인트 라이트 효과
 	Light pointLight;
 	pointLight.position = m_lightFromGUI.position;
 	pointLight.radiance = Vector3(1.0f); // Strength
 	pointLight.fallOffEnd = 20.0f;
-	m_mainSphere.m_basicPixelConstData.lights[ 1 ] = pointLight;
+	m_mainObj.m_basicPixelConstData.lights[ 1 ] = pointLight;
+	m_cursorSphere.m_basicPixelConstData.lights[ 1 ] = pointLight;
 
-	m_mainSphere.UpdateConstantBuffers(m_device, m_context);
+	// $mainObj
+	{
+		// 원점의 위치를 옮기지 않기 위해 Translation 추출
+		Vector3 translation = m_mainObj.m_modelWorldRow.Translation( );
+		m_mainObj.m_modelWorldRow.Translation(Vector3(0.0f));
+		m_mainObj.UpdateModelWorld(m_mainObj.m_modelWorldRow *
+								  Matrix::CreateFromQuaternion(q) *
+								  Matrix::CreateTranslation(dragTranslation + translation));
+		//Bounding Sphere도 같이 이동
+		m_mainBoundingSphere.Center = m_mainObj.m_modelWorldRow.Translation( );
+		m_mainObj.m_basicVertexConstData.view = viewRow.Transpose( );
+		m_mainObj.m_basicVertexConstData.proj = projRow.Transpose( );
+		m_mainObj.m_basicPixelConstData.eyeWorld = eyeWorld;
 
+		m_mainObj.UpdateConstantBuffers(m_device, m_context);	
+	}
+	
 	// $tessellatedQuad
 	/*m_tessellatedQuad.m_constantData.eyeWorld = eyeWorld;
 	m_tessellatedQuad.m_constantData.model = Matrix( );
@@ -384,8 +437,14 @@ void KuskApp::Render() {
 	//m_billboardPoints.Render(m_context);
 	//m_tessellatedQuad.Render(m_context);
 
-	m_mainSphere.Render(m_context);
+	// $sphere
+	if (false) {
+		m_mainSphere.Render(m_context);
+	}
 
+	// $mainObj
+	m_mainObj.Render(m_context);
+	
 	// 물체들
 	/*if (m_visibleMeshIndex == 0) {
 		m_mainSphere.Render(m_context);
@@ -460,20 +519,22 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
+	// $mainObj
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Material")) {
 		int flag = 0;
-		flag += ImGui::SliderFloat("Metallic", &m_mainSphere.m_basicPixelConstData.material.metallic, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat("Roughness", &m_mainSphere.m_basicPixelConstData.material.roughness, 0.0f, 1.0f);
-		flag += ImGui::CheckboxFlags("Use AlbedoTexture", &m_mainSphere.m_basicPixelConstData.useAlbedoMap, 1);
-		flag += ImGui::CheckboxFlags("Use NormalMapping", &m_mainSphere.m_basicPixelConstData.useNormalMap, 1);
-		flag += ImGui::CheckboxFlags("Use AO", &m_mainSphere.m_basicPixelConstData.useAOMap, 1);
-		flag += ImGui::CheckboxFlags("Use HeightMapping", &m_mainSphere.m_basicVertexConstData.useHeightMap, 1);
-		flag += ImGui::SliderFloat("HeightScale", &m_mainSphere.m_basicVertexConstData.heightScale, 0.0f, 0.1f);
-		flag += ImGui::CheckboxFlags("Use MetallicMap", &m_mainSphere.m_basicPixelConstData.useMetallicMap, 1);
-		flag += ImGui::CheckboxFlags("Use RoughnessMap", &m_mainSphere.m_basicPixelConstData.useRoughnessMap, 1);
-		flag += ImGui::Checkbox("Draw Normals", &m_mainSphere.m_drawNormals);
-		
+		flag += ImGui::SliderFloat("Metallic", &m_mainObj.m_basicPixelConstData.material.metallic, 0.0f, 1.0f);
+		flag += ImGui::SliderFloat("Roughness", &m_mainObj.m_basicPixelConstData.material.roughness, 0.0f, 1.0f);
+		flag += ImGui::CheckboxFlags("Use AlbedoTexture", &m_mainObj.m_basicPixelConstData.useAlbedoMap, 1);
+		flag += ImGui::CheckboxFlags("Use EmissiveTexture", &m_mainObj.m_basicPixelConstData.useEmissiveMap, 1);
+		flag += ImGui::CheckboxFlags("Use NormalMapping", &m_mainObj.m_basicPixelConstData.useNormalMap, 1);
+		flag += ImGui::CheckboxFlags("Use AO", &m_mainObj.m_basicPixelConstData.useAOMap, 1);
+		flag += ImGui::CheckboxFlags("Use HeightMapping", &m_mainObj.m_basicVertexConstData.useHeightMap, 1);
+		flag += ImGui::SliderFloat("HeightScale", &m_mainObj.m_basicVertexConstData.heightScale, 0.0f, 0.1f);
+		flag += ImGui::CheckboxFlags("Use MetallicMap", &m_mainObj.m_basicPixelConstData.useMetallicMap, 1);
+		flag += ImGui::CheckboxFlags("Use RoughnessMap", &m_mainObj.m_basicPixelConstData.useRoughnessMap, 1);
+		flag += ImGui::Checkbox("Draw Normals", &m_mainObj.m_drawNormals);
+
 		if (flag) {
 			// GUI 입력이 있을 때만 할 일들 추가.. (근데 어처피 Update에서 계속 업데이트 해주기 때문에 패스)
 		}
@@ -481,36 +542,33 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	/*
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Sphere")) {
-		bool temp = bool(m_mainSphere.m_basicPixelConstData.useAlbedoMap);
-		if (ImGui::Checkbox("Use AlbedoTexture", &temp)) {
-			m_mainSphere.m_basicPixelConstData.useAlbedoMap = int(temp);
+	if (false) // $sphere
+	{
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (ImGui::TreeNode("Material")) {
+			int flag = 0;
+			flag += ImGui::SliderFloat("Metallic", &m_mainSphere.m_basicPixelConstData.material.metallic, 0.0f, 1.0f);
+			flag += ImGui::SliderFloat("Roughness", &m_mainSphere.m_basicPixelConstData.material.roughness, 0.0f, 1.0f);
+			flag += ImGui::CheckboxFlags("Use AlbedoTexture", &m_mainSphere.m_basicPixelConstData.useAlbedoMap, 1);
+			flag += ImGui::CheckboxFlags("Use NormalMapping", &m_mainSphere.m_basicPixelConstData.useNormalMap, 1);
+			flag += ImGui::CheckboxFlags("Use AO", &m_mainSphere.m_basicPixelConstData.useAOMap, 1);
+			flag += ImGui::CheckboxFlags("Use HeightMapping", &m_mainSphere.m_basicVertexConstData.useHeightMap, 1);
+			flag += ImGui::SliderFloat("HeightScale", &m_mainSphere.m_basicVertexConstData.heightScale, 0.0f, 0.1f);
+			flag += ImGui::CheckboxFlags("Use MetallicMap", &m_mainSphere.m_basicPixelConstData.useMetallicMap, 1);
+			flag += ImGui::CheckboxFlags("Use RoughnessMap", &m_mainSphere.m_basicPixelConstData.useRoughnessMap, 1);
+			flag += ImGui::Checkbox("Draw Normals", &m_mainSphere.m_drawNormals);
+
+			if (flag) {
+				// GUI 입력이 있을 때만 할 일들 추가.. (근데 어처피 Update에서 계속 업데이트 해주기 때문에 패스)
+			}
+
+			ImGui::TreePop( );
 		}
-
-		temp = bool(m_mainSphere.m_basicPixelConstData.useNormalMap);
-		if (ImGui::Checkbox("Use NormalMapping", &temp)) {
-			m_mainSphere.m_basicPixelConstData.useNormalMap = int(temp);
-		}
-
-		temp = bool(m_mainSphere.m_basicPixelConstData.useAOMap);
-		if (ImGui::Checkbox("Use AO", &temp)) {
-			m_mainSphere.m_basicPixelConstData.useAOMap = int(temp);
-		}
-
-		temp = bool(m_mainSphere.m_basicVertexConstData.useHeightMap);
-		if (ImGui::Checkbox("Use HeightMapping", &temp)) {
-			m_mainSphere.m_basicVertexConstData.useHeightMap = int(temp);
-		}
-
-		ImGui::SliderFloat("HeightScale",
-						   &m_mainSphere.m_basicVertexConstData.heightScale,
-						   0.0f, 0.1f);
-
-		ImGui::TreePop( );
 	}
 	
+
+	/*
+		
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Ground")) {
 		bool temp = bool(m_meshGroupGround.m_basicPixelConstData.useAlbedoMap);

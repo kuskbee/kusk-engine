@@ -28,18 +28,18 @@ struct BasicPixelConstData {
 	Light lights[ MAX_LIGHTS ];			// 48 * MAX_LIGHTS
 	Vector3 rimColor = Vector3(1.0f);	// 12
 	float rimPower;						// 4
-	float rimStrength = 0.0f;			// 4
-	bool useSmoothstep = false;			// 4
-	int useAlbedoMap = 0;				// 4
-	int useNormalMap = 0;				// 4
-	int useAOMap = 0;					// 4
-	int invertNormalMapY = 0;			// 4
-	int useMetallicMap = 0;				// 4
-	int useRoughnessMap = 0;			// 4
-	float expose = 1.0f;				// 4
-	float gamma = 1.0f;					// 4
-	float dummy1;
-	float dummy2;
+	float rimStrength = 0.0f;
+	bool useSmoothstep = false;
+	int useAlbedoMap = 0;
+	int useNormalMap = 0;				// 16
+	int useAOMap = 0;
+	int invertNormalMapY = 0;
+	int useMetallicMap = 0;
+	int useRoughnessMap = 0;			// 16
+	int useEmissiveMap = 0;
+	float expose = 1.0f;
+	float gamma = 1.0f;
+	float dummy1;						// 16
 };
 
 struct NormalVertexConstantData {

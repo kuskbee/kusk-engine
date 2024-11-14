@@ -12,6 +12,7 @@ Texture2D normalTex : register(t4);
 Texture2D aoTex : register(t5);
 Texture2D metallicTex : register(t6);
 Texture2D roughnessTex : register(t7);
+Texture2D emissiveTex : register(t8);
 
 SamplerState linearSampler : register(s0);
 SamplerState clampSampler : register(s1);
@@ -34,8 +35,10 @@ cbuffer BasicPixelConstantData : register(b0)
     int invertNormalMapY;
     int useMetallicMap;
     int useRoughnessMap;
+    int useEmissiveMap;
     float exposure;
     float gamma;
+    float dummy1;
 };
 
 struct PixelShaderOutput
@@ -80,9 +83,8 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float me
     
     // 앞에서 사용했던 방법과 동일
     float3 irradiance = irradianceIBLTex.Sample(linearSampler, normalWorld).rgb;
-    kd *= irradiance;
     
-    return kd * albedo;
+    return kd * albedo * irradiance;
 }
 
 float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic, float roughness)
@@ -90,12 +92,11 @@ float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float m
     float2 specularBRDF = brdfTex.Sample(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness)).rg;
     
     // 앞에서 사용했던 방법과 동일
-    float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normalWorld), roughness * 5.0f).rgb;
+    float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normalWorld), roughness * 10.0f).rgb;
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
     float3 F0 = lerp(Fdielectric, albedo, metallic);
-    float3 specular = specularIrradiance * (F0 * specularBRDF.x + specularBRDF.y); // Note (8)
     
-    return specular;
+    return (F0 * specularBRDF.x + specularBRDF.y) * specularIrradiance; // Note (8)
 }
 
 float3 AmbientLightingByIBL(float3 albedo, float3 normalW, float3 pixelToEye, float ao, float metallic, float roughness)
@@ -114,15 +115,18 @@ float NdfGGX(float NdotH, float roughness)
     float alpha = roughness * roughness;
     float alphaSq = alpha * alpha;
     float denom = (NdotH * NdotH) * (alphaSq - 1.0) + 1.0;
+    
     return alphaSq / (3.141592 * denom * denom);
 }
 
+// Single term for separable Schilck-GGX below.
 float SchlickG1(float NdotV, float k)
 {
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-// Note (4), I : Input = light, O : Output = view
+// Note (4), Schlick-GGX approximation of geometric attenuation function using Smith's method.
+// I : Input = light, O : Output = view
 float SchlickGGX(float NdotI, float NdotO, float roughness) 
 {
     float r = roughness + 1.0;
@@ -137,8 +141,16 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
     
     float3 albedo = useAlbedoMap ? albedoTex.Sample(linearSampler, input.texcoord).rgb : material.albedo;
     float ao = useAOMap ? aoTex.SampleLevel(linearSampler, input.texcoord, 0.0).r : 1.0f;
-    float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).r : material.metallic;
-    float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).r : material.roughness;
+    //float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).r : material.metallic;
+    float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).b : material.metallic;
+    //float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).r : material.roughness;
+    float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).g : material.roughness;
+    float3 emission = useEmissiveMap ? emissiveTex.Sample(linearSampler, input.texcoord).rgb : float3(0, 0, 0);
+    
+    // adjust 
+    ao = 0.3 + 0.7 * ao;
+    emission *= 4.0;
+    
     float3 ambientLighting = AmbientLightingByIBL(albedo, normalWorld, pixelToEye, ao, metallic, roughness);
     
     float3 directLighting = float3(0, 0, 0);
@@ -189,7 +201,7 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
         
     PixelShaderOutput output;
     
-    output.pixelColor = float4(ambientLighting + directLighting, 1.0);
+    output.pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
         
     // Rim Lighting
     float rim = 1.0 - dot(pixelToEye, normalWorld);

@@ -18,10 +18,14 @@ class ModelLoader {
 public:
 	void Load(std::string basePath, std::string filename);
 
-	void ProcessNode(aiNode* node, const aiScene* scene,
+	void ProcessNode(aiNode* node, const aiScene* scene, const std::string& ext,
 					 DirectX::SimpleMath::Matrix tr);
 	
-	MeshData ProcessMesh(aiMesh* mesh, const aiScene* scene);
+	MeshData ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& ext);
+
+	std::string ReadFilename(aiMaterial* material, aiTextureType type);
+
+	void UpdateTangents( );
 
 public:
 	std::string basePath;

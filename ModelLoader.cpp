@@ -1,9 +1,13 @@
 #include "ModelLoader.h"
 
+#include <DirectXMesh.h>
 #include <filesystem>
+#include <vector>
+#include <algorithm>
 
 namespace kusk {
 
+using namespace std;
 using namespace DirectX::SimpleMath;
 
 void ModelLoader::Load(std::string basePath, std::string filename) {
@@ -15,14 +19,24 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 		this->basePath + filename,
 		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals);
 
+	string ext;
+	size_t dotPos = filename.find_last_of('.');
+    if (dotPos != std::string::npos) {
+		ext = filename.substr(dotPos + 1);
+		std::transform(ext.begin( ), ext.end( ), ext.begin( ), [](unsigned char c) { return std::tolower(c); });
+    }
+    
 	if (!pScene) {
 		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;
 	}
 	else {
 		Matrix tr; // Initial transformation
-		ProcessNode(pScene->mRootNode, pScene, tr);
+		ProcessNode(pScene->mRootNode, pScene, ext, tr);
 	}
 
+	// https://github.com/microsoft/DirectXMesh/wiki/ComputeNormals
+	// ComputeNormals()과 비슷
+	
 	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
 	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
 #pragma region non-normal-case
@@ -51,15 +65,46 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 
 		for (int i = 0; i < m.vertices.size( ); i++) {
 			if (weightsTemp[ i ] > 0.0f) {
-				m.vertices[ i ].normal = normalsTemp[ i ] / weightsTemp[ i ];
-				m.vertices[ i ].normal.Normalize( );
+				m.vertices[ i ].normalModel = normalsTemp[ i ] / weightsTemp[ i ];
+				m.vertices[ i ].normalModel.Normalize( );
 			}
 		}
 	}*/
 #pragma endregion
+
+	UpdateTangents( );
 }
 
-void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, Matrix tr) {
+void ModelLoader::UpdateTangents( ) {
+	
+	using namespace DirectX;
+
+	// https://github.com/microsoft/DirectXMesh/wiki/ComputeTangentFrame
+
+	for (auto& m : this->meshes) {
+		vector<XMFLOAT3> positions(m.vertices.size( ));
+		vector<XMFLOAT3> normals(m.vertices.size( ));
+		vector<XMFLOAT2> texcoords(m.vertices.size( ));
+		vector<XMFLOAT3> tangents(m.vertices.size( ));
+		vector<XMFLOAT3> bitangents(m.vertices.size( ));
+
+		for (size_t i = 0; i < m.vertices.size( ); i++) {
+			auto& v = m.vertices[ i ];
+			positions[ i ] = v.position;
+			normals[ i ] = v.normalModel;
+			texcoords[ i ] = v.texcoord;
+		}
+
+		ComputeTangentFrame(m.indices.data( ), m.indices.size( ) / 3, positions.data( ), normals.data( ), texcoords.data( ),
+							m.vertices.size( ), tangents.data( ), bitangents.data( ));
+
+		for (size_t i = 0; i < m.vertices.size( ); i++) {
+			m.vertices[ i ].tangentModel = tangents[ i ];
+		}
+	}
+}
+
+void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, const std::string& ext, Matrix tr) {
 
 	// std::cout << node->mName.C_str() << " : " << node->mNumMeshes << " "
 	//			 << node->mNumChildren << std::endl;
@@ -75,7 +120,7 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, Matrix tr) {
 	for (UINT i = 0; i < node->mNumMeshes; i++) {
 
 		aiMesh* mesh = scene->mMeshes[ node->mMeshes[ i ] ];
-		auto newMesh = this->ProcessMesh(mesh, scene);
+		auto newMesh = this->ProcessMesh(mesh, scene, ext);
 
 		for (auto& v : newMesh.vertices) {
 			v.position = DirectX::SimpleMath::Vector3::Transform(v.position, m);
@@ -84,11 +129,27 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, Matrix tr) {
 	}
 
 	for (UINT i = 0; i < node->mNumChildren; i++) {
-		this->ProcessNode(node->mChildren[ i ], scene, m);
+		this->ProcessNode(node->mChildren[ i ], scene, ext, m);
 	}
 }
 
-MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
+string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
+	if (material->GetTextureCount(type) > 0) {
+		aiString filepath;
+		material->GetTexture(type, 0, &filepath);
+
+		std::string fullpath = this->basePath + std::string(std::filesystem::path(filepath.C_Str( )).filename( ).string( ));
+		
+		//test
+		cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
+		return fullpath;
+	}
+	else {
+		return "";
+	}
+}
+
+MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std::string& ext) {
 	//Data to fill
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
@@ -102,8 +163,16 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
 		vertex.position.z = mesh->mVertices[ i ].z;
 
 		vertex.normalModel.x = mesh->mNormals[ i ].x;
-		vertex.normalModel.y = mesh->mNormals[ i ].y;
-		vertex.normalModel.z = mesh->mNormals[ i ].z;
+
+		if (ext == "gltf") {
+			vertex.normalModel.y = mesh->mNormals[ i ].z;
+			vertex.normalModel.z = -mesh->mNormals[ i ].y;
+		}
+		else {
+			vertex.normalModel.y = mesh->mNormals[ i ].y;
+			vertex.normalModel.z = mesh->mNormals[ i ].z;
+		}
+
 		vertex.normalModel.Normalize( );
 
 		if (mesh->mTextureCoords[ 0 ]) {
@@ -125,18 +194,13 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene) {
 
 	if (mesh->mMaterialIndex >= 0) {
 		aiMaterial* material = scene->mMaterials[ mesh->mMaterialIndex ];
-		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-			aiString filePath;
-			material->GetTexture(aiTextureType_DIFFUSE, 0, &filePath);
-
-			std::string fullPath =
-				this->basePath +
-				std::string(std::filesystem::path(filePath.C_Str())
-								 .filename()
-								 .string( ));
-
-			newMesh.albedoTextureFilename = fullPath;
-		}
+		newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_BASE_COLOR);
+		newMesh.emissiveTextureFilename = ReadFilename(material, aiTextureType_EMISSIVE);
+		newMesh.heightTextureFilename = ReadFilename(material, aiTextureType_HEIGHT);
+		newMesh.normalTextureFilename = ReadFilename(material, aiTextureType_NORMALS);
+		newMesh.metallicTextureFilename = ReadFilename(material, aiTextureType_METALNESS);
+		newMesh.roughnessTextureFilename = ReadFilename(material, aiTextureType_DIFFUSE_ROUGHNESS);
+		newMesh.aoTextureFilename = ReadFilename(material, aiTextureType_AMBIENT_OCCLUSION);
 	}
 
 	return newMesh;

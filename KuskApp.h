@@ -31,6 +31,7 @@ public:
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	//BillboardPoints m_billboardPoints;
+	BasicMeshGroup m_mainObj;
 	BasicMeshGroup m_mainSphere;
 	BoundingSphere m_mainBoundingSphere;	//
 	BasicMeshGroup m_cursorSphere;			//
