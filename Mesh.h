@@ -21,10 +21,15 @@ struct Mesh {
 	ComPtr<ID3D11Texture2D> normalTexture;
 	ComPtr<ID3D11Texture2D> heightTexture;
 	ComPtr<ID3D11Texture2D> aoTexture;
-	ComPtr<ID3D11ShaderResourceView> albedoTextureResourceView;
-	ComPtr<ID3D11ShaderResourceView> normalTextureResourceView;
-	ComPtr<ID3D11ShaderResourceView> heightTextureResourceView;
-	ComPtr<ID3D11ShaderResourceView> aoTextureResourceView;
+	ComPtr<ID3D11Texture2D> metallicTexture;
+	ComPtr<ID3D11Texture2D> roughnessTextrure;
+
+	ComPtr<ID3D11ShaderResourceView> albedoSRV;
+	ComPtr<ID3D11ShaderResourceView> normalSRV;
+	ComPtr<ID3D11ShaderResourceView> heightSRV;
+	ComPtr<ID3D11ShaderResourceView> aoSRV;
+	ComPtr<ID3D11ShaderResourceView> metallicSRV;
+	ComPtr<ID3D11ShaderResourceView> roughnessSRV;
 
 	UINT indexCount = 0;
 	UINT vertexCount = 0;

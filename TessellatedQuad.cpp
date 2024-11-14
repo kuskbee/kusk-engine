@@ -31,7 +31,7 @@ void TessellatedQuad::Initialize(ComPtr<ID3D11Device>& device)
 
 	m_indexCount = uint32_t(controlPoints.size( ));
 
-	D3D11Utils::CreateConstantBuffer(device, m_constantData, m_constantBuffer);
+	D3D11Utils::CreateConstBuffer(device, m_constantData, m_constantBuffer);
 
 	// 쉐이더 초기화
 	vector<D3D11_INPUT_ELEMENT_DESC> inputElements = {

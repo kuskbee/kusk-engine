@@ -48,7 +48,6 @@ public:
 	bool m_useMSAA = true;
 	UINT m_numQualityLevels = 0;
 	bool m_drawAsWire = false;
-	bool m_usePostProcessing = false;
 
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;

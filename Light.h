@@ -15,11 +15,11 @@ using DirectX::SimpleMath::Vector4;
 
 // 조명
 struct Light {
-    Vector3 strength = Vector3(0.0f);              // 12
-    float fallOffStart = 0.0f;                     // 4
-    Vector3 direction = Vector3(0.0f, 0.0f, 1.0f); // 12
-    float fallOffEnd = 10.0f;                      // 4
-    Vector3 position = Vector3(0.0f, 1.0f, 0.0f); // 12
-    float spotPower = 100.0f;                      // 4
+    Vector3 radiance = Vector3(0.0f); // strength
+    float fallOffStart = 0.0f;
+    Vector3 direction = Vector3(0.0f, 0.0f, 1.0f);
+    float fallOffEnd = 10.0f;
+    Vector3 position = Vector3(0.0f, 0.0f, 0.0f);
+    float spotPower = 100.0f;
 };
-}
+} // namespace kusk

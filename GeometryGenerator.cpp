@@ -307,7 +307,7 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 }
 
 MeshData GeometryGenerator::MakeSphere(const float radius, 
-									   const int numStacks, const int numSlices, 
+									   const int numSlices, const int numStacks,
 									   const Vector2 texScale) {
 
 	// Texture 좌표계때문에 (numSlices + 1) 개의 vertex 사용 (마지막에 닫아주는 vertex가 중복)

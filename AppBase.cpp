@@ -163,7 +163,6 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // 화면 해상도가 바뀌면 카메라 aspect ratio도 같이 변경
             m_camera.SetAspectRatio(this->GetAspectRatio());
-            m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
         }
         break;
     case WM_SYSCOMMAND :
@@ -341,8 +340,6 @@ bool AppBase::InitDirect3D() {
     rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
     ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_wireRasterizerState.GetAddressOf( )));
 
-    m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
-
     return true;
 }
 
@@ -435,6 +432,8 @@ void AppBase::CreateBuffers( ) {
     ThrowIfFailed(m_device->CreateRenderTargetView(m_resolvedBuffer.Get( ), NULL, m_resolvedRTV.GetAddressOf( )));
 
     // m_resolvedRTV->GetDesc(&viewDesc);
+
+    m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
 }
 
 

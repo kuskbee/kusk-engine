@@ -17,6 +17,8 @@ struct MeshData {
 	std::string normalTextureFilename;
 	std::string heightTextureFilename;
 	std::string aoTextureFilename; // Ambient Occlusion
+	std::string metallicTextureFilename;
+	std::string roughnessTextureFilename;
 };
 
 } // namespace kusk

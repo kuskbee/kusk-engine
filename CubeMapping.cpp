@@ -2,21 +2,29 @@
 
 namespace kusk {
 void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
-					const wchar_t* originalFilename,
-					const wchar_t* diffuseFilename,
-					const wchar_t* specularFilename	) {
+					const wchar_t* envFilename,
+					const wchar_t* specularFilename,
+					const wchar_t* irradianceFilename,
+					const wchar_t* brdfFilename) {
+
 	// .dds 파일 읽어들여서 초기화
-	D3D11Utils::CreateCubemapTexture(device, originalFilename, m_originalResView);
-	D3D11Utils::CreateCubemapTexture(device, diffuseFilename, m_diffuseResView);
-	D3D11Utils::CreateCubemapTexture(device, specularFilename, m_specularResView);
+	D3D11Utils::CreateDDSTexture(device, envFilename, true, m_envSRV);
+	D3D11Utils::CreateDDSTexture(device, specularFilename, true, m_specularSRV);
+	D3D11Utils::CreateDDSTexture(device, irradianceFilename, true, m_irradianceSRV);
+	
+	// BRDF LookUp Table은 2D Texture
+	D3D11Utils::CreateDDSTexture(device, brdfFilename, false, m_brdfSRV);
 
 	m_cubeMesh = std::make_shared<Mesh>( );
 
-	D3D11Utils::CreateConstantBuffer(device, m_vertexConstantData,
+	D3D11Utils::CreateConstBuffer(device, m_vertexConstData,
 									 m_cubeMesh->vertexConstantBuffer);
 
-	// MeshData cubeMeshData = GeometryGenerator::MakeBox(20.0f);
-	MeshData cubeMeshData = GeometryGenerator::MakeSphere(50.0f, 10, 10);
+	D3D11Utils::CreateConstBuffer(device, m_pixelConstData,
+									 m_cubeMesh->pixelConstantBuffer);
+
+	MeshData cubeMeshData = GeometryGenerator::MakeBox(40.0f);
+	//MeshData cubeMeshData = GeometryGenerator::MakeSphere(50.0f, 10, 10);
 	std::reverse(cubeMeshData.indices.begin( ), cubeMeshData.indices.end( ));
 
 	D3D11Utils::CreateVertexBuffer(device, cubeMeshData.vertices,
@@ -52,14 +60,21 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 	device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 }
 
-void CubeMapping::UpdateConstantBuffers(ComPtr<ID3D11Device>& device,
+void CubeMapping::UpdateVertexConstBuffer(ComPtr<ID3D11Device>& device,
 										ComPtr<ID3D11DeviceContext>& context,
 										const Matrix& viewCol,
 										const Matrix& projCol) {
-	m_vertexConstantData.viewProj = projCol * viewCol;
+	m_vertexConstData.viewProj = projCol * viewCol;
 
-	D3D11Utils::UpdateBuffer(device, context, m_vertexConstantData,
+	D3D11Utils::UpdateBuffer(device, context, m_vertexConstData,
 							 m_cubeMesh->vertexConstantBuffer);
+}
+
+void CubeMapping::UpdatePixelConstBuffers(ComPtr<ID3D11Device>& device,
+										ComPtr<ID3D11DeviceContext>& context) {
+	
+	D3D11Utils::UpdateBuffer(device, context, m_pixelConstData,
+							 m_cubeMesh->pixelConstantBuffer);
 }
 
 void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context) {
@@ -74,11 +89,11 @@ void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->VSSetShader(m_vertexShader.Get( ), 0, 0);
 	context->VSSetConstantBuffers(0, 1, m_cubeMesh->vertexConstantBuffer.GetAddressOf( ));
 
-	// 배경 자체를 렌더링할 때는 original 텍스쳐 사용
-	ID3D11ShaderResourceView* views[ 1 ] = { m_originalResView.Get( ) };
-	context->PSSetShaderResources(0, 1, views);
+	vector<ID3D11ShaderResourceView *> srvs = { m_envSRV.Get( ), m_specularSRV.Get(), m_irradianceSRV.Get() };
+	context->PSSetShaderResources(0, UINT(srvs.size()), srvs.data());
 	context->PSSetShader(m_pixelShader.Get( ), 0, 0);
 	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
+	context->PSSetConstantBuffers(0, 1, m_cubeMesh->pixelConstantBuffer.GetAddressOf( ));
 
 	context->DrawIndexed(m_cubeMesh->indexCount, 0, 0);
 }

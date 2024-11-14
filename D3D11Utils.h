@@ -79,7 +79,7 @@ public:
 	}
 
 	template <typename T_CONSTANT>
-	static void CreateConstantBuffer(
+	static void CreateConstBuffer(
 		ComPtr<ID3D11Device>& device,
 		const T_CONSTANT& constantBufferData,
 		ComPtr<ID3D11Buffer>& constantBuffer) {
@@ -132,8 +132,8 @@ public:
 							ComPtr<ID3D11Texture2D>& texture, 
 							ComPtr<ID3D11ShaderResourceView>& textureResourceView);
 
-	static void CreateCubemapTexture(ComPtr<ID3D11Device>& device,
-							 const wchar_t* filename,
+	static void CreateDDSTexture(ComPtr<ID3D11Device>& device,
+							 const wchar_t* filename, const bool isCubeMap,
 							 ComPtr<ID3D11ShaderResourceView>& texResView);
 
 	// 텍스쳐를 이미지 파일로 저장

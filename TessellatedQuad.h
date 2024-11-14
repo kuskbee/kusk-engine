@@ -25,9 +25,6 @@ struct TessellatedQuadConstantData {
 	Vector2 padding2;
 };
 
-static_assert((sizeof(TessellatedQuadConstantData) % 16) == 0,
-			  "Constant Buffer size must be 16-byte aligned");
-
 class TessellatedQuad
 {
 public:

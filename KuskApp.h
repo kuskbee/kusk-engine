@@ -29,14 +29,14 @@ public:
 	virtual void Render() override;
 
 protected: 
-	TessellatedQuad m_tessellatedQuad;
-	BillboardPoints m_billboardPoints;
+	//TessellatedQuad m_tessellatedQuad;
+	//BillboardPoints m_billboardPoints;
 	BasicMeshGroup m_mainSphere;
 	BoundingSphere m_mainBoundingSphere;	//
 	BasicMeshGroup m_cursorSphere;			//
 
-	BasicMeshGroup m_meshGroupCharacter;
-	BasicMeshGroup m_meshGroupGround;
+	//BasicMeshGroup m_meshGroupCharacter;
+	//BasicMeshGroup m_meshGroupGround;
 	CubeMapping m_cubeMapping;
 
 	/*Vector3 m_modelTranslation = Vector3(0.0f, 0.2f, 0.6f);

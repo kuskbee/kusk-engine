@@ -75,12 +75,5 @@ float4 main(SamplingPixelShaderInput input) : SV_Target
     // Tone Mapping
     combined = LinearToneMapping(combined);
     
-    //if (input.texcoord.y < 0.2)
-    //{
-    //    return float4(float3(1, 1, 1) * floor(input.texcoord.x * 11.0) / 10.0, 1);
-    //}
-    //else
-    {
-        return float4(combined, 1.0f);
-    }
+    return float4(combined, 1.0f);
 }

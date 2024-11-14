@@ -259,6 +259,15 @@ void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& wid
             }
         }
     }
+    else if (channels == 2) {
+        for (size_t i = 0; i < width * height; i++) {
+            for (size_t c = 0; c < 2; c++) {
+                image[ 4 * i + c ] = img[ i * channels + c ];
+            }
+            image[ 4 * i + 2 ] = 255;
+            image[ 4 * i + 3 ] = 255;
+        }
+    }
     else if (channels == 3) {
         for (size_t i = 0; i < width * height; i++) {
             for (size_t c = 0; c < 3; c++) {
@@ -435,18 +444,23 @@ void D3D11Utils::CreateTextureArray(
     context->GenerateMips(textureResourceView.Get( ));
 }
 
-void D3D11Utils::CreateCubemapTexture(
+void D3D11Utils::CreateDDSTexture(
     ComPtr<ID3D11Device>& device,
     const wchar_t* filename,
+    const bool isCubeMap,
     ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
     ComPtr<ID3D11Texture2D> texture;
+
+    UINT miscFlags = 0;
+    if (isCubeMap) {
+        miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+    }
 
     // https://github.com/microsoft/DirectXTK/wiki/DDSTextureLoader
     ThrowIfFailed(CreateDDSTextureFromFileEx(
         device.Get( ), filename, 0, D3D11_USAGE_DEFAULT,
-        D3D11_BIND_SHADER_RESOURCE, 0,
-        D3D11_RESOURCE_MISC_TEXTURECUBE, // 큐브맵용 텍스춰
-        DDS_LOADER_FLAGS(false), ( ID3D11Resource** ) texture.GetAddressOf( ),
+        D3D11_BIND_SHADER_RESOURCE, 0, miscFlags, DDS_LOADER_FLAGS(false), 
+        ( ID3D11Resource** ) texture.GetAddressOf( ),
         textureResourceView.GetAddressOf( ), nullptr));
 
     //D3D11_TEXTURE2D_DESC desc;

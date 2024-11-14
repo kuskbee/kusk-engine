@@ -29,15 +29,16 @@ public:
     Matrix m_invTransposeRow = Matrix( );
 
 	// ExampleApp::Update()에서 접근
-    BasicVertexConstantData m_basicVertexConstantData;
-    BasicPixelConstantData m_basicPixelConstantData;
+    BasicVertexConstData m_basicVertexConstData;
+    BasicPixelConstData m_basicPixelConstData;
 
 	// ExampleApp::Initialize()에서 접근
-    ComPtr<ID3D11ShaderResourceView> m_diffuseResView;
-    ComPtr<ID3D11ShaderResourceView> m_specularResView;
+    ComPtr<ID3D11ShaderResourceView> m_irradianceSRV;
+    ComPtr<ID3D11ShaderResourceView> m_specularSRV;
+    ComPtr<ID3D11ShaderResourceView> m_brdfSRV;
 
     // GUI에서 업데이트할 때 사용
-    NormalVertexConstantData m_normalVertexConstantData;
+    NormalVertexConstantData m_normalVertexConstData;
     bool m_drawNormalsDirtyFlag = true;
     bool m_drawNormals = false;
 
@@ -49,6 +50,7 @@ private:
     ComPtr<ID3D11InputLayout> m_basicInputLayout;
 
     ComPtr<ID3D11SamplerState> m_samplerState;
+    ComPtr<ID3D11SamplerState> m_clampSamplerState;
 
     ComPtr<ID3D11Buffer> m_vertexConstantBuffer;
     ComPtr<ID3D11Buffer> m_pixelConstantBuffer;

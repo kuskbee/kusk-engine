@@ -21,9 +21,6 @@ struct BillboardPointsConstantData {
 	Vector3 padding;
 };
 
-static_assert((sizeof(BillboardPointsConstantData) % 16) == 0,
-			  "Constant Buffer size must be 16-byte aligned");
-
 class BillboardPoints
 {
 public:

@@ -23,7 +23,11 @@
 #define SKYBOX_DIFF_DDS L"./Assets/Textures/Cubemaps/skybox/cubemap_diffuse.dds"
 #define SKYBOX_SPEC_DDS L"./Assets/Textures/Cubemaps/skybox/cubemap_specular.dds"
 
-
+#define OUTDOOR_ORGN_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorEnvHDR.dds"
+#define OUTDOOR_SPEC_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorSpecularHDR.dds"
+#define OUTDOOR_DIFF_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorDiffuseHDR.dds"
+#define OUTDOOR_BRDF_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorBrdf.dds"
+ 
 // Textures
 #define BLENDER_UV_GRID_2K_TEXTURE "./Assets/Textures/blender_uv_grid_2k.png"
 #define EARTH_TEXTURE "./Assets/Textures/earth.jpg";
@@ -43,3 +47,14 @@
 #define BRICK_TEXTURE_4K_HDRI "./Assets/Textures/PBR/Bricks075A_4K-PNG/Bricks075A_4K_Color.png"
 
 #define SKY_TEXTURE_HDRI "./Assets/Textures/Cubemaps/HDRI/DaySkyHDRI015A_4K-HDR.exr"
+
+// PBR textures
+
+#define WORN_PAINTED_METAL_TEXTURE_DIR "./Assets/Textures/PBR/worn-painted-metal-ue/"
+
+#define WORN_PAINTED_METAL_TEXTURE_ALBEDO "worn-painted-metal_albedo.png"
+#define WORN_PAINTED_METAL_TEXTURE_NORMAL "worn-painted-metal_normal-dx.png"
+#define WORN_PAINTED_METAL_TEXTURE_HEIGHT "worn-painted-metal_height.png"
+#define WORN_PAINTED_METAL_TEXTURE_AO "worn-painted-metal_ao.png"
+#define WORN_PAINTED_METAL_TEXTURE_METALLIC "worn-painted-metal_metallic.png"
+#define WORN_PAINTED_METAL_TEXTURE_ROUGHNESS "worn-painted-metal_roughness.png"

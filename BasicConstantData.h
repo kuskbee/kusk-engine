@@ -11,20 +11,17 @@ using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 
-struct BasicVertexConstantData {
+struct BasicVertexConstData {
 	Matrix modelWorld;
 	Matrix invTranspose;
 	Matrix view;
 	Matrix proj;
-	int useHeightMap = 1;
+	int useHeightMap = 0;
 	float heightScale = 0.0f;
 	Vector2 dummy;
 };
 
-static_assert((sizeof(BasicVertexConstantData) % 16) == 0,
-	"Constant Buffer size must be 16-byte aligned");
-
-struct BasicPixelConstantData {
+struct BasicPixelConstData {
 	Vector3 eyeWorld;					// 12
 	float mipmapLevel = 0.0f;			//4
 	Material material;					// 48
@@ -33,16 +30,17 @@ struct BasicPixelConstantData {
 	float rimPower;						// 4
 	float rimStrength = 0.0f;			// 4
 	bool useSmoothstep = false;			// 4
-	int useTexture = 0;					// 4
-	int useNormalMap = 1;				// 4
-	int useAOMap = 1;					// 4
-	int reverseNormalMapY = 0;			// 4
+	int useAlbedoMap = 0;				// 4
+	int useNormalMap = 0;				// 4
+	int useAOMap = 0;					// 4
+	int invertNormalMapY = 0;			// 4
+	int useMetallicMap = 0;				// 4
+	int useRoughnessMap = 0;			// 4
 	float expose = 1.0f;				// 4
 	float gamma = 1.0f;					// 4
+	float dummy1;
+	float dummy2;
 };
-
-static_assert((sizeof(BasicPixelConstantData) % 16) == 0,
-	"Constant Buffer size must be 16-byte aligned");
 
 struct NormalVertexConstantData {
 	float scale = 0.1f;

@@ -1,13 +1,22 @@
 #include "Common.hlsli"
 
-TextureCube g_diffuseCube : register(t0);
-TextureCube g_specularCube : register(t1);
+// 참고자료
+// https://github.com/Nadrin/PBR/blob/master/data/shaders/hlsl/pbr.hlsl
+// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
 
-Texture2D g_albedoTexture : register(t2);
-Texture2D g_normalTexture : register(t3);
-Texture2D g_aoTexture : register(t4);
+TextureCube specularIBLTex : register(t0);
+TextureCube irradianceIBLTex : register(t1);
+Texture2D brdfTex : register(t2);
+Texture2D albedoTex : register(t3);
+Texture2D normalTex : register(t4);
+Texture2D aoTex : register(t5);
+Texture2D metallicTex : register(t6);
+Texture2D roughnessTex : register(t7);
 
-SamplerState g_sampler : register(s0);
+SamplerState linearSampler : register(s0);
+SamplerState clampSampler : register(s1);
+
+static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
 
 cbuffer BasicPixelConstantData : register(b0) 
 {
@@ -19,43 +28,37 @@ cbuffer BasicPixelConstantData : register(b0)
     float rimPower;
     float rimStrength;
     bool useSmoothstep;
-    int useAlbedoTexture;
+    int useAlbedoMap;
     int useNormalMap;
     int useAOMap;       // Ambient Occlusion
-    int reverseNormalMapY;
+    int invertNormalMapY;
+    int useMetallicMap;
+    int useRoughnessMap;
     float exposure;
     float gamma;
 };
 
-float3 SchlickFresnel(float3 fresnelR0, float3 normal, float3 toEye)
+struct PixelShaderOutput
 {
-    float normalDotView = saturate(dot(normal, toEye));
-    float f0 = 1.0f - normalDotView; // 90도이면 f0 = 1, 0도이면 f0 = 0
-    
-    return fresnelR0 + (1.0f - fresnelR0) * pow(f0, 5.0f);
+    float4 pixelColor : SV_Target0;
+};
+
+float3 SchlickFresnel(float3 F0, float VdotH)
+{
+    return float3(F0 + (1.0 - F0) * pow(2.0, (-5.55473 * VdotH - 6.98316) * VdotH)); // Note (5)
+    // return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-float4 main(PixelShaderInput input) : SV_TARGET {
-    
-    float3 toEye = normalize(eyeWorld - input.posWorld);
-    
-    float dist = length(eyeWorld - input.posWorld);
-    float distMin = 5.0;
-    float distMax = 20.0;
-    float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));
-        
-    float3 color = float3(0.0, 0.0, 0.0);
-    
-    int i = 0;
-    
+float3 GetNormal(PixelShaderInput input)
+{
     float3 normalWorld = input.normalWorld;
-    if(useNormalMap) // NormalWorld를 교체
+    if (useNormalMap) // NormalWorld를 교체
     {
-        float3 normalTex = g_normalTexture.SampleLevel(g_sampler, input.texcoord, lod).rgb;
-        normalTex = 2.0 * normalTex - 1.0; // 범위 조절 [0.0, 1.0] => [-1.0, 1.0]
+        float3 normal = normalTex.SampleLevel(linearSampler, input.texcoord, 0.0).rgb;
+        normal = 2.0 * normal - 1.0; // 범위 조절 [0.0, 1.0] => [-1.0, 1.0]
         
         // OpenGL용 노멀맵인 경우 y 방향을 뒤집어주기
-        normalTex.y = reverseNormalMapY ? -normalTex.y : normalTex.y;
+        normal.y = invertNormalMapY ? -normal.y : normal.y;
         
         float3 N = normalWorld; // normal
         float3 T = normalize(input.tangentWorld - dot(input.tangentWorld, N) * N); // tangent
@@ -63,66 +66,133 @@ float4 main(PixelShaderInput input) : SV_TARGET {
         
         // matrix는 float4x4, 여기서 벡터 변환용이라서 3x3 사용
         float3x3 TBN = float3x3(T, B, N);
-        normalWorld = normalize(mul(normalTex, TBN));
+        normalWorld = normalize(mul(normal, TBN));
     }
     
-    [unroll]
+    return normalWorld;
+}
+
+float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic)
+{
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+    float3 F = SchlickFresnel(F0, max(0.0, dot(normalWorld, pixelToEye)));
+    float3 kd = lerp(1.0 - F, 0.0, metallic);
+    
+    // 앞에서 사용했던 방법과 동일
+    float3 irradiance = irradianceIBLTex.Sample(linearSampler, normalWorld).rgb;
+    kd *= irradiance;
+    
+    return kd * albedo;
+}
+
+float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic, float roughness)
+{
+    float2 specularBRDF = brdfTex.Sample(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness)).rg;
+    
+    // 앞에서 사용했던 방법과 동일
+    float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normalWorld), roughness * 5.0f).rgb;
+    const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+    float3 specular = specularIrradiance * (F0 * specularBRDF.x + specularBRDF.y); // Note (8)
+    
+    return specular;
+}
+
+float3 AmbientLightingByIBL(float3 albedo, float3 normalW, float3 pixelToEye, float ao, float metallic, float roughness)
+{
+    float3 diffuseIBL = DiffuseIBL(albedo, normalW, pixelToEye, metallic);
+    float3 specularIBL = SpecularIBL(albedo, normalW, pixelToEye, metallic, roughness);
+    
+    return (diffuseIBL + specularIBL) * ao;
+}
+
+// GGX / Towbridge-Reitz normal distribution function
+// Uses Disney's reparametrization of alpha = roughness^2.
+float NdfGGX(float NdotH, float roughness)
+{
+    // Note (3)
+    float alpha = roughness * roughness;
+    float alphaSq = alpha * alpha;
+    float denom = (NdotH * NdotH) * (alphaSq - 1.0) + 1.0;
+    return alphaSq / (3.141592 * denom * denom);
+}
+
+float SchlickG1(float NdotV, float k)
+{
+    return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+// Note (4), I : Input = light, O : Output = view
+float SchlickGGX(float NdotI, float NdotO, float roughness) 
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return SchlickG1(NdotI, k) * SchlickG1(NdotO, k);
+}
+
+PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
+    
+    float3 pixelToEye = normalize(eyeWorld - input.posWorld);
+    float3 normalWorld = GetNormal(input);
+    
+    float3 albedo = useAlbedoMap ? albedoTex.Sample(linearSampler, input.texcoord).rgb : material.albedo;
+    float ao = useAOMap ? aoTex.SampleLevel(linearSampler, input.texcoord, 0.0).r : 1.0f;
+    float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).r : material.metallic;
+    float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).r : material.roughness;
+    float3 ambientLighting = AmbientLightingByIBL(albedo, normalWorld, pixelToEye, ao, metallic, roughness);
+    
+    float3 directLighting = float3(0, 0, 0);
+    
+    /*float dist = length(eyeWorld - input.posWorld);
+    float distMin = 5.0;
+    float distMax = 20.0;
+    float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));*/
+    
+    int i = 0;
+
+    /*[unroll]
     for (i = 0; i < NUM_DIR_LIGHTS; ++i)
     {
         color += ComputeDirectionalLight(lights[i], material, normalWorld, toEye);
-    }
+    }*/
 
+    // 포인트 라이트만 먼저 구현
     [unroll]
     for (i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
     {
-        color += ComputePointLight(lights[i], material, input.posWorld, normalWorld, toEye);
+        float3 lightVec = lights[i].position - input.posWorld;
+        float3 halfway = normalize(pixelToEye + lightVec);
+        float NdotI = max(0.0, dot(normalWorld, lightVec));
+        float NdotO = max(0.0, dot(normalWorld, pixelToEye));
+        float NdotH = max(0.0, dot(normalWorld, halfway));
+
+        const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+        float3 F0 = lerp(Fdielectric, albedo, metallic);
+        float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
+        float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
+        float3 diffuseBRDF = kd * albedo;
+        
+        float D = NdfGGX(NdotH, roughness);
+        float3 G = SchlickGGX(NdotI, NdotO, roughness);
+        
+        // Note (2), 0으로 나누기 방지
+        float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
+        float3 radiance = lights[i].radiance * saturate((lights[i].fallOffEnd - length(lightVec)) / (lights[i].fallOffEnd - lights[i].fallOffStart));
+        directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
     }
     
-    [unroll]
+    /*[unroll]
     for (i = NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS; ++i)
     {
         color += ComputeSpotLight(lights[i], material, input.posWorld, normalWorld, toEye);
-    }
-    
-    // sphere mapping 시 사용
-    //float2 uv;
-    //uv.x = atan2(input.posModel.z, input.posModel.x) / (3.141592 * 2.0) + 0.5;
-    //uv.y = acos(input.posModel.y / 1.5) / 3.141592;
-    //return useAlbedoTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, uv) : float4(color, 1.0);
-    
-    // IBL
-    float4 diffuse = g_diffuseCube.Sample(g_sampler, normalWorld) + float4(color, 1.0);
-    
-    float3 reflected = reflect(-toEye, normalWorld);
-    float4 specular = g_specularCube.Sample(g_sampler, reflected);
-    
-    diffuse *= float4(material.diffuse, 1.0f);
-    specular *= pow(abs(specular.r + specular.g + specular.b) / 3.0, material.shininess);
-    specular *= float4(material.specular, 1.0f);
-    
-    float3 f = SchlickFresnel(material.fresnelR0, normalWorld, toEye);
-    specular.xyz *= f;
-    
-    if (useAlbedoTexture)
-    {
-        // 임시로 색 대입
-        float3 albedo = g_albedoTexture.SampleLevel(g_sampler, input.texcoord, lod).rgb;
-        diffuse.rgb = albedo;
+    }*/
         
-        //diffuse *= g_albedoTexture.SampleLevel(g_sampler, input.texcoord, lod);
-        //diffuse *= g_albedoTexture.SampleLevel(g_sampler, input.texcoord, 0.0); // 가장 높은 해상도로 테스트
-        //diffuse *= g_albedoTexture.Sample(g_sampler, input.texcoord);
-    }
+    PixelShaderOutput output;
     
-    if(useAOMap)
-    {
-        diffuse *= g_aoTexture.SampleLevel(g_sampler, input.texcoord, lod);
-    }
-    
-    float4 finalColor = diffuse + specular;
-    
+    output.pixelColor = float4(ambientLighting + directLighting, 1.0);
+        
     // Rim Lighting
-    float rim = 1.0 - dot(toEye, normalWorld);
+    float rim = 1.0 - dot(pixelToEye, normalWorld);
     
     if (useSmoothstep)
         rim = smoothstep(0.0, 1.0, rim);
@@ -137,7 +207,8 @@ float4 main(PixelShaderInput input) : SV_TARGET {
     //else {
     //    finalColor = diffuse + specular;
     //}
+    output.pixelColor += float4(rimEffect, 1.0);
+    output.pixelColor = clamp(output.pixelColor, 0.0, 1000.0);
     
-    return finalColor + float4(rimEffect, 1.0);
-    //return useTexture ? float4(color, 1.0) * g_texture0.Sample(g_sampler, input.texcoord) : float4(color, 1.0);
+    return output;
 }

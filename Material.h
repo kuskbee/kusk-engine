@@ -13,14 +13,19 @@ using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
 
 struct Material {
-	Vector3 ambient = Vector3(0.0f);	// 12
-	float shininess = 0.01f;			// 4
-	Vector3 diffuse = Vector3(0.0f);	// 12
-	float dummy1;						// 4
-	Vector3 specular = Vector3(1.0f);	// 12
-	float dummy2;						// 4
-	Vector3 fresnelR0 = Vector3(1.0f, 0.71f, 0.29f); // Gold
-	float dummy3;
+	Vector3 albedo = Vector3(1.0f);		// 12
+	float roughness = 0.0f;
+	float metallic = 0.0f;
+	Vector3 dummy;
+	//
+	//Vector3 ambient = Vector3(0.0f);	// 12
+	//float shininess = 0.01f;			// 4
+	//Vector3 diffuse = Vector3(0.0f);	// 12
+	//float dummy1;						// 4
+	//Vector3 specular = Vector3(1.0f);	// 12
+	//float dummy2;						// 4
+	//Vector3 fresnelR0 = Vector3(1.0f, 0.71f, 0.29f); // Gold
+	//float dummy3;
 };
 
 } // namespace kusk
