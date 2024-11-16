@@ -24,7 +24,8 @@ struct BasicVertexConstData {
 struct EyeViewProjConstData {
 	Matrix viewProj; // View 와 Proj를 미리 곱한 형태
 	Vector3 eyeWorld; // Eye도 분리 가능
-	float dummy;
+	bool isMirror = false;
+	Vector4 mirrorPlane;
 };
 
 struct BasicPixelConstData {

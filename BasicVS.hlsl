@@ -18,7 +18,8 @@ cbuffer EyeViewProjConstData : register(b1)
 {
     matrix viewProj;
     float3 eyeWorld;
-    float dummy1;
+    bool isMirror;
+    float4 mirrorPlane;
 }
 
 PixelShaderInput main(VertexShaderInput input)

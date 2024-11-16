@@ -44,7 +44,8 @@ cbuffer EyeViewProjConstData : register(b1)
 {
     matrix viewProj;
     float3 eyeWorld;
-    float dummy1;
+    bool isMirror;
+    float4 mirrorPlane;
 }
 
 struct PixelShaderOutput
@@ -141,6 +142,11 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
 }
 
 PixelShaderOutput main(PixelShaderInput input) {
+    
+    if (isMirror && dot(input.posWorld.xyz, mirrorPlane.xyz) + mirrorPlane.w < 0.0)
+    {
+        clip(-1.0);
+    }
     
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);

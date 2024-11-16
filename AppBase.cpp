@@ -234,8 +234,11 @@ void AppBase::UpdateEyeViewProjBuffers(const Vector3& eyeWorld,
 
     m_eyeViewProjConstData.eyeWorld = eyeWorld;
     m_eyeViewProjConstData.viewProj = (viewRow * projRow).Transpose( );
+    m_mirrorEyeViewProjConstData.isMirror = false;
+
     m_mirrorEyeViewProjConstData.eyeWorld = eyeWorld;
     m_mirrorEyeViewProjConstData.viewProj = (refl * viewRow * projRow).Transpose( );
+    m_mirrorEyeViewProjConstData.isMirror = true;
 
     D3D11Utils::UpdateBuffer(m_device, m_context, m_eyeViewProjConstData, m_eyeViewProjConstBuffer);
     D3D11Utils::UpdateBuffer(m_device, m_context, m_mirrorEyeViewProjConstData, m_mirrorEyeViewProjConstBuffer);

@@ -85,6 +85,21 @@ bool KuskApp::Initialize() {
 		m_basicList.push_back(m_ground); // 리스트에 등록
 	}
 
+	// $box - test용
+	{
+		vector<MeshData> meshes = { GeometryGenerator::MakeBox(0.15f) };
+		Vector3 center(1.5f, 0.25f, 2.0f);
+		m_mainObj = make_shared<BasicMeshGroup>(m_device, m_context, meshes);
+		m_mainObj->m_irradianceSRV = m_cubeMapping.m_irradianceSRV;
+		m_mainObj->m_specularSRV = m_cubeMapping.m_specularSRV;
+		m_mainObj->m_brdfSRV = m_cubeMapping.m_brdfSRV;
+		m_mainObj->UpdateModelWorld(Matrix::CreateTranslation(center));
+		m_mainObj->UpdateConstantBuffers(m_device, m_context);
+
+		m_basicList.push_back(m_mainObj); // 리스트에 등록
+	}
+
+
 	// $mainObj
 	{
 		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
@@ -182,6 +197,10 @@ void KuskApp::Update(float dt) {
 	Matrix viewRow = m_camera.GetViewRow( );
 	Matrix projRow = m_camera.GetProjRow( );
 
+	AppBase::m_mirrorEyeViewProjConstData.mirrorPlane.x = m_mirrorPlane.Normal( ).x;
+	AppBase::m_mirrorEyeViewProjConstData.mirrorPlane.y = m_mirrorPlane.Normal( ).y;
+	AppBase::m_mirrorEyeViewProjConstData.mirrorPlane.z = m_mirrorPlane.Normal( ).z;
+	AppBase::m_mirrorEyeViewProjConstData.mirrorPlane.w = m_mirrorPlane.D( );
 	AppBase::UpdateEyeViewProjBuffers(eyeWorld, viewRow, projRow, reflectionRow);
 	
 	// 큐브매핑을 위한 constantBuffers 업데이트
