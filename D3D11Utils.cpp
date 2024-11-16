@@ -19,35 +19,6 @@ namespace kusk {
 using namespace std;
 using namespace DirectX;
 
-void D3D11Utils::CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
-                                  int screenHeight, UINT numQualityLevels,
-                                  ComPtr<ID3D11DepthStencilView>& depthStencilView) {
-    // Create depth buffer
-    D3D11_TEXTURE2D_DESC depthStencilBufferDesc;
-    depthStencilBufferDesc.Width = screenWidth;
-    depthStencilBufferDesc.Height = screenHeight;
-    depthStencilBufferDesc.MipLevels = 1;
-    depthStencilBufferDesc.ArraySize = 1;
-    depthStencilBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    if (numQualityLevels > 0) {
-        depthStencilBufferDesc.SampleDesc.Count = 4;
-        depthStencilBufferDesc.SampleDesc.Quality = numQualityLevels - 1;
-    }
-    else {
-        depthStencilBufferDesc.SampleDesc.Count = 1;
-        depthStencilBufferDesc.SampleDesc.Quality = 0;
-    }
-    depthStencilBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    depthStencilBufferDesc.CPUAccessFlags = 0;
-    depthStencilBufferDesc.MiscFlags = 0;
-
-    ComPtr<ID3D11Texture2D> depthStencilBuffer;
-
-    ThrowIfFailed(device->CreateTexture2D(&depthStencilBufferDesc, 0, depthStencilBuffer.GetAddressOf( )));
-    ThrowIfFailed(device->CreateDepthStencilView(depthStencilBuffer.Get( ), 0, depthStencilView.GetAddressOf( )));
-}
-
 void CheckResult(HRESULT hr, ID3DBlob* errorBlob) {
     if (FAILED(hr)) {
         // 파일이 없을 경우
@@ -286,6 +257,8 @@ void ReadImage(const std::string filename, std::vector<uint8_t>& image, int& wid
     else {
         std::cout << "Cannot read " << channels << " channels" << endl;
     }
+
+    delete[ ] img;
 }
 
 ComPtr<ID3D11Texture2D> CreateStagingTexture(ComPtr<ID3D11Device>& device,
@@ -325,27 +298,12 @@ ComPtr<ID3D11Texture2D> CreateStagingTexture(ComPtr<ID3D11Device>& device,
     return stagingTexture;
 }
 
-void D3D11Utils::CreateTexture(
-    ComPtr<ID3D11Device>& device,
-    ComPtr<ID3D11DeviceContext>& context,
-    const std::string filename,
-    const bool useSRGB,
+void CreateTextureHelper(
+    ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+    const int width, const int height,
+    const vector<uint8_t>& image, const DXGI_FORMAT pixelFormat,
     ComPtr<ID3D11Texture2D>& texture,
-    ComPtr<ID3D11ShaderResourceView>& textureResourceView) {
-
-    int width = 0, height = 0;
-    std::vector<uint8_t> image;
-    DXGI_FORMAT pixelFormat = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    string ext(filename.end( ) - 3, filename.end( ));
-    std::transform(ext.begin( ), ext.end( ), ext.begin( ), std::tolower);
-
-    if (ext == "exr") {
-        ReadEXRImage(filename, image, width, height, pixelFormat);
-    }
-    else {
-        ReadImage(filename, image, width, height);
-    }
+    ComPtr<ID3D11ShaderResourceView>& srv) {
 
     // 스테이징 텍스쳐 만들고 CPU의 이미지를 복사합니다.
     ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(device, context, width, height, image, pixelFormat);
@@ -375,10 +333,81 @@ void D3D11Utils::CreateTexture(
     context->CopySubresourceRegion(texture.Get( ), 0, 0, 0, 0, stagingTexture.Get( ), 0, nullptr);
 
     // ResourceView 만들기
-    device->CreateShaderResourceView(texture.Get( ), 0, textureResourceView.GetAddressOf( ));
+    device->CreateShaderResourceView(texture.Get( ), 0, srv.GetAddressOf( ));
 
     // 해상도를 낮춰가며 밉맵 생성
-    context->GenerateMips(textureResourceView.Get( ));
+    context->GenerateMips(srv.Get( ));
+}
+
+void D3D11Utils::CreateMetallicRoughnessTexture(
+    ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+        const std::string metallicFilename, const std::string roughnessFilename,
+        ComPtr<ID3D11Texture2D>& texture, ComPtr<ID3D11ShaderResourceView>& srv) {
+
+    // GLTF 방식은 이미 합쳐져 있음
+    if (!metallicFilename.empty( ) && (metallicFilename == roughnessFilename)) {
+        CreateTexture(device, context, metallicFilename, false, texture, srv);
+    }
+    else {
+        // 별도 파일인 경우 따로 읽어서 합쳐줍니다.
+
+        // ReadImage()를 활용하기 위해서 두 이미지를 각각 4채널로 변환 후 다시
+        // 3채널로 합치는 식으로 구현
+        int mWidth = 0, mHeight = 0;
+        int rWidth = 0, rHeight = 0;
+        std::vector<uint8_t> mImage;
+        std::vector<uint8_t> rImage;
+
+        // (거의 없겠지만) 둘 중 하나만 있을 경우도 고려하기 위해 각각 파일명 확인
+        if (!metallicFilename.empty( )) {
+            ReadImage(metallicFilename, mImage, mWidth, mHeight);
+        }
+        if (!roughnessFilename.empty( )) {
+            ReadImage(roughnessFilename, rImage, rWidth, rHeight);
+        }
+
+        // 두 이미지의 해상도가 같다고 가정
+        if (!metallicFilename.empty( ) && !roughnessFilename.empty( )) {
+            assert(mWidth == rWidth);
+            assert(mHeight == rHeight);
+        }
+
+        vector<uint8_t> combinedImage(size_t(mWidth * mHeight) * 4);
+        fill(combinedImage.begin( ), combinedImage.end( ), 0);
+        for (size_t i = 0; i < size_t(mWidth * mHeight); i++) {
+            if (rImage.size( ))
+                combinedImage[ 4 * i + 1 ] = rImage[ 4 * i ]; // Green = Roughness
+            if (mImage.size( ))
+                combinedImage[ 4 * i + 2 ] = mImage[ 4 * i ]; // Blue = Metalness
+        }
+
+        CreateTextureHelper(device, context, mWidth, mHeight, combinedImage, DXGI_FORMAT_R8G8B8A8_UNORM, texture, srv);
+    }
+}
+
+void D3D11Utils::CreateTexture(
+    ComPtr<ID3D11Device>& device,
+    ComPtr<ID3D11DeviceContext>& context,
+    const std::string filename,
+    const bool useSRGB,
+    ComPtr<ID3D11Texture2D>& tex,
+    ComPtr<ID3D11ShaderResourceView>& srv) {
+
+    int width = 0, height = 0;
+    std::vector<uint8_t> image;
+    DXGI_FORMAT pixelFormat = useSRGB ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    string ext(filename.end( ) - 3, filename.end( ));
+    std::transform(ext.begin( ), ext.end( ), ext.begin( ), std::tolower);
+
+    if (ext == "exr") {
+        ReadEXRImage(filename, image, width, height, pixelFormat);
+    }
+    else {
+        ReadImage(filename, image, width, height);
+    }
+
+    CreateTextureHelper(device, context, width, height, image, pixelFormat, tex, srv);
 }
 
 void D3D11Utils::CreateTextureArray(

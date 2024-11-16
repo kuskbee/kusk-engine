@@ -16,7 +16,7 @@ struct Material {
 	Vector3 albedo = Vector3(1.0f);		// 12
 	float roughness = 0.0f;
 	float metallic = 0.0f;
-	Vector3 dummy;
+	Vector3 emission = Vector3(0.0f);
 	//
 	//Vector3 ambient = Vector3(0.0f);	// 12
 	//float shininess = 0.01f;			// 4

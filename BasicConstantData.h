@@ -14,20 +14,24 @@ using DirectX::SimpleMath::Vector3;
 struct BasicVertexConstData {
 	Matrix modelWorld;
 	Matrix invTranspose;
-	Matrix view;
-	Matrix proj;
+	// Matrix view; // 다른 Const로 분리
+	// Matrix proj; // 다른 Const로 분리
 	int useHeightMap = 0;
 	float heightScale = 0.0f;
 	Vector2 dummy;
 };
 
+struct EyeViewProjConstData {
+	Matrix viewProj; // View 와 Proj를 미리 곱한 형태
+	Vector3 eyeWorld; // Eye도 분리 가능
+	float dummy;
+};
+
 struct BasicPixelConstData {
-	Vector3 eyeWorld;					// 12
-	float mipmapLevel = 0.0f;			//4
-	Material material;					// 48
+	Material material;					// 32
 	Light lights[ MAX_LIGHTS ];			// 48 * MAX_LIGHTS
 	Vector3 rimColor = Vector3(1.0f);	// 12
-	float rimPower;						// 4
+	float rimPower = 0.01f;						// 4
 	float rimStrength = 0.0f;
 	bool useSmoothstep = false;
 	int useAlbedoMap = 0;
@@ -39,7 +43,7 @@ struct BasicPixelConstData {
 	int useEmissiveMap = 0;
 	float expose = 1.0f;
 	float gamma = 1.0f;
-	float dummy1;						// 16
+	float mipmapLevel = 0.0f;			// 16
 };
 
 struct NormalVertexConstantData {

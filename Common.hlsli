@@ -21,24 +21,12 @@
 #define NUM_SPOT_LIGHTS 1
 
 // 재질
-//struct Material
-//{
-//    float3 ambient;
-//    float shininess;
-//    float3 diffuse;
-//    float dummy1;   // 16bytes 맞춰주기 위해 추가
-//    float3 specular;
-//    float dummy2;
-//    float3 fresnelR0;
-//    float dummy3;
-//};
-
 struct Material
 {
     float3 albedo; // baseColor
     float roughness;
     float metallic;
-    float3 dummy;
+    float3 emission;
 };
 
 // 조명

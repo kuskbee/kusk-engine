@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+#include "BasicConstantData.h"
 #include "Camera.h"
 #include "D3D11Utils.h"
 #include "PostProcess.h"
@@ -30,8 +31,14 @@ public :
 	virtual void UpdateGUI() = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Render() = 0;
-	virtual void OnMouseMove(WPARAM btnState, int x, int y);
+	virtual void OnMouseMove(int mouseX, int mouseY);
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	void UpdateEyeViewProjBuffers(const Vector3& eyeWorld,
+								  const Matrix& viewRow, const Matrix& projRow,
+								  const Matrix& refl);
+
+	void CreateDepthBuffers( );
 
 protected:
 	bool InitMainWindow();
@@ -48,6 +55,7 @@ public:
 	bool m_useMSAA = true;
 	UINT m_numQualityLevels = 0;
 	bool m_drawAsWire = false;
+	bool m_useEnv = true;
 
 	ComPtr<ID3D11Device> m_device;
 	ComPtr<ID3D11DeviceContext> m_context;
@@ -62,13 +70,21 @@ public:
 	ComPtr<ID3D11RenderTargetView> m_resolvedRTV;
 	ComPtr<ID3D11ShaderResourceView> m_floatSRV;
 	ComPtr<ID3D11ShaderResourceView> m_resolvedSRV;
-	
-	ComPtr<ID3D11RasterizerState> m_solidRasterizerState;
-	ComPtr<ID3D11RasterizerState> m_wireRasterizerState;
+
+	ComPtr<ID3D11RasterizerState> m_solidRS;
+	ComPtr<ID3D11RasterizerState> m_solidCCWRS; // Counter-ClockWise
+	ComPtr<ID3D11RasterizerState> m_wireRS;
+	ComPtr<ID3D11RasterizerState> m_wireCCWRS;
 
 	// Depth Buffer
+	ComPtr<ID3D11Texture2D> m_depthStencilBuffer;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
-	ComPtr<ID3D11DepthStencilState> m_depthStencilState;
+
+	ComPtr<ID3D11DepthStencilState> m_drawDSS;			// 일반적으로 그리기
+	ComPtr<ID3D11DepthStencilState> m_maskDSS;			// 스텐실 버퍼에 표시
+	ComPtr<ID3D11DepthStencilState> m_drawMaskedDSS;	// 스텐실 표시된 곳만
+
+	ComPtr<ID3D11BlendState> m_mirrorBS;
 
 	Camera m_camera;
 	bool m_useFirstPersonView = false;
@@ -88,6 +104,12 @@ public:
 
 	// 후처리 필터
 	PostProcess m_postProcess;
+
+	// 거울 구현을 더 효율적으로 하기 위해 ConstBuffers들 분리
+	EyeViewProjConstData m_eyeViewProjConstData;
+	EyeViewProjConstData m_mirrorEyeViewProjConstData;
+	ComPtr<ID3D11Buffer> m_eyeViewProjConstBuffer;
+	ComPtr<ID3D11Buffer> m_mirrorEyeViewProjConstBuffer;
 };
 
 } // namespace kusk

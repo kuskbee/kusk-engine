@@ -3,6 +3,17 @@
 #include "GeometryGenerator.h"
 
 namespace kusk {
+
+BasicMeshGroup::BasicMeshGroup(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+                                   const std::string& basicPath, const std::string& filename) {
+    this->Initialize(device, context, basicPath, filename);
+}
+
+BasicMeshGroup::BasicMeshGroup(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+                               const std::vector<MeshData>& meshes) {
+    this->Initialize(device, context, meshes);
+}
+
  void BasicMeshGroup::Initialize(ComPtr<ID3D11Device>& device,
                             ComPtr<ID3D11DeviceContext>& context,
                             const std::string& basePath,
@@ -37,13 +48,11 @@ namespace kusk {
 
      // ConstantBuffer 만들기
      m_basicVertexConstData.modelWorld = Matrix( );
-     m_basicVertexConstData.view = Matrix( );
-     m_basicVertexConstData.proj = Matrix( );
-
+     
      D3D11Utils::CreateConstBuffer(device, m_basicVertexConstData,
-                                      m_vertexConstantBuffer);
+                                      m_vertexConstBuffer);
      D3D11Utils::CreateConstBuffer(device, m_basicPixelConstData,
-                                      m_pixelConstantBuffer);
+                                      m_pixelConstBuffer);
 
      for (const auto& meshData : meshes) {
          auto newMesh = std::make_shared<Mesh>( );
@@ -61,6 +70,7 @@ namespace kusk {
              D3D11Utils::CreateTexture(device, context, meshData.albedoTextureFilename, true,
                                        newMesh->albedoTexture, 
                                        newMesh->albedoSRV);
+             m_basicPixelConstData.useAlbedoMap = true;
          }
 
          if (!meshData.emissiveTextureFilename.empty( )) {
@@ -69,6 +79,7 @@ namespace kusk {
              D3D11Utils::CreateTexture(device, context, meshData.emissiveTextureFilename, false,
                                        newMesh->emissiveTexture,
                                        newMesh->emissiveSRV);
+             m_basicPixelConstData.useEmissiveMap = true;
          }
 
          if (!meshData.normalTextureFilename.empty( )) {
@@ -77,6 +88,7 @@ namespace kusk {
              D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename, false,
                                        newMesh->normalTexture,
                                        newMesh->normalSRV);
+             m_basicPixelConstData.useNormalMap = true;
          }
 
          if (!meshData.heightTextureFilename.empty( )) {
@@ -85,6 +97,7 @@ namespace kusk {
              D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename, false,
                                        newMesh->heightTexture,
                                        newMesh->heightSRV);
+             m_basicVertexConstData.useHeightMap = true;
          }
 
          if (!meshData.aoTextureFilename.empty( )) {
@@ -93,26 +106,29 @@ namespace kusk {
              D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename, false,
                                        newMesh->aoTexture,
                                        newMesh->aoSRV);
+             m_basicPixelConstData.useAOMap = true;
+         }
+
+         // GLTF 방식으로 metallic과 roughness를 한 텍스쳐에 넣음.
+         // Green : roughness, Blue : metallic(metalness)
+         if (!meshData.metallicTextureFilename.empty( ) || !meshData.roughnessTextureFilename.empty( )) {
+             D3D11Utils::CreateMetallicRoughnessTexture(device, context,
+                 meshData.metallicTextureFilename, meshData.roughnessTextureFilename,
+                 newMesh->metallicRoughnessTexture, newMesh->metallicRoughnessSRV);
          }
 
          if (!meshData.metallicTextureFilename.empty( )) {
-
              std::cout << meshData.metallicTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.metallicTextureFilename, false,
-                                       newMesh->metallicTexture,
-                                       newMesh->metallicSRV);
+             m_basicPixelConstData.useMetallicMap = true;
          }
 
          if (!meshData.roughnessTextureFilename.empty( )) {
-
              std::cout << meshData.roughnessTextureFilename << std::endl;
-             D3D11Utils::CreateTexture(device, context, meshData.roughnessTextureFilename, false,
-                                       newMesh->roughnessTextrure,
-                                       newMesh->roughnessSRV);
+             m_basicPixelConstData.useRoughnessMap = true;
          }
 
-         newMesh->vertexConstantBuffer = m_vertexConstantBuffer;
-         newMesh->pixelConstantBuffer = m_pixelConstantBuffer;
+         newMesh->vertexConstBuffer = m_vertexConstBuffer;
+         newMesh->pixelConstBuffer = m_pixelConstBuffer;
          
          this->m_meshes.push_back(newMesh);
      }
@@ -134,28 +150,24 @@ namespace kusk {
      D3D11Utils::CreatePixelShader(device, L"NormalPS.hlsl", m_normalPixelShader);
      D3D11Utils::CreateGeometryShader(device, L"NormalGS.hlsl", m_normalGeometryShader);
 
-     D3D11Utils::CreateConstBuffer(device, m_normalVertexConstData,
-                                      m_normalVertexConstantBuffer);
+     D3D11Utils::CreateConstBuffer(device, m_normalVertexConstData, m_normalVertexConstBuffer);
  }
 
  void BasicMeshGroup::UpdateConstantBuffers(ComPtr<ID3D11Device>& device,
                                        ComPtr<ID3D11DeviceContext>& context) {
 
-     D3D11Utils::UpdateBuffer(device, context, m_basicVertexConstData,
-                              m_vertexConstantBuffer);
+     D3D11Utils::UpdateBuffer(device, context, m_basicVertexConstData, m_vertexConstBuffer);
 
-     D3D11Utils::UpdateBuffer(device, context, m_basicPixelConstData,
-                              m_pixelConstantBuffer);
+     D3D11Utils::UpdateBuffer(device, context, m_basicPixelConstData, m_pixelConstBuffer);
 
      // 노멀 벡터 그리기
      if (m_drawNormals && m_drawNormalsDirtyFlag) {
-         D3D11Utils::UpdateBuffer(device, context, m_normalVertexConstData,
-                                  m_normalVertexConstantBuffer);
+         D3D11Utils::UpdateBuffer(device, context, m_normalVertexConstData, m_normalVertexConstBuffer);
          m_drawNormalsDirtyFlag = false;
      }
  }
-
- void BasicMeshGroup::Render(ComPtr<ID3D11DeviceContext>& context) {
+  
+ void BasicMeshGroup::Render(ComPtr<ID3D11DeviceContext>& context, ComPtr<ID3D11Buffer>& eyeViewProjCB, bool useEnv) {
 
      UINT stride = sizeof(Vertex);
      UINT offset = 0;
@@ -165,7 +177,9 @@ namespace kusk {
          // VertexShader도 Texture 사용
          context->VSSetShaderResources(0, 1, mesh->heightSRV.GetAddressOf( ));
          context->VSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-         context->VSSetConstantBuffers(0, 1, mesh->vertexConstantBuffer.GetAddressOf( ));
+
+         vector<ID3D11Buffer*> vertexCB = { mesh->vertexConstBuffer.Get( ), eyeViewProjCB.Get( ) };
+         context->VSSetConstantBuffers(0, UINT(vertexCB.size()), vertexCB.data());
 
          vector<ID3D11SamplerState*> samplers = { m_samplerState.Get( ), m_clampSamplerState.Get( ) };
          context->PSSetSamplers(0, UINT(samplers.size()), samplers.data());
@@ -173,14 +187,18 @@ namespace kusk {
          
          // 물체 렌더링할 때 여러가지 텍스쳐 사용
          vector<ID3D11ShaderResourceView*> resViews = {
-             m_specularSRV.Get(), m_irradianceSRV.Get(), m_brdfSRV.Get(),
-             mesh->albedoSRV.Get( ), mesh->normalSRV.Get( ), mesh->aoSRV.Get( ),
-             mesh->metallicSRV.Get( ), mesh->roughnessSRV.Get( ), mesh->emissiveSRV.Get()};
-          
+             useEnv ? m_specularSRV.Get() : NULL, 
+             useEnv ? m_irradianceSRV.Get() : NULL, 
+             m_brdfSRV.Get(),
+             mesh->albedoSRV.Get( ), 
+             mesh->normalSRV.Get( ), 
+             mesh->aoSRV.Get( ),
+             mesh->metallicRoughnessSRV.Get( ), 
+             mesh->emissiveSRV.Get()};
          context->PSSetShaderResources(0, UINT(resViews.size()), resViews.data());
 
-         context->PSSetConstantBuffers(0, 1,
-                                       mesh->pixelConstantBuffer.GetAddressOf( ));
+         vector<ID3D11Buffer*> pixelCB = { mesh->pixelConstBuffer.Get( ), eyeViewProjCB.Get( ) };
+         context->PSSetConstantBuffers(0, UINT(pixelCB.size()), pixelCB.data());
 
          context->IASetInputLayout(m_basicInputLayout.Get( ));
          context->IASetVertexBuffers(0, 1, mesh->vertexBuffer.GetAddressOf( ),
@@ -194,8 +212,8 @@ namespace kusk {
          if (m_drawNormals) {
              // 같은 VertexBuffer 사용
              context->VSSetShader(m_normalVertexShader.Get( ), 0, 0);
-             ID3D11Buffer* pptr[ 2 ] = { m_vertexConstantBuffer.Get( ),
-                                      m_normalVertexConstantBuffer.Get( ) };
+             ID3D11Buffer* pptr[ 2 ] = { m_vertexConstBuffer.Get( ),
+                                      m_normalVertexConstBuffer.Get( ) };
              context->GSSetConstantBuffers(0, 2, pptr);
              context->GSSetShader(m_normalGeometryShader.Get( ), 0, 0);
              context->PSSetShader(m_normalPixelShader.Get( ), 0, 0);
@@ -211,7 +229,7 @@ namespace kusk {
      m_invTransposeRow.Translation(Vector3(0.0f));
      m_invTransposeRow = m_invTransposeRow.Invert( ).Transpose( );
 
-     m_basicVertexConstData.modelWorld = m_modelWorldRow.Transpose( );
+     m_basicVertexConstData.modelWorld = modelWorldRow.Transpose( );
      m_basicVertexConstData.invTranspose = m_invTransposeRow.Transpose( );
  }
 } // namespace kusk

@@ -9,6 +9,12 @@ namespace kusk {
 class BasicMeshGroup
 {
 public:
+    BasicMeshGroup( ) {};
+    BasicMeshGroup(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+                   const std::string& basePath, const std::string& filename);
+    BasicMeshGroup(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+                   const std::vector<MeshData>& meshes);
+
     void Initialize(ComPtr<ID3D11Device>& device, 
                 ComPtr<ID3D11DeviceContext>& context,
                 const std::string& basePath,
@@ -21,7 +27,7 @@ public:
     void UpdateConstantBuffers(ComPtr<ID3D11Device>& device,
                                ComPtr<ID3D11DeviceContext>& context);
 
-    void Render(ComPtr<ID3D11DeviceContext>& context);
+    void Render(ComPtr<ID3D11DeviceContext>& context, ComPtr<ID3D11Buffer>& eyeViewProjCB, bool useEnv);
 
     void UpdateModelWorld(const Matrix& modelToWorldRow);
 public:
@@ -52,16 +58,16 @@ private:
     ComPtr<ID3D11SamplerState> m_samplerState;
     ComPtr<ID3D11SamplerState> m_clampSamplerState;
 
-    ComPtr<ID3D11Buffer> m_vertexConstantBuffer;
-    ComPtr<ID3D11Buffer> m_pixelConstantBuffer;
+    ComPtr<ID3D11Buffer> m_vertexConstBuffer;
+    ComPtr<ID3D11Buffer> m_pixelConstBuffer;
 
     // 메쉬의 노멀 벡터 그리기
     ComPtr<ID3D11VertexShader> m_normalVertexShader;
     ComPtr<ID3D11PixelShader> m_normalPixelShader;
     ComPtr<ID3D11GeometryShader> m_normalGeometryShader;
 
-    ComPtr<ID3D11Buffer> m_normalVertexConstantBuffer;
-    ComPtr<ID3D11Buffer> m_normalPixelConstantBuffer;
+    ComPtr<ID3D11Buffer> m_normalVertexConstBuffer;
+    ComPtr<ID3D11Buffer> m_normalPixelConstBuffer;
 
 };
 

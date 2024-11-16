@@ -12,7 +12,7 @@ cbuffer SamplingPixelConstantData : register(b0)
 
 struct SamplingPixelShaderInput
 {
-    float4 positon : SV_POSITION;
+    float4 position : SV_POSITION;
     float2 texcoord : TEXCOORD;
 };
 

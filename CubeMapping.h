@@ -20,16 +20,16 @@ public:
 					const wchar_t* diffuseFilename,
 					const wchar_t* brdfFilename);
 
-	void UpdateVertexConstBuffer(ComPtr<ID3D11Device>& device,
+	void UpdateViewProjConstBuffer(ComPtr<ID3D11Device>& device,
 							   ComPtr<ID3D11DeviceContext>& context,
-							   const Matrix& viewCol, const Matrix& projCol);
+							   const Matrix& viewRow, const Matrix& projRow, const Matrix& reflRow);
 
-	void UpdatePixelConstBuffers(ComPtr<ID3D11Device>& device,
+	void UpdatePixelConstBuffer(ComPtr<ID3D11Device>& device,
 							   ComPtr<ID3D11DeviceContext>& context);
 
-	void Render(ComPtr<ID3D11DeviceContext>& context);
+	void Render(ComPtr<ID3D11DeviceContext>& context, const bool& mirror);
 public:
-	struct VertexConstantData {
+	struct ViewProjConstData {
 		Matrix viewProj;	// 미리 곱해서 사용
 	};
 	
@@ -47,7 +47,11 @@ public:
 	ComPtr<ID3D11ShaderResourceView> m_irradianceSRV;	// Diffuse
 	ComPtr<ID3D11ShaderResourceView> m_brdfSRV;			// BRDF LookUpTable
 	
-	CubeMapping::VertexConstantData m_vertexConstData;
+	CubeMapping::ViewProjConstData m_viewProjConstData;
+	CubeMapping::ViewProjConstData m_mirrorViewProjConstData;
+	ComPtr<ID3D11Buffer> m_viewProjConstBuffer;
+	ComPtr<ID3D11Buffer> m_mirrorViewProjConstBuffer;
+
 	CubeMapping::PixelConstData m_pixelConstData;
 
 private:

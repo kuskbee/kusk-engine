@@ -10,37 +10,15 @@ namespace kusk {
 using namespace std;
 using namespace DirectX::SimpleMath;
 
-void ModelLoader::Load(std::string basePath, std::string filename) {
-	this->basePath = basePath;
+void UpdateNormal(vector<MeshData>& meshes) {
 
-	Assimp::Importer importer;
-
-	const aiScene* pScene = importer.ReadFile(
-		this->basePath + filename,
-		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals);
-
-	string ext;
-	size_t dotPos = filename.find_last_of('.');
-    if (dotPos != std::string::npos) {
-		ext = filename.substr(dotPos + 1);
-		std::transform(ext.begin( ), ext.end( ), ext.begin( ), [](unsigned char c) { return std::tolower(c); });
-    }
-    
-	if (!pScene) {
-		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;
-	}
-	else {
-		Matrix tr; // Initial transformation
-		ProcessNode(pScene->mRootNode, pScene, ext, tr);
-	}
+	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
+	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
 
 	// https://github.com/microsoft/DirectXMesh/wiki/ComputeNormals
 	// ComputeNormals()과 비슷
-	
-	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
-	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
-#pragma region non-normal-case
-	/*for (auto& m : this->meshes) {
+
+	for (auto& m : meshes) {
 		vector<Vector3> normalsTemp(m.vertices.size( ), Vector3(0.0f));
 		vector<float> weightsTemp(m.vertices.size( ), 0.0f);
 
@@ -69,8 +47,36 @@ void ModelLoader::Load(std::string basePath, std::string filename) {
 				m.vertices[ i ].normalModel.Normalize( );
 			}
 		}
-	}*/
-#pragma endregion
+	}
+}
+
+string GetExtension(const string filename) {
+	string ext(filesystem::path(filename).extension( ).string( ));
+	transform(ext.begin( ), ext.end( ), ext.begin( ), ::tolower);
+	return ext;
+}
+
+void ModelLoader::Load(std::string basePath, std::string filename) {
+
+	string ext = GetExtension(filename);
+	
+	this->basePath = basePath;
+
+	Assimp::Importer importer;
+
+	const aiScene* pScene = importer.ReadFile(
+		this->basePath + filename,
+		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals);
+
+	if (!pScene) {
+		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;
+	}
+	else {
+		Matrix tr; // Initial transformation
+		ProcessNode(pScene->mRootNode, pScene, ext, tr);
+	}
+
+	// UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
 
 	UpdateTangents( );
 }
@@ -164,7 +170,7 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 
 		vertex.normalModel.x = mesh->mNormals[ i ].x;
 
-		if (ext == "gltf") {
+		if (ext == ".gltf") {
 			vertex.normalModel.y = mesh->mNormals[ i ].z;
 			vertex.normalModel.z = -mesh->mNormals[ i ].y;
 		}
@@ -201,6 +207,14 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 		newMesh.metallicTextureFilename = ReadFilename(material, aiTextureType_METALNESS);
 		newMesh.roughnessTextureFilename = ReadFilename(material, aiTextureType_DIFFUSE_ROUGHNESS);
 		newMesh.aoTextureFilename = ReadFilename(material, aiTextureType_AMBIENT_OCCLUSION);
+		if (newMesh.aoTextureFilename.empty( )) {
+			newMesh.aoTextureFilename = ReadFilename(material, aiTextureType_LIGHTMAP);
+		}
+
+		// 디버깅용
+	   // for (size_t i = 0; i < 22; i++) {
+	   //    cout << i << " " << ReadFilename(material, aiTextureType(i)) << endl;
+	   //}
 	}
 
 	return newMesh;

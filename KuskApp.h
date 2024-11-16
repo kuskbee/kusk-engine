@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <directxtk/SimpleMath.h>
 #include <iostream>
 #include <memory>
 
@@ -31,13 +32,15 @@ public:
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	//BillboardPoints m_billboardPoints;
-	BasicMeshGroup m_mainObj;
-	BasicMeshGroup m_mainSphere;
+	shared_ptr<BasicMeshGroup> m_ground;
+	shared_ptr<BasicMeshGroup> m_mainObj;
+	shared_ptr<BasicMeshGroup> m_lightSphere;
+	BasicMeshGroup m_box;
 	BoundingSphere m_mainBoundingSphere;	//
 	BasicMeshGroup m_cursorSphere;			//
 
 	//BasicMeshGroup m_meshGroupCharacter;
-	//BasicMeshGroup m_meshGroupGround;
+
 	CubeMapping m_cubeMapping;
 
 	/*Vector3 m_modelTranslation = Vector3(0.0f, 0.2f, 0.6f);
@@ -45,11 +48,17 @@ protected:
 	Vector3 m_modelScaling = Vector3(1.8f);*/
 
 	int m_lightType = 0;
-	Light m_lightFromGUI;
-	float m_materialDiffuse = 1.0f;
-	float m_materialSpecular = 1.0f;
+	Light m_light;
+
+	// 거울
+	shared_ptr<BasicMeshGroup> m_mirror;
+	DirectX::SimpleMath::Plane m_mirrorPlane;
+	float m_mirrorAlpha = 0.5f; // opacity
+
+	// 거울이 아닌 물체들의 리스트 (for문으로 그리기 위함)
+	vector<shared_ptr<BasicMeshGroup>> m_basicList;
 	
-	int m_visibleMeshIndex = 0; // Sphere, Character
+	//int m_visibleMeshIndex = 0; // Sphere, Character
 
 };
 } // namespace kusk

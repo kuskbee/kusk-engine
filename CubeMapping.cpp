@@ -17,11 +17,12 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 
 	m_cubeMesh = std::make_shared<Mesh>( );
 
-	D3D11Utils::CreateConstBuffer(device, m_vertexConstData,
-									 m_cubeMesh->vertexConstantBuffer);
-
+	D3D11Utils::CreateConstBuffer(device, m_viewProjConstData,
+									 m_viewProjConstBuffer);
+	D3D11Utils::CreateConstBuffer(device, m_mirrorViewProjConstData,
+									 m_mirrorViewProjConstBuffer);
 	D3D11Utils::CreateConstBuffer(device, m_pixelConstData,
-									 m_cubeMesh->pixelConstantBuffer);
+									 m_cubeMesh->pixelConstBuffer);
 
 	MeshData cubeMeshData = GeometryGenerator::MakeBox(40.0f);
 	//MeshData cubeMeshData = GeometryGenerator::MakeSphere(50.0f, 10, 10);
@@ -60,24 +61,30 @@ void CubeMapping::Initialize(ComPtr<ID3D11Device>& device,
 	device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
 }
 
-void CubeMapping::UpdateVertexConstBuffer(ComPtr<ID3D11Device>& device,
+void CubeMapping::UpdateViewProjConstBuffer(ComPtr<ID3D11Device>& device,
 										ComPtr<ID3D11DeviceContext>& context,
-										const Matrix& viewCol,
-										const Matrix& projCol) {
-	m_vertexConstData.viewProj = projCol * viewCol;
+										const Matrix& viewRowInput, const Matrix& projRow, 
+										const Matrix& reflRow) {
+	
 
-	D3D11Utils::UpdateBuffer(device, context, m_vertexConstData,
-							 m_cubeMesh->vertexConstantBuffer);
+	Matrix viewRow = viewRowInput;
+	viewRow.Translation(Vector3(0.0f)); // 이동 취소
+
+	this->m_viewProjConstData.viewProj = (viewRow * projRow).Transpose( );
+	this->m_mirrorViewProjConstData.viewProj = (reflRow * viewRow * projRow).Transpose( );
+
+	D3D11Utils::UpdateBuffer(device, context, m_viewProjConstData, m_viewProjConstBuffer);
+	D3D11Utils::UpdateBuffer(device, context, m_mirrorViewProjConstData, m_mirrorViewProjConstBuffer);
 }
 
-void CubeMapping::UpdatePixelConstBuffers(ComPtr<ID3D11Device>& device,
+void CubeMapping::UpdatePixelConstBuffer(ComPtr<ID3D11Device>& device,
 										ComPtr<ID3D11DeviceContext>& context) {
 	
-	D3D11Utils::UpdateBuffer(device, context, m_pixelConstData,
-							 m_cubeMesh->pixelConstantBuffer);
+	D3D11Utils::UpdateBuffer(device, context, m_pixelConstData, m_cubeMesh->pixelConstBuffer);
 }
 
-void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context) {
+void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context, const bool& mirror) {
+
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 
@@ -87,13 +94,18 @@ void CubeMapping::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->IASetIndexBuffer(m_cubeMesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->VSSetShader(m_vertexShader.Get( ), 0, 0);
-	context->VSSetConstantBuffers(0, 1, m_cubeMesh->vertexConstantBuffer.GetAddressOf( ));
+
+	// 거울 그릴 때는 constBuffer의 포인터만 교체
+	std::vector<ID3D11Buffer*> vertexCB = {
+		mirror ? m_mirrorViewProjConstBuffer.Get( )
+			   : m_viewProjConstBuffer.Get( ) };
+	context->VSSetConstantBuffers(0, UINT(vertexCB.size()), vertexCB.data());
 
 	vector<ID3D11ShaderResourceView *> srvs = { m_envSRV.Get( ), m_specularSRV.Get(), m_irradianceSRV.Get() };
 	context->PSSetShaderResources(0, UINT(srvs.size()), srvs.data());
 	context->PSSetShader(m_pixelShader.Get( ), 0, 0);
 	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
-	context->PSSetConstantBuffers(0, 1, m_cubeMesh->pixelConstantBuffer.GetAddressOf( ));
+	context->PSSetConstantBuffers(0, 1, m_cubeMesh->pixelConstBuffer.GetAddressOf( ));
 
 	context->DrawIndexed(m_cubeMesh->indexCount, 0, 0);
 }

@@ -10,19 +10,18 @@ Texture2D brdfTex : register(t2);
 Texture2D albedoTex : register(t3);
 Texture2D normalTex : register(t4);
 Texture2D aoTex : register(t5);
-Texture2D metallicTex : register(t6);
-Texture2D roughnessTex : register(t7);
-Texture2D emissiveTex : register(t8);
+Texture2D metallicRoughnessTex : register(t6);
+Texture2D emissiveTex : register(t7);
 
 SamplerState linearSampler : register(s0);
 SamplerState clampSampler : register(s1);
 
 static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
 
-cbuffer BasicPixelConstantData : register(b0) 
+static const float lod = 2.0;
+
+cbuffer BasicPixelConstData : register(b0) 
 {
-    float3 eyeWorld;
-    float mipmapLevel;
     Material material;
     Light lights[MAX_LIGHTS];
     float3 rimColor;
@@ -38,8 +37,15 @@ cbuffer BasicPixelConstantData : register(b0)
     int useEmissiveMap;
     float exposure;
     float gamma;
-    float dummy1;
+    float mipmapLevel;
 };
+
+cbuffer EyeViewProjConstData : register(b1)
+{
+    matrix viewProj;
+    float3 eyeWorld;
+    float dummy1;
+}
 
 struct PixelShaderOutput
 {
@@ -57,7 +63,7 @@ float3 GetNormal(PixelShaderInput input)
     float3 normalWorld = input.normalWorld;
     if (useNormalMap) // NormalWorld를 교체
     {
-        float3 normal = normalTex.SampleLevel(linearSampler, input.texcoord, 0.0).rgb;
+        float3 normal = normalTex.SampleLevel(linearSampler, input.texcoord, lod).rgb;
         normal = 2.0 * normal - 1.0; // 범위 조절 [0.0, 1.0] => [-1.0, 1.0]
         
         // OpenGL용 노멀맵인 경우 y 방향을 뒤집어주기
@@ -82,17 +88,17 @@ float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float me
     float3 kd = lerp(1.0 - F, 0.0, metallic);
     
     // 앞에서 사용했던 방법과 동일
-    float3 irradiance = irradianceIBLTex.Sample(linearSampler, normalWorld).rgb;
+    float3 irradiance = irradianceIBLTex.SampleLevel(linearSampler, normalWorld, 0).rgb;
     
     return kd * albedo * irradiance;
 }
 
 float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic, float roughness)
 {
-    float2 specularBRDF = brdfTex.Sample(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness)).rg;
+    float2 specularBRDF = brdfTex.SampleLevel(clampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
     
     // 앞에서 사용했던 방법과 동일
-    float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normalWorld), roughness * 10.0f).rgb;
+    float3 specularIrradiance = specularIBLTex.SampleLevel(linearSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
     const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
     float3 F0 = lerp(Fdielectric, albedo, metallic);
     
@@ -119,7 +125,7 @@ float NdfGGX(float NdotH, float roughness)
     return alphaSq / (3.141592 * denom * denom);
 }
 
-// Single term for separable Schilck-GGX below.
+// Single term for separable Schlick-GGX below.
 float SchlickG1(float NdotV, float k)
 {
     return NdotV / (NdotV * (1.0 - k) + k);
@@ -134,18 +140,16 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return SchlickG1(NdotI, k) * SchlickG1(NdotO, k);
 }
 
-PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
+PixelShaderOutput main(PixelShaderInput input) {
     
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
     
-    float3 albedo = useAlbedoMap ? albedoTex.Sample(linearSampler, input.texcoord).rgb : material.albedo;
-    float ao = useAOMap ? aoTex.SampleLevel(linearSampler, input.texcoord, 0.0).r : 1.0f;
-    //float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).r : material.metallic;
-    float metallic = useMetallicMap ? metallicTex.Sample(linearSampler, input.texcoord).b : material.metallic;
-    //float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).r : material.roughness;
-    float roughness = useRoughnessMap ? roughnessTex.Sample(linearSampler, input.texcoord).g : material.roughness;
-    float3 emission = useEmissiveMap ? emissiveTex.Sample(linearSampler, input.texcoord).rgb : float3(0, 0, 0);
+    float3 albedo = useAlbedoMap ? albedoTex.SampleLevel(linearSampler, input.texcoord, lod).rgb : material.albedo;
+    float ao = useAOMap ? aoTex.SampleLevel(linearSampler, input.texcoord, lod).r : 1.0f;
+    float metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearSampler, input.texcoord, lod).b : material.metallic;
+    float roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearSampler, input.texcoord, lod).g : material.roughness;
+    float3 emission = useEmissiveMap ? emissiveTex.SampleLevel(linearSampler, input.texcoord, lod).rgb : material.emission;
     
     // adjust 
     ao = 0.3 + 0.7 * ao;
@@ -159,8 +163,6 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
     float distMin = 5.0;
     float distMax = 20.0;
     float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));*/
-    
-    int i = 0;
 
     /*[unroll]
     for (i = 0; i < NUM_DIR_LIGHTS; ++i)
@@ -170,9 +172,11 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
 
     // 포인트 라이트만 먼저 구현
     [unroll]
-    for (i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
+    for (int i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
     {
         float3 lightVec = lights[i].position - input.posWorld;
+        float lightDist = length(lightVec);
+        lightVec /= lightDist;
         float3 halfway = normalize(pixelToEye + lightVec);
         float NdotI = max(0.0, dot(normalWorld, lightVec));
         float NdotO = max(0.0, dot(normalWorld, pixelToEye));
@@ -189,7 +193,8 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
         
         // Note (2), 0으로 나누기 방지
         float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
-        float3 radiance = lights[i].radiance * saturate((lights[i].fallOffEnd - length(lightVec)) / (lights[i].fallOffEnd - lights[i].fallOffStart));
+        float att = saturate((lights[i].fallOffEnd - lightDist) / (lights[i].fallOffEnd - lights[i].fallOffStart));
+        float3 radiance = lights[i].radiance * att;
         directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
     }
     
@@ -200,7 +205,6 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
     }*/
         
     PixelShaderOutput output;
-    
     output.pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
         
     // Rim Lighting
@@ -211,14 +215,7 @@ PixelShaderOutput main(PixelShaderInput input) : SV_TARGET {
     rim = pow(abs(rim), rimPower);
     
     float3 rimEffect = rim * rimColor * rimStrength;
-    
-    // 임시로 밝기 띠 표시
-    //if (input.texcoord.y < 0.2) {
-    //    finalColor = float4(float3(1, 1, 1) * floor(input.texcoord.x * 11.0) / 10.0, 1);
-    //}
-    //else {
-    //    finalColor = diffuse + specular;
-    //}
+
     output.pixelColor += float4(rimEffect, 1.0);
     output.pixelColor = clamp(output.pixelColor, 0.0, 1000.0);
     

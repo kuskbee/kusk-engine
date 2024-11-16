@@ -32,6 +32,6 @@ public:
 	std::vector<MeshData> meshes;
 };
 
-} // nampspace kusk
+} // namespace kusk
 
 

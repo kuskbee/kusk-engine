@@ -1,5 +1,7 @@
 #include "Camera.h"
 
+#include <iostream>
+
 namespace kusk {
 
 using namespace std;
@@ -18,11 +20,7 @@ void Camera::UpdateMouse(float mouseNdcX, float mouseNdcY) {
 	m_yaw = mouseNdcX * DirectX::XM_2PI; // 좌우 360도
 	m_pitch = mouseNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
 
-	// 이동할 때 기준이 되는 정면/오른쪽 방향 계산
-	m_viewDir = Vector3::Transform(Vector3(0.0f, 0.0f, 1.0f),
-								   Matrix::CreateRotationY(this->m_yaw));
-	m_rightDir = m_upDir.Cross(m_viewDir);
-
+	UpdateViewDir( );
 }
 
 void Camera::MoveForward(float dt) {

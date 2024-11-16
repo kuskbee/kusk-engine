@@ -23,9 +23,6 @@ inline void ThrowIfFailed(HRESULT hr) {
 class D3D11Utils
 {
 public:
-	static void CreateDepthBuffer(ComPtr<ID3D11Device>& device, int screenWidth,
-								  int screenHeight, UINT numQualityLevels,
-								  ComPtr<ID3D11DepthStencilView>& depthStencilView);
 	static void CreateVertexShaderAndInputLayout(
 		ComPtr<ID3D11Device>& device,
 		const wstring& filename,
@@ -88,6 +85,7 @@ public:
 					  "Constant Buffer size must be 16-byte aligned");
 
 		D3D11_BUFFER_DESC cbDesc;
+		ZeroMemory(&cbDesc, sizeof(cbDesc));
 		cbDesc.ByteWidth = sizeof(constantBufferData);
 		cbDesc.Usage = D3D11_USAGE_DYNAMIC;
 		cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -97,6 +95,7 @@ public:
 
 		// Fill in the subresource data.
 		D3D11_SUBRESOURCE_DATA initData;
+		ZeroMemory(&initData, sizeof(initData));
 		initData.pSysMem = &constantBufferData;
 		initData.SysMemPitch = 0;
 		initData.SysMemSlicePitch = 0;
@@ -125,6 +124,11 @@ public:
 					   const bool useSRGB,
 					   ComPtr<ID3D11Texture2D>& texture,
 					   ComPtr<ID3D11ShaderResourceView>& textureResourceView);
+
+	static void CreateMetallicRoughnessTexture(
+		ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+		const std::string metallicFilename, const std::string roughnessFilename,
+		ComPtr<ID3D11Texture2D>& texture, ComPtr<ID3D11ShaderResourceView>& srv);
 
 	static void CreateTextureArray(ComPtr<ID3D11Device>& device, 
 							ComPtr<ID3D11DeviceContext>& context,
