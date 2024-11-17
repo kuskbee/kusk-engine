@@ -1,14 +1,14 @@
 #include "Common.hlsli"
 
-struct GeometryShaderInput
+struct NormalGeometryShaderInput
 {
     float4 posModel : SV_POSITION;
     float3 normalModel : NORMAL; // ¸ðµ¨ ÁÂÇ¥°èÀÇ normal
 };
 
-GeometryShaderInput main(VertexShaderInput input)
+NormalGeometryShaderInput main(VertexShaderInput input)
 {
-    GeometryShaderInput output;
+    NormalGeometryShaderInput output;
     output.posModel = float4(input.posModel, 1.0);
     output.normalModel = input.normalModel;
     

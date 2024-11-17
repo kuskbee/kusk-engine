@@ -31,7 +31,10 @@ struct Mesh {
 	ComPtr<ID3D11ShaderResourceView> aoSRV;
 	ComPtr<ID3D11ShaderResourceView> metallicRoughnessSRV;
 
-	UINT indexCount = 0;
+	UINT indexCount = 0; // Number of indices = 3 * number of triangles
 	UINT vertexCount = 0;
+
+	UINT stride = 0;
+	UINT offset = 0;
 };
 } // namespace kusk

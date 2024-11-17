@@ -13,7 +13,7 @@ void ImageFilter::Initialize(ComPtr<ID3D11Device>& device,
 				ComPtr<ID3D11PixelShader>& pixelShader,
 				int width, int height) {
 
-	pixelShader.CopyTo(m_pixelShader.GetAddressOf( ));
+	ThrowIfFailed(pixelShader.CopyTo(m_pixelShader.GetAddressOf( )));
 
 	// Set the viewport
 	ZeroMemory(&m_viewport, sizeof(D3D11_VIEWPORT));

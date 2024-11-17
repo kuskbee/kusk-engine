@@ -1,8 +1,10 @@
 #include "AppBase.h"
 
 #include <algorithm>
+#include <directxtk/SimpleMath.h>
 
 #include "D3D11Utils.h"
+#include "GraphicsCommon.h"
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
 // VCPKG를 통해 IMGUI를 사용할 경우 빨간줄로 경고가 뜰 수 있음
@@ -14,6 +16,10 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd,
 namespace kusk {
 
 using namespace std;
+using namespace DirectX;
+using namespace DirectX::SimpleMath;
+using DirectX::BoundingSphere;
+using DirectX::SimpleMath::Vector3;
 
 // RegisterClassEx() 에서 멤버 함수를 직접 등록할 수 없기 때문에
 // 클래스의 멤버 함수에서 간접적으로 메시지를 처리할 수 있도록 전역변수로 다룸.
@@ -54,7 +60,7 @@ AppBase::~AppBase() {
 }
 
 float AppBase::GetAspectRatio() const {
-    return float(m_screenWidth - m_screenViewport.TopLeftX) / m_screenHeight;
+    return float(m_screenWidth) / m_screenHeight;
 }
 
 int AppBase::Run() {
@@ -79,11 +85,6 @@ int AppBase::Run() {
                         ImGui::GetIO().Framerate);
 
             UpdateGUI(); // 추가적으로 사용할 GUI
-
-            m_guiWidth = 0;
-            // 화면을 크게 쓰기 위해 아래 기능 주석
-            //ImGui::SetWindowPos(ImVec2(0.0f, 0.0f));
-            //m_guiWidth = int(ImGui::GetWindowWidth( ));
 
             ImGui::End();
             ImGui::Render();
@@ -134,9 +135,7 @@ void AppBase::OnMouseMove(int mouseX, int mouseY) {
     m_cursorNdcY = std::clamp(m_cursorNdcY, -1.0f, 1.0f);
 
     // 카메라 시점 회전
-    if (m_useFirstPersonView) {
-        m_camera.UpdateMouse(m_cursorNdcX, m_cursorNdcY);
-    }
+    m_camera.UpdateMouse(m_cursorNdcX, m_cursorNdcY);
 }
 
 LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -150,7 +149,6 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         if (m_swapChain) { // 처음 실행이 아닌 지 확인
             m_screenWidth = int(LOWORD(lParam));
             m_screenHeight = int(HIWORD(lParam));
-            m_guiWidth = 0;
 
             m_backBufferRTV.Reset( );
             m_swapChain->ResizeBuffers( 0,   // 현재 개수 유지
@@ -199,17 +197,17 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // 키보드 키 눌림 갱신
         m_keyPressed[ wParam ] = true;
         
-        if (wParam == 27) { // esc 키 종료
+        if (wParam == VK_SPACE) { // esc 키 종료
             DestroyWindow(hWnd);
         }
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
         break;
     case WM_KEYUP :
-        if (wParam == 70) { // 'f' 키, 일인칭 시점 On/Off
-            m_useFirstPersonView = !m_useFirstPersonView;
+        if (wParam == 'F') { // 'f' 키, 일인칭 시점 On/Off
+            m_camera.m_useFirstPersonView = !m_camera.m_useFirstPersonView;
         }
 
-        if (wParam == 67) { // 'c'키, 화면 캡쳐
+        if (wParam == 'C') { // 'c'키, 화면 캡쳐
             ComPtr<ID3D11Texture2D> backBuffer;
             m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
             D3D11Utils::WriteToFile(m_device, m_context, backBuffer, "captured.png");
@@ -226,22 +224,45 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+void AppBase::InitCubemaps(wstring basePath, wstring envFilename,
+                           wstring specularFilename, wstring irradianceFilename,
+                           wstring brdfFilename) {
+
+    // BRDF LookUp Table은 CubeMap이 아니라 2D 텍스쳐
+    D3D11Utils::CreateDDSTexture(m_device, (basePath + envFilename).c_str( ), true, m_envSRV);
+    D3D11Utils::CreateDDSTexture(m_device, (basePath + specularFilename).c_str( ), true, m_specularSRV);
+    D3D11Utils::CreateDDSTexture(m_device, (basePath + irradianceFilename).c_str( ), true, m_irradianceSRV);
+    D3D11Utils::CreateDDSTexture(m_device, (basePath + brdfFilename).c_str( ), false, m_brdfSRV);
+}
+ 
 // 여러 물체들이 공통적으로 사용하는 Const 업데이트
-void AppBase::UpdateEyeViewProjBuffers(const Vector3& eyeWorld, 
-                                       const Matrix& viewRow, 
-                                       const Matrix& projRow, 
-                                       const Matrix& refl = Matrix( )) {
+void AppBase::UpdateGlobalConstants(const Vector3& eyeWorld, 
+                                    const Matrix& viewRow, 
+                                    const Matrix& projRow, 
+                                    const Matrix& refl = Matrix( )) {
 
-    m_eyeViewProjConstData.eyeWorld = eyeWorld;
-    m_eyeViewProjConstData.viewProj = (viewRow * projRow).Transpose( );
-    m_mirrorEyeViewProjConstData.isMirror = false;
+    m_globalConstsCPU.eyeWorld = eyeWorld;
+    m_globalConstsCPU.view = viewRow.Transpose( );
+    m_globalConstsCPU.proj = projRow.Transpose( );
+    m_globalConstsCPU.viewProj = (viewRow * projRow).Transpose( );
+    
+    m_reflectGlobalConstsCPU.eyeWorld = eyeWorld;
+    m_reflectGlobalConstsCPU.view = (refl * viewRow).Transpose( );
+    m_reflectGlobalConstsCPU.proj = projRow.Transpose( );
+    m_reflectGlobalConstsCPU.viewProj = (refl * viewRow * projRow).Transpose( );
 
-    m_mirrorEyeViewProjConstData.eyeWorld = eyeWorld;
-    m_mirrorEyeViewProjConstData.viewProj = (refl * viewRow * projRow).Transpose( );
-    m_mirrorEyeViewProjConstData.isMirror = true;
+    m_globalConstsCPU.isMirror = false;
+    m_reflectGlobalConstsCPU.isMirror = true;
 
-    D3D11Utils::UpdateBuffer(m_device, m_context, m_eyeViewProjConstData, m_eyeViewProjConstBuffer);
-    D3D11Utils::UpdateBuffer(m_device, m_context, m_mirrorEyeViewProjConstData, m_mirrorEyeViewProjConstBuffer);
+    D3D11Utils::UpdateBuffer(m_device, m_context, m_globalConstsCPU, m_globalConstsGPU);
+    D3D11Utils::UpdateBuffer(m_device, m_context, m_reflectGlobalConstsCPU, m_reflectGlobalConstsGPU);
+}
+
+void AppBase::SetGlobalConsts(ComPtr<ID3D11Buffer>& globalConstsGPU) {
+    // 쉐이더와 일관성 유지 register(b1)
+    m_context->VSSetConstantBuffers(1, 1, globalConstsGPU.GetAddressOf( ));
+    m_context->PSSetConstantBuffers(1, 1, globalConstsGPU.GetAddressOf( ));
+    m_context->GSSetConstantBuffers(1, 1, globalConstsGPU.GetAddressOf( ));
 }
 
 void AppBase::CreateDepthBuffers( ) {
@@ -266,89 +287,109 @@ void AppBase::CreateDepthBuffers( ) {
         desc.SampleDesc.Quality = 0;
     }
     desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    ThrowIfFailed(m_device->CreateTexture2D(&desc, 0, m_depthStencilBuffer.GetAddressOf( )));
-    ThrowIfFailed(m_device->CreateDepthStencilView(m_depthStencilBuffer.Get( ), NULL, m_depthStencilView.GetAddressOf( )));
-
-    /* D3D11_DEPTH_STENCIL_DESC 옵션 정리
-     * https://learn.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_depth_stencil_desc
-     * StencilRead/WriteMask: 예) uint8 중 어떤 비트를 사용할지
-     */
-
-    // m_drawDSS : 지금까지 사용해온 기본 DSS
-    D3D11_DEPTH_STENCIL_DESC dsDesc;
-    ZeroMemory(&dsDesc, sizeof(dsDesc));
-    dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-    dsDesc.StencilEnable = false; // Stencil 불필요
-    dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-    dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-    // 앞면에 대해서 어떻게 작동할지 설정
-    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-    // 뒷면에 대해 어떻게 작동할지 설정 (뒷면도 그릴 경우)
-    dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-    dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-    ThrowIfFailed(m_device->CreateDepthStencilState(&dsDesc, m_drawDSS.GetAddressOf( )));
-
-    // Stencil에 1로 표기해주는 DSS
-    dsDesc.DepthEnable = true; // 이미 그려진 물체 유지
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO; // 깊이를 덮어씌우지 않음
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-    dsDesc.StencilEnable = true; // Stencil 필수
-    dsDesc.StencilReadMask = 0xFF; // 모든 비트 다 사용
-    dsDesc.StencilWriteMask = 0xFF; // 모든 비트 다 사용
-    // 앞면에 대해서 어떻게 작동할 지 설정
-    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
     
-    ThrowIfFailed(m_device->CreateDepthStencilState(&dsDesc, m_maskDSS.GetAddressOf( )));
+    ComPtr<ID3D11Texture2D> depthStencilBuffer;
+    ThrowIfFailed(m_device->CreateTexture2D(&desc, 0, depthStencilBuffer.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateDepthStencilView(depthStencilBuffer.Get( ), NULL, m_depthStencilView.GetAddressOf( )));
+}
 
-    // Stencil에 1로 표기된 경우에'만' 그리는 DSS
-    // DepthBuffer는 초기화된 상태로 가정
-    // D3D11_COMPARISON_EQUAL 이미 1로 표기된 경우에만 그리기
-    // OMSetDepthStencilState(..., 1); <- 여기의 1을 뜻한다.
-    dsDesc.DepthEnable = true; // 거울 속을 다시 그릴 때 필요
-    dsDesc.StencilEnable = true; // Stencil 사용
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL; // 
-    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+void AppBase::SetPipelineState(const GraphicsPSO& pso) {
 
-    ThrowIfFailed(m_device->CreateDepthStencilState(&dsDesc, m_drawMaskedDSS.GetAddressOf( )));
+    m_context->VSSetShader(pso.m_vertexShader.Get( ), 0, 0);
+    m_context->PSSetShader(pso.m_pixelShader.Get( ), 0, 0);
+    m_context->HSSetShader(pso.m_hullShader.Get( ), 0, 0);
+    m_context->DSSetShader(pso.m_domainShader.Get( ), 0, 0);
+    m_context->GSSetShader(pso.m_geometryShader.Get( ), 0, 0);
+    m_context->IASetInputLayout(pso.m_inputLayout.Get( ));
+    m_context->RSSetState(pso.m_rasterizerState.Get( ));
+    m_context->OMSetBlendState(pso.m_blendState.Get( ), pso.m_blendFactor, 0xffffffff);
+    m_context->OMSetDepthStencilState(pso.m_depthStencilState.Get( ), pso.m_stencilRef);
+    m_context->IASetPrimitiveTopology(pso.m_primitiveTopology);
+}
 
-    /* "이미 그려져있는 화면"과 어떻게 섞을지를 결정
-    * Dest : 이미 그려져 있는 값들을 의미
-    * Src : 픽셀 쉐이더가 계산한 값들을 의미 (여기서는 마지막 거울)
-    */
+bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
+                                 Vector3& dragTranslation, Vector3& pickPoint) {
+    const Matrix viewRow = m_camera.GetViewRow( );
+    const Matrix projRow = m_camera.GetProjRow( );
 
-    D3D11_BLEND_DESC mirrorBlendDesc;
-    ZeroMemory(&mirrorBlendDesc, sizeof(mirrorBlendDesc));
-    mirrorBlendDesc.AlphaToCoverageEnable = true; // MSAA
-    mirrorBlendDesc.IndependentBlendEnable = false;
-    // 개별 RenderTarget에 대해서 설정 (최대 8개)
-    mirrorBlendDesc.RenderTarget[ 0 ].BlendEnable = true;
-    mirrorBlendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
-    mirrorBlendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
-    mirrorBlendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
+    // mainSphere의 회전 계산용
+    static float prevRatio = 0.0f;
+    static Vector3 prevPos(0.0f);
+    static Vector3 prevVector(0.0f);
 
-    mirrorBlendDesc.RenderTarget[ 0 ].SrcBlendAlpha = D3D11_BLEND_ONE;
-    mirrorBlendDesc.RenderTarget[ 0 ].DestBlendAlpha = D3D11_BLEND_ONE;
-    mirrorBlendDesc.RenderTarget[ 0 ].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    // 회전과 이동 초기화
+    q = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), 0.0f);
+    dragTranslation = Vector3(0.0f);
 
-    // 필요하면 RGBA 각각에 대해서도 조절 가능
-    mirrorBlendDesc.RenderTarget[ 0 ].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    // 마우스 선택했을 때만 업데이트
+    if (m_leftButton || m_rightButton)
+    {
+        // OnMouseMove에서 m_mouseNdcX, m_mouseNdxY 저장
 
-    ThrowIfFailed(m_device->CreateBlendState(&mirrorBlendDesc, m_mirrorBS.GetAddressOf( )));
+        // ViewFrustum에서 가까운 면 위의 커서 위치 (z값 유의)
+        Vector3 cursorNdcNear = Vector3(m_cursorNdcX, m_cursorNdcY, 0.0f);
+
+        // ViewFrustum에서 먼 면 위의 커서 위치 (z값 유의)
+        Vector3 cursorNdcFar = Vector3(m_cursorNdcX, m_cursorNdcY, 1.0f);
+
+        // NDC 커서 위치를 월드 좌표계로 역변환 해주는 행렬
+        Matrix inverseProjView = (viewRow * projRow).Invert( );
+
+        // ViewFrustum 안에서 PickingRay의 방향 구하기
+        Vector3 cursorWorldNear = Vector3::Transform(cursorNdcNear, inverseProjView);
+        Vector3 cursorWorldFar = Vector3::Transform(cursorNdcFar, inverseProjView);
+        Vector3 dir = cursorWorldFar - cursorWorldNear;
+        dir.Normalize( );
+
+        // 광선을 만들고 충돌 감지
+        SimpleMath::Ray curRay = SimpleMath::Ray(cursorWorldNear, dir);
+        float dist = 0.0f;
+        if (curRay.Intersects(bs, dist)) {
+            pickPoint = cursorWorldNear + dist * dir;
+
+            // mainSphere를 어떻게 회전시킬지 결정
+            if (m_leftButton)
+            {
+                if (m_dragStartFlag) { // 드래그를 시작하는 경우
+                    m_dragStartFlag = false;
+
+                    prevVector = pickPoint - Vector3(bs.Center);
+                    prevVector.Normalize( );
+                }
+                else {
+                    Vector3 currentVector = pickPoint - Vector3(bs.Center);
+                    currentVector.Normalize( );
+                    float theta = acos(prevVector.Dot(currentVector));
+                    // 마우스가 조금이라도 움직였을 경우에만 회전시키기
+                    if (theta > 3.141592f / 180.0f * 3.0f) {
+                        Vector3 axis = prevVector.Cross(currentVector);
+                        axis.Normalize( );
+                        q = SimpleMath::Quaternion::CreateFromAxisAngle(axis, theta);
+                        prevVector = currentVector;
+                    }
+                }
+                return true; // selected
+            }
+            // mainSphere를 어떻게 이동시킬지 결정
+            else if (m_rightButton)
+            {
+                if (m_dragStartFlag) { // 드래그를 시작하는 경우
+                    m_dragStartFlag = false;
+
+                    prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
+                    prevPos = pickPoint;
+                }
+                else {
+                    Vector3 newPos = cursorWorldNear + prevRatio * (cursorWorldFar - cursorWorldNear);
+                    dragTranslation = newPos - prevPos;
+                    prevPos = newPos;
+                }
+                return true; // selected
+            }
+        }
+    }
+
+    return false;
 }
 
 bool AppBase::InitMainWindow() {
@@ -445,33 +486,15 @@ bool AppBase::InitDirect3D() {
         return false;
     }
 
+    Graphics::InitCommonStates(m_device);
+
     CreateBuffers( );
+    
     SetViewport( );
 
-    // Create a rasterize state
-    D3D11_RASTERIZER_DESC rastDesc;
-    ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
-    rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-    rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
-    rastDesc.FrontCounterClockwise = false;
-    rastDesc.DepthClipEnable = true; // <- zNear, zFar 확인에 필요
-    rastDesc.MultisampleEnable = true;
-
-    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_solidRS.GetAddressOf()));
-
-    // 거울에 반사되면 삼각형의 Winding이 바뀌기 때문에 CCW로 그려야함.
-    rastDesc.FrontCounterClockwise = true;
-    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_solidCCWRS.GetAddressOf( )));
-
-    rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME;
-    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_wireCCWRS.GetAddressOf( )));
-
-    rastDesc.FrontCounterClockwise = false;
-    ThrowIfFailed(m_device->CreateRasterizerState(&rastDesc, m_wireRS.GetAddressOf( )));
-
     // 공통으로 쓰이는 ConstBuffers
-    D3D11Utils::CreateConstBuffer(m_device, m_eyeViewProjConstData, m_eyeViewProjConstBuffer);
-    D3D11Utils::CreateConstBuffer(m_device, m_mirrorEyeViewProjConstData, m_mirrorEyeViewProjConstBuffer);
+    D3D11Utils::CreateConstBuffer(m_device, m_globalConstsCPU, m_globalConstsGPU);
+    D3D11Utils::CreateConstBuffer(m_device, m_reflectGlobalConstsCPU, m_reflectGlobalConstsGPU);
 
     return true;
 }
@@ -499,22 +522,16 @@ bool AppBase::InitGUI() {
 
 void AppBase::SetViewport( ) {
     
-    static int previousGuiWidth = -1;
+    // Set the viewport
+    ZeroMemory(&m_screenViewport, sizeof(D3D11_VIEWPORT));
+    m_screenViewport.TopLeftX = 0;
+    m_screenViewport.TopLeftY = 0;
+    m_screenViewport.Width = float(m_screenWidth);
+    m_screenViewport.Height = float(m_screenHeight);
+    m_screenViewport.MinDepth = 0.0f;
+    m_screenViewport.MaxDepth = 1.0f;
 
-    if (previousGuiWidth != m_guiWidth) {
-        previousGuiWidth = m_guiWidth;
-
-        // Set the viewport
-        ZeroMemory(&m_screenViewport, sizeof(D3D11_VIEWPORT));
-        m_screenViewport.TopLeftX = float(m_guiWidth);
-        m_screenViewport.TopLeftY = 0;
-        m_screenViewport.Width = float(m_screenWidth - m_guiWidth);
-        m_screenViewport.Height = float(m_screenHeight);
-        m_screenViewport.MinDepth = 0.0f;
-        m_screenViewport.MaxDepth = 1.0f;
-
-        m_context->RSSetViewports(1, &m_screenViewport);
-    }
+    m_context->RSSetViewports(1, &m_screenViewport);
 }
 
 void AppBase::CreateBuffers( ) {
@@ -548,7 +565,6 @@ void AppBase::CreateBuffers( ) {
     }
 
     ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_floatBuffer.GetAddressOf( )));
-    ThrowIfFailed(m_device->CreateShaderResourceView(m_floatBuffer.Get( ), NULL, m_floatSRV.GetAddressOf( )));
     ThrowIfFailed(m_device->CreateRenderTargetView(m_floatBuffer.Get( ), NULL, m_floatRTV.GetAddressOf( )));
 
     // D3D11_RENDER_TARGET_VIEW_DESC viewDesc;

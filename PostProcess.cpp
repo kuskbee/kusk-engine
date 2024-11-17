@@ -1,4 +1,5 @@
 #include "PostProcess.h"
+#include "GraphicsCommon.h"
 
 namespace kusk {
 
@@ -14,43 +15,6 @@ void PostProcess::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCo
 	m_mesh->indexCount = UINT(meshData.indices.size( ));
 	D3D11Utils::CreateIndexBuffer(device, meshData.indices, m_mesh->indexBuffer);
 
-	vector<D3D11_INPUT_ELEMENT_DESC> basicInputElements = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3 + 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	};
-
-	// 모든 이미지 필터들이 VS 공유
-	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SamplingVS.hlsl", basicInputElements,
-												 m_vertexShader, m_inputLayout);
-	D3D11Utils::CreatePixelShader(device, L"CombinePS.hlsl", m_combinePixelShader);
-	D3D11Utils::CreatePixelShader(device, L"BloomDownPS.hlsl", m_bloomDownPixelShader);
-	D3D11Utils::CreatePixelShader(device, L"BloomUpPS.hlsl", m_bloomUpPixelShader);
-
-	// Sampler도 공유
-	D3D11_SAMPLER_DESC sampDesc;
-	ZeroMemory(&sampDesc, sizeof(sampDesc));
-	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	sampDesc.MinLOD = 0;
-	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-	// Create the Sample State
-	device->CreateSamplerState(&sampDesc, m_samplerState.GetAddressOf( ));
-
-	// Create a rasterizer State
-	D3D11_RASTERIZER_DESC rastDesc;
-	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC)); // Need this
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-	rastDesc.FrontCounterClockwise = false;
-	rastDesc.DepthClipEnable = false;
-
-	device->CreateRasterizerState(&rastDesc, m_rasterizerState.GetAddressOf( ));
-
 	// Bloom Down/Up
 	m_bloomSRVs.resize(bloomLevels);
 	m_bloomRTVs.resize(bloomLevels);
@@ -62,7 +26,7 @@ void PostProcess::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCo
 	m_bloomDownFilters.resize(bloomLevels - 1);
 	for (int i = 0; i < bloomLevels - 1; i++) {
 		int div = int(pow(2, i + 1));
-		m_bloomDownFilters[ i ].Initialize(device, context, m_bloomDownPixelShader, width / div, height / div);
+		m_bloomDownFilters[ i ].Initialize(device, context, Graphics::bloomDownPS, width / div, height / div);
 		if (i == 0) {
 			m_bloomDownFilters[ i ].SetShaderResources({ resources[ 0 ] });
 		}
@@ -76,13 +40,13 @@ void PostProcess::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCo
 	for (int i = 0; i < bloomLevels - 1; i++) {
 		int level = bloomLevels - 2 - i;
 		int div = int(pow(2, level));
-		m_bloomUpFilters[ i ].Initialize(device, context, m_bloomUpPixelShader, width / div, height / div);
+		m_bloomUpFilters[ i ].Initialize(device, context, Graphics::bloomUpPS, width / div, height / div);
 		m_bloomUpFilters[ i ].SetShaderResources({ m_bloomSRVs[ level + 1 ] });		
 		m_bloomUpFilters[ i ].SetRenderTargets({ m_bloomRTVs[ level ] });
 	}
 
 	// Combine + ToneMapping
-	m_combineFilter.Initialize(device, context, m_combinePixelShader, width, height);
+	m_combineFilter.Initialize(device, context, Graphics::combinePS, width, height);
 	m_combineFilter.SetShaderResources({ resources[ 0 ], m_bloomSRVs[ 0 ] });
 	m_combineFilter.SetRenderTargets(targets);
 	m_combineFilter.m_constData.strength = 0.0f; // Bloom Strength
@@ -93,18 +57,13 @@ void PostProcess::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCo
 
 void PostProcess::Render(ComPtr<ID3D11DeviceContext>& context) {
 
-	// 여러 필터들 공통
-	context->RSSetState(m_rasterizerState.Get( ));
+	context->PSSetSamplers(0, 1, Graphics::linearClampSS.GetAddressOf( ));
 
 	UINT stride = sizeof(Vertex);
 	UINT offset = 0;
 
-	context->IASetInputLayout(m_inputLayout.Get( ));
 	context->IASetVertexBuffers(0, 1, m_mesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
 	context->IASetIndexBuffer(m_mesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->VSSetShader(m_vertexShader.Get( ), 0, 0);
-	context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf( ));
 
 	for (int i = 0; i < m_bloomDownFilters.size( ); i++) {
 		RenderImageFilter(context, m_bloomDownFilters[ i ]);

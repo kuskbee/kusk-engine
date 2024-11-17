@@ -2,25 +2,15 @@
 
 // Vertex Shader에서도 텍스쳐 사용
 Texture2D g_heightTexture : register(t0);
-SamplerState g_sampler : register(s0);
 
 cbuffer BasicVertexConstantData : register(b0)
 {
-    matrix modelWorld;
-    matrix invTranspose;
+    matrix world;   // Model(또는 Object) 좌표계 -> World로 변환
+    matrix worldIT; // World의 InverseTranspose
     int useHeightMap;
     float heightScale;
     float2 dummy;
 };
-
-// 여러 물체들이 공통으로 사용할 ConstData 분리
-cbuffer EyeViewProjConstData : register(b1)
-{
-    matrix viewProj;
-    float3 eyeWorld;
-    bool isMirror;
-    float4 mirrorPlane;
-}
 
 PixelShaderInput main(VertexShaderInput input)
 {
@@ -28,20 +18,20 @@ PixelShaderInput main(VertexShaderInput input)
     
     // Normal 벡터 먼저 변환 (Height Mapping)
     float4 normal = float4(input.normalModel, 0.0);
-    output.normalWorld = mul(normal, invTranspose).xyz;
+    output.normalWorld = mul(normal, worldIT).xyz;
     output.normalWorld = normalize(output.normalWorld);
     
-    // Tangent 벡터는 modelWorld로 변환
+    // Tangent 벡터는 world로 변환
     float4 tangentWorld = float4(input.tangentModel, 0.0);
-    tangentWorld = mul(tangentWorld, modelWorld);
+    tangentWorld = mul(tangentWorld, world);
     
     output.posModel = input.posModel;
     float4 pos = float4(input.posModel, 1.0f);
-    pos = mul(pos, modelWorld);
+    pos = mul(pos, world);
     
     if(useHeightMap)
     {
-        float height = g_heightTexture.SampleLevel(g_sampler, input.texcoord, 0).r;
+        float height = g_heightTexture.SampleLevel(linearClampSampler, input.texcoord, 0).r;
         height = height * 2.0 - 1.0;
         pos += float4(output.normalWorld * height * heightScale, 0.0);
     }
@@ -53,8 +43,6 @@ PixelShaderInput main(VertexShaderInput input)
     output.posProj = pos;
     output.texcoord = input.texcoord;
     output.tangentWorld = tangentWorld.xyz;
-    
-    output.color = float3(0.0f, 0.0f, 0.0f);
     
     return output;
 }

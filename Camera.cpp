@@ -15,12 +15,38 @@ Matrix Camera::GetViewRow( ) {
 
 Vector3 Camera::GetEyePos( ) { return m_position; }
 
-void Camera::UpdateMouse(float mouseNdcX, float mouseNdcY) {
-	// 얼마나 회전할지 계산
-	m_yaw = mouseNdcX * DirectX::XM_2PI; // 좌우 360도
-	m_pitch = mouseNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
+void Camera::UpdateViewDir( ) {
+	// 이동할 때 기준이 되는 정면/오른쪽 방향 계산
+	m_viewDir = Vector3::Transform(Vector3(0.0f, 0.0f, 1.0f),
+								   Matrix::CreateRotationY(this->m_yaw));
+	m_rightDir = m_upDir.Cross(m_viewDir);
+}
 
-	UpdateViewDir( );
+void Camera::UpdateKeyboard(const float dt, bool const keyPressed[ 256 ]) {
+	if (m_useFirstPersonView) {
+		if (keyPressed[ 'W' ])
+			MoveForward(dt);
+		if (keyPressed[ 'S' ])
+			MoveForward(-dt);
+		if (keyPressed[ 'D' ])
+			MoveRight(dt);
+		if (keyPressed[ 'A' ])
+			MoveRight(-dt);
+		if (keyPressed[ 'Q' ])
+			MoveUp(dt);
+		if (keyPressed[ 'E' ])
+			MoveUp(-dt);
+	}
+}
+
+void Camera::UpdateMouse(float mouseNdcX, float mouseNdcY) {
+	if (m_useFirstPersonView) {
+		// 얼마나 회전할지 계산
+		m_yaw = mouseNdcX * DirectX::XM_2PI; // 좌우 360도
+		m_pitch = mouseNdcY * DirectX::XM_PIDIV2; // 위 아래 90도
+
+		UpdateViewDir( );
+	}
 }
 
 void Camera::MoveForward(float dt) {
@@ -40,4 +66,4 @@ Matrix Camera::GetProjRow( ) {
 		: XMMatrixOrthographicOffCenterLH(-m_aspect, m_aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 }
 
-}
+} // namespace kusk
