@@ -7,7 +7,7 @@
 #define LIGHT_OFF 0x00
 #define LIGHT_DIRECTIONAL 0x01
 #define LIGHT_POINT 0x02
-#define LIGHT_SPOT 0x03
+#define LIGHT_SPOT 0x04
 #define LIGHT_SHADOW 0x10
 
 namespace kusk {
@@ -51,7 +51,7 @@ __declspec(align(256)) struct MaterialConstants {
 	Vector3 rimColor = Vector3(1.0f);
 	float rimStrength = 0.0f;
 	bool useSmoothstep = false;
-	Vector3 dummy;
+	Vector3 dummy = Vector3(0.0f);
 
 };
 
@@ -67,7 +67,11 @@ struct Light {
 	// Light type bitmasking
 	// ex) LIGHT_SPOT | LIGHT_SHADOW
 	uint32_t type = LIGHT_OFF;
-	Vector3 dummy;
+	float radius = 0.0f; // 반지름
+	Vector2 dummy;
+
+	Matrix viewProj;	// 그림자 렌더링에 필요
+	Matrix invProj;		// 그림자 렌더링 디버깅용
 };
 
 // register(b1) 사용
@@ -76,8 +80,9 @@ __declspec(align(256)) struct GlobalConstants {
 	Matrix proj;
 	Matrix invProj;
 	Matrix viewProj;
+	Matrix invViewProj;	// Proj -> World
 	Vector3 eyeWorld;
-	float strengthIBL = 0.2f;
+	float strengthIBL = 0.0f;
 	int textureToDraw = 0;	// 0 : Env, 1 : Specular, 2 : Irradiance, 그외 : 검은색
 	float envLodBias = 0.0f;	// 환경맵 LodBias
 	float lodBias = 2.0f;		// 다른 물체들 LoadBias

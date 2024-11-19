@@ -8,18 +8,25 @@
 #define LIGHT_OFF 0x00
 #define LIGHT_DIRECTIONAL 0x01
 #define LIGHT_POINT 0x02
-#define LIGHT_SPOT 0x03
+#define LIGHT_SPOT 0x04
 #define LIGHT_SHADOW 0x10
 
 // 샘플러들을 모든 쉐이더에서 공통으로 사용
 SamplerState linearWrapSampler : register(s0);
 SamplerState linearClampSampler : register(s1);
+SamplerState shadowPointSampler : register(s2);
+SamplerComparisonState shadowCompareSampler : register(s3);
 
 // 공용 텍스쳐들 t10 부터 시작
 TextureCube envIBLTex : register(t10);
 TextureCube specularIBLTex : register(t11);
 TextureCube irradianceIBLTex : register(t12);
 Texture2D brdfTex : register(t13);
+
+Texture2D shadowMaps[MAX_LIGHTS] : register(t15);
+//Texture2D shadowMap1 : register(t16);
+//Texture2D shadowMap2 : register(t17);
+//static Texture2D shadowMaps[MAX_LIGHTS] = { shadowMap0, shadowMap1, shadowMap2 };
 
 // 조명
 struct Light
@@ -32,7 +39,11 @@ struct Light
     float spotPower;
     
     uint type;
-    float3 dummy;
+    float radius;
+    float2 dummy;
+    
+    matrix viewProj;
+    matrix invProj;
 };
 
 // 공용 Constants
@@ -42,6 +53,7 @@ cbuffer GlobalConstants : register(b1)
     matrix proj;
     matrix invProj;
     matrix viewProj;
+    matrix invViewProj; // Proj -> World
     float3 eyeWorld;
     float strengthIBL;
     

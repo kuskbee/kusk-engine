@@ -7,6 +7,8 @@ namespace Graphics {
 // Sampler States
 ComPtr<ID3D11SamplerState> linearWrapSS;
 ComPtr<ID3D11SamplerState> linearClampSS;
+ComPtr<ID3D11SamplerState> shadowPointSS;
+ComPtr<ID3D11SamplerState> shadowCompareSS;
 vector<ID3D11SamplerState*> sampleStates;
 
 // Rasterizer States
@@ -61,6 +63,7 @@ GraphicsPSO skyboxWirePSO;
 GraphicsPSO reflectSkyboxSolidPSO;
 GraphicsPSO reflectSkyboxWirePSO;
 GraphicsPSO normalsPSO;
+GraphicsPSO depthOnlyPSO;
 GraphicsPSO postEffectsPSO;
 GraphicsPSO postProcessingPSO;
 
@@ -92,9 +95,29 @@ void Graphics::InitSamplers(ComPtr<ID3D11Device>& device) {
 	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	device->CreateSamplerState(&sampDesc, linearClampSS.GetAddressOf( ));
 
+	// shadowPointSS
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.BorderColor[ 0 ] = 100.0f; // 큰 z값
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	device->CreateSamplerState(&sampDesc, shadowPointSS.GetAddressOf( ));
+
+	// shadowCompareSS, 쉐이더 안에서는 SamplerComparisonState
+	// Filter = "_COMPARISON_" 주의
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	sampDesc.BorderColor[ 0 ] = 100.0f; // 큰 z값
+	sampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	device->CreateSamplerState(&sampDesc, shadowCompareSS.GetAddressOf( ));
+
 	// 샘플러 순서가 "Common.hlsli"에서와 일관성 있어야 함
 	sampleStates.push_back(linearWrapSS.Get( ));
 	sampleStates.push_back(linearClampSS.Get( ));
+	sampleStates.push_back(shadowPointSS.Get( ));
+	sampleStates.push_back(shadowCompareSS.Get( ));
 }
 
 void Graphics::InitRasterizerStates(ComPtr<ID3D11Device>& device) {
@@ -339,6 +362,11 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	normalsPSO.m_geometryShader = normalGS;
 	normalsPSO.m_pixelShader = normalPS;
 	normalsPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+
+	// depthOnlyPSO
+	depthOnlyPSO = defaultSolidPSO;
+	depthOnlyPSO.m_vertexShader = depthOnlyVS;
+	depthOnlyPSO.m_pixelShader = depthOnlyPS;
 
 	// postEffectsPSO
 	postEffectsPSO.m_vertexShader = samplingVS;

@@ -25,6 +25,8 @@ public:
 	virtual void Update(float dt) override;
 	virtual void Render() override;
 
+	void UpdateLights(float dt);
+
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	//BillboardPoints m_billboardPoints;

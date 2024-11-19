@@ -24,17 +24,17 @@ using std::vector;
 using std::wstring;
 
 class AppBase {
-public :
-	AppBase();
-	virtual ~AppBase();
+public:
+	AppBase( );
+	virtual ~AppBase( );
 
 	int Run( );
-	float GetAspectRatio() const;
-	
-	virtual bool Initialize();
-	virtual void UpdateGUI() = 0;
+	float GetAspectRatio( ) const;
+
+	virtual bool Initialize( );
+	virtual void UpdateGUI( ) = 0;
 	virtual void Update(float dt) = 0;
-	virtual void Render() = 0;
+	virtual void Render( ) = 0;
 	virtual void OnMouseMove(int mouseX, int mouseY);
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -51,12 +51,13 @@ public :
 							Vector3& dragTranslation, Vector3& pickPoint);
 
 protected:
-	bool InitMainWindow();
-	bool InitDirect3D();
-	bool InitGUI();
+	bool InitMainWindow( );
+	bool InitDirect3D( );
+	bool InitGUI( );
 	void CreateBuffers( );
-	void SetViewport( );
-	
+	void SetMainViewport( );
+	void SetShadowViewport( );
+
 public:
 	int m_screenWidth; // 렌더링할 최종 화면의 해상도
 	int m_screenHeight;
@@ -88,14 +89,21 @@ public:
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
 	ComPtr<ID3D11ShaderResourceView> m_depthOnlySRV;
 
+	// Shadow maps
+	int m_shadowWidth = 1280;
+	int m_shadowHeight = 1280;
+	ComPtr<ID3D11Texture2D> m_shadowBuffers[ MAX_LIGHTS ]; // No MSAA
+	ComPtr<ID3D11DepthStencilView> m_shadowDSVs[ MAX_LIGHTS ];
+	ComPtr<ID3D11ShaderResourceView> m_shadowSRVs[ MAX_LIGHTS ];
+
 	Camera m_camera;
-	
+
 	// 현재 키보드가 눌렸는지 상태를 저장하는 배열
 	bool m_keyPressed[ 256 ] = { false };
 	bool m_leftButton = false;
 	bool m_rightButton = false;
 	bool m_dragStartFlag = false;
-	
+
 	D3D11_VIEWPORT m_screenViewport;
 
 	// 마우스 커서 위치 저장 (Picking에 사용)
@@ -105,14 +113,16 @@ public:
 	// 렌더링 -> PostEffects -> PostProcess
 	PostEffectsConstants m_postEffectsConstsCPU;
 	ComPtr<ID3D11Buffer> m_postEffectsConstsGPU;
-	
+
 	PostProcess m_postProcess;
 
-	// 거울 구현을 더 효율적으로 하기 위해 ConstBuffers들 분리
+	// 다양한 Pass들을 더 간단히 구현하기 위해 ConstBuffers들 분리
 	GlobalConstants m_globalConstsCPU;
 	GlobalConstants m_reflectGlobalConstsCPU;
+	GlobalConstants m_shadowGlobalConstsCPU[ MAX_LIGHTS ];
 	ComPtr<ID3D11Buffer> m_globalConstsGPU;
 	ComPtr<ID3D11Buffer> m_reflectGlobalConstsGPU;
+	ComPtr<ID3D11Buffer> m_shadowGlobalConstsGPU[ MAX_LIGHTS ];
 
 	// 공통으로 사용하는 텍스쳐들
 	ComPtr<ID3D11ShaderResourceView> m_envSRV;

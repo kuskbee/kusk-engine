@@ -23,7 +23,7 @@ float4 TexcoordToView(float2 texcoord)
     
     // [0, 1]x[0, 1] -> [-1, 1]x[-1, 1]
     posProj.xy = texcoord * 2.0 - 1.0;
-    posProj.y *= -1; // y 방향을 뒤집어 주어야 함.
+    posProj.y *= -1; // y 좌표 뒤집기
     posProj.z = depthOnlyTex.Sample(linearClampSampler, texcoord).r;
     posProj.w = 1.0;
     

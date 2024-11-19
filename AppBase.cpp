@@ -157,7 +157,7 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                                         DXGI_FORMAT_UNKNOWN, // 현재 포맷 유지
                                         0);
             CreateBuffers( );
-            SetViewport( );
+            SetMainViewport( );
 
             // 화면 해상도가 바뀌면 카메라 aspect ratio도 같이 변경
             m_camera.SetAspectRatio(this->GetAspectRatio());
@@ -251,15 +251,20 @@ void AppBase::UpdateGlobalConstants(const Vector3& eyeWorld,
     m_globalConstsCPU.proj = projRow.Transpose( );
     m_globalConstsCPU.invProj = projRow.Invert( ).Transpose();
     m_globalConstsCPU.viewProj = (viewRow * projRow).Transpose( );
+    // 그림자 렌더링에 사용
+    m_globalConstsCPU.invViewProj = m_globalConstsCPU.viewProj.Invert( );
     
     for (int i = 0; i < MAX_LIGHTS; i++) {
-        m_reflectGlobalConstsCPU.lights[i] = m_globalConstsCPU.lights[i];
+        m_reflectGlobalConstsCPU.lights[ i ] = m_globalConstsCPU.lights[ i ];
+        m_reflectGlobalConstsCPU.lights[ i ].viewProj = m_reflectGlobalConstsCPU.lights[ i ].viewProj * refl.Transpose( );
     }
     m_reflectGlobalConstsCPU.eyeWorld = eyeWorld;
     m_reflectGlobalConstsCPU.view = (refl * viewRow).Transpose( );
     m_reflectGlobalConstsCPU.proj = m_globalConstsCPU.proj;
     m_reflectGlobalConstsCPU.invProj = m_globalConstsCPU.invProj;
     m_reflectGlobalConstsCPU.viewProj = (refl * viewRow * projRow).Transpose( );
+    // 그림자 렌더링에 사용 (:TODO: 광원의 위치도 반사시킨 후에 계산해야 함)
+    m_reflectGlobalConstsCPU.invViewProj = m_reflectGlobalConstsCPU.viewProj.Invert();
 
     m_globalConstsCPU.isMirror = false;
     m_reflectGlobalConstsCPU.isMirror = true;
@@ -302,12 +307,19 @@ void AppBase::CreateDepthBuffers( ) {
     ThrowIfFailed(m_device->CreateTexture2D(&desc, 0, depthStencilBuffer.GetAddressOf( )));
     ThrowIfFailed(m_device->CreateDepthStencilView(depthStencilBuffer.Get( ), NULL, m_depthStencilView.GetAddressOf( )));
 
-    // Depth Only
+    // Depth 전용
     desc.Format = DXGI_FORMAT_R32_TYPELESS;
     desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
     ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_depthOnlyBuffer.GetAddressOf( )));
+
+    // 그림자 Buffers (Depth 전용)
+    desc.Width = m_shadowWidth;
+    desc.Height = m_shadowHeight;
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_shadowBuffers[ i ].GetAddressOf( )));
+    }
 
     D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
     ZeroMemory(&dsvDesc, sizeof(dsvDesc));
@@ -315,12 +327,24 @@ void AppBase::CreateDepthBuffers( ) {
     dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     ThrowIfFailed(m_device->CreateDepthStencilView(m_depthOnlyBuffer.Get( ), &dsvDesc, m_depthOnlyDSV.GetAddressOf( )));
 
+    // 그림자 DSVs
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        ThrowIfFailed(
+            m_device->CreateDepthStencilView(m_shadowBuffers[ i ].Get( ), &dsvDesc, m_shadowDSVs[ i ].GetAddressOf( )));
+    }
+
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
     ZeroMemory(&srvDesc, sizeof(srvDesc));
     srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
     srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
     ThrowIfFailed(m_device->CreateShaderResourceView(m_depthOnlyBuffer.Get( ), &srvDesc, m_depthOnlySRV.GetAddressOf( )));
+
+    // 그림자 SRVs
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        ThrowIfFailed(
+            m_device->CreateShaderResourceView(m_shadowBuffers[ i ].Get( ), &srvDesc, m_shadowSRVs[ i ].GetAddressOf( )));
+    }
 }
 
 void AppBase::SetPipelineState(const GraphicsPSO& pso) {
@@ -520,11 +544,16 @@ bool AppBase::InitDirect3D() {
 
     CreateBuffers( );
     
-    SetViewport( );
+    SetMainViewport( );
 
     // 공통으로 쓰이는 ConstBuffers
     D3D11Utils::CreateConstBuffer(m_device, m_globalConstsCPU, m_globalConstsGPU);
     D3D11Utils::CreateConstBuffer(m_device, m_reflectGlobalConstsCPU, m_reflectGlobalConstsGPU);
+
+    // 그림자맵 렌더링할 때 사용할 GlobalConsts들 별도 생성
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        D3D11Utils::CreateConstBuffer(m_device, m_shadowGlobalConstsCPU[ i ], m_shadowGlobalConstsGPU[ i ]);
+    }
 
     // 후처리 효과용 ConstBuffer
     D3D11Utils::CreateConstBuffer(m_device, m_postEffectsConstsCPU, m_postEffectsConstsGPU);
@@ -553,7 +582,7 @@ bool AppBase::InitGUI() {
     return true;
 }
 
-void AppBase::SetViewport( ) {
+void AppBase::SetMainViewport( ) {
     
     // Set the viewport
     ZeroMemory(&m_screenViewport, sizeof(D3D11_VIEWPORT));
@@ -566,6 +595,22 @@ void AppBase::SetViewport( ) {
 
     m_context->RSSetViewports(1, &m_screenViewport);
 }
+
+void AppBase::SetShadowViewport( ) {
+
+    // Set the viewport
+    D3D11_VIEWPORT shadowViewport;
+    ZeroMemory(&shadowViewport, sizeof(D3D11_VIEWPORT));
+    shadowViewport.TopLeftX = 0;
+    shadowViewport.TopLeftY = 0;
+    shadowViewport.Width = float(m_shadowWidth);
+    shadowViewport.Height = float(m_shadowHeight);
+    shadowViewport.MinDepth = 0.0f;
+    shadowViewport.MaxDepth = 1.0f;
+
+    m_context->RSSetViewports(1, &shadowViewport);
+}
+
 
 void AppBase::CreateBuffers( ) {
     

@@ -63,12 +63,12 @@ bool KuskApp::Initialize() {
 	// 바닥(거울)
 	{
 		auto mesh = GeometryGenerator::MakeSquare(5.0f);
-		mesh.albedoTextureFilename = BLENDER_UV_GRID_2K_TEXTURE;
+		//mesh.albedoTextureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 		m_ground = make_shared<Model>(m_device, m_context, vector{ mesh });
-		m_ground->m_materialConstsCPU.albedoFactor = Vector3(0.5f);
+		m_ground->m_materialConstsCPU.albedoFactor = Vector3(0.1f);
 		m_ground->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		m_ground->m_materialConstsCPU.metallicFactor = 0.2f;
-		m_ground->m_materialConstsCPU.roughnessFactor = 0.8f;
+		m_ground->m_materialConstsCPU.metallicFactor = 0.5f;
+		m_ground->m_materialConstsCPU.roughnessFactor = 0.3f;
 
 		Vector3 position = Vector3(0.0f, -0.5f, 2.0f);
 		m_ground->UpdateWorldRow(
@@ -109,8 +109,9 @@ bool KuskApp::Initialize() {
 		m_mainObj = make_shared<Model>(m_device, m_context, meshes);
 		m_mainObj->m_materialConstsCPU.invertNormalMapY = true; // GLTF는 true로
 		m_mainObj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
-		m_mainObj->m_materialConstsCPU.metallicFactor = 1.0f;
-		m_mainObj->m_materialConstsCPU.roughnessFactor = 1.0f;
+		m_mainObj->m_materialConstsCPU.roughnessFactor = 0.3f;
+		m_mainObj->m_materialConstsCPU.metallicFactor = 0.8f;
+		m_mainObj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
 		m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
 
 		m_basicList.push_back(m_mainObj); // 리스트에 등록
@@ -123,46 +124,48 @@ bool KuskApp::Initialize() {
 	{
 		MeshData mesh = GeometryGenerator::MakeSphere(0.2f, 200, 200);
 		Vector3 center(0.5f, 0.5f, 2.0f);
-		auto m_obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-		m_obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-		m_obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
-		m_obj->m_materialConstsCPU.roughnessFactor = 0.2f;
-		m_obj->m_materialConstsCPU.metallicFactor = 0.6f;
-		m_obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		m_obj->UpdateConstantBuffers(m_device, m_context);
+		auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+		obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+		obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
+		obj->m_materialConstsCPU.roughnessFactor = 0.2f;
+		obj->m_materialConstsCPU.metallicFactor = 0.6f;
+		obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+		obj->UpdateConstantBuffers(m_device, m_context);
 
-		m_basicList.push_back(m_obj);
+		m_basicList.push_back(obj);
 	}
 
 	// 추가 물체2 (빨간 박스)
 	{
 		MeshData mesh = GeometryGenerator::MakeBox(0.2f);
 		Vector3 center(0.0f, 0.5f, 2.5f);
-		auto m_obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-		m_obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-		m_obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
-		m_obj->m_materialConstsCPU.roughnessFactor = 0.5f;
-		m_obj->m_materialConstsCPU.metallicFactor = 0.9f;
-		m_obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		m_obj->UpdateConstantBuffers(m_device, m_context);
+		auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+		obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+		obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
+		obj->m_materialConstsCPU.roughnessFactor = 0.5f;
+		obj->m_materialConstsCPU.metallicFactor = 0.9f;
+		obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+		obj->UpdateConstantBuffers(m_device, m_context);
 
-		m_basicList.push_back(m_obj);
+		m_basicList.push_back(obj);
 	}
 
 	// 조명 설정
 	{
 		// 조명 0은 고정
-		m_globalConstsCPU.lights[ 0 ].position = Vector3(0.0f, 1.5f, 2.0f);
+		m_globalConstsCPU.lights[ 0 ].radiance = Vector3(5.0f);
+		m_globalConstsCPU.lights[ 0 ].position = Vector3(0.0f, 1.5f, 1.5f);
 		m_globalConstsCPU.lights[ 0 ].direction = Vector3(0.0f, -1.0f, 0.0f);
+		m_globalConstsCPU.lights[ 0 ].spotPower = 6.0f;
 		m_globalConstsCPU.lights[ 0 ].type =
-			LIGHT_POINT | LIGHT_SHADOW; // Spot with shadow
+			LIGHT_SPOT | LIGHT_SHADOW; // Spot with shadow
 
 		// 조명 1의 위치와 방향은 Update()에서 설정
 		m_globalConstsCPU.lights[ 1 ].radiance = Vector3(5.0f);
 		m_globalConstsCPU.lights[ 1 ].spotPower = 6.0f;
 		m_globalConstsCPU.lights[ 1 ].fallOffEnd = 20.0f;
 		m_globalConstsCPU.lights[ 1 ].type =
-			LIGHT_POINT | LIGHT_SHADOW; // Spot with shadow
+			LIGHT_SPOT | LIGHT_SHADOW; // Spot with shadow
 
 		// 조명 2는 꺼놓음
 		m_globalConstsCPU.lights[ 2 ].type = LIGHT_OFF;
@@ -171,11 +174,12 @@ bool KuskApp::Initialize() {
 	// 조명 위치 표시
 	{
 		for (int i = 0; i < MAX_LIGHTS; i++) {
-			MeshData sphere = GeometryGenerator::MakeSphere(0.01f, 10, 10);
+			MeshData sphere = GeometryGenerator::MakeSphere(1.0f, 20, 20);
 			m_lightSphere[ i ] = make_shared<Model>(m_device, m_context, vector{ sphere });
 			m_lightSphere[ i ]->UpdateWorldRow(Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
 			m_lightSphere[ i ]->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
 			m_lightSphere[ i ]->m_materialConstsCPU.emissionFactor = Vector3(1.0f, 1.0f, 0.0f);
+			m_lightSphere[ i ]->m_castShadow = false; // 조명 표시 물체들은 그림자 X
 
 			if (m_globalConstsCPU.lights[ i ].type == 0) {
 				m_lightSphere[ i ]->m_isVisible = false;
@@ -189,7 +193,8 @@ bool KuskApp::Initialize() {
 	{
 		MeshData sphere = GeometryGenerator::MakeSphere(0.01f, 10, 10);
 		m_cursorSphere = make_shared<Model>(m_device, m_context, vector{ sphere });
-		m_cursorSphere->UpdateWorldRow(Matrix::CreateTranslation(Vector3(0.0f)));
+		m_cursorSphere->m_isVisible = false; // 마우스가 눌렸을 때만 보임
+		m_cursorSphere->m_castShadow = false; // 그림자 X
 		m_cursorSphere->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
 		m_cursorSphere->m_materialConstsCPU.emissionFactor = Vector3(0.0f, 1.0f, 1.0f);
 		
@@ -218,6 +223,50 @@ bool KuskApp::Initialize() {
 	return true;
 }
 
+void KuskApp::UpdateLights(float dt) {
+	// 회전하는 light[1] 업데이트 (Dev=Deviation 편차)
+	static Vector3 lightDev = Vector3(0.8f, 0.0f, 0.0f);
+	if (m_lightRotate) {
+		lightDev = Vector3::Transform(lightDev, Matrix::CreateRotationY(dt * 3.141592f * 0.5f));
+	}
+	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 0.5f, 2.0f) + lightDev;
+	Vector3 focusPosition = Vector3(0.0f, -0.5f, 1.7f);
+	m_globalConstsCPU.lights[ 1 ].direction = focusPosition - m_globalConstsCPU.lights[ 1 ].position;
+	m_globalConstsCPU.lights[ 1 ].direction.Normalize( );
+
+	// 그림자맵을 만들기 위한 시점
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		const auto& light = m_globalConstsCPU.lights[ i ];
+		if (light.type & LIGHT_SHADOW) {
+
+			Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+			if (abs(up.Dot(light.direction) + 1.0f) < 1e-5)
+				up = Vector3(1.0f, 0.0f, 0.0f);
+
+			// 그림자맵을 만들 때 필요
+			Matrix lightViewRow = XMMatrixLookAtLH(
+				light.position, light.position + light.direction, up);
+
+			Matrix lightProjRow = XMMatrixPerspectiveFovLH(
+				XMConvertToRadians(120.0f), 1.0f, 0.01f, 100.0f);
+
+			m_shadowGlobalConstsCPU[ i ].eyeWorld = light.position;
+			m_shadowGlobalConstsCPU[ i ].view = lightViewRow.Transpose( );
+			m_shadowGlobalConstsCPU[ i ].proj = lightProjRow.Transpose( );
+			m_shadowGlobalConstsCPU[ i ].invProj = lightProjRow.Invert( ).Transpose( );
+			m_shadowGlobalConstsCPU[ i ].viewProj = (lightViewRow * lightProjRow).Transpose( );
+
+			D3D11Utils::UpdateBuffer(m_device, m_context, m_shadowGlobalConstsCPU[ i ], m_shadowGlobalConstsGPU[ i ]);
+
+			// 그림자를 실제로 렌더링할 때 필요
+			m_globalConstsCPU.lights[ i ].viewProj = m_shadowGlobalConstsCPU[i].viewProj;
+			m_globalConstsCPU.lights[ i ].invProj = m_shadowGlobalConstsCPU[i].invProj;
+
+			//:TODO: 반사된 장면에도 그림자를 그리고 싶다면 조명도 반사시켜서 넣어주면 된다.
+		}
+	}
+}
+
 void KuskApp::Update(float dt) {
 	
 	// 카메라의 이동
@@ -234,15 +283,8 @@ void KuskApp::Update(float dt) {
 	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.z = m_mirrorPlane.Normal( ).z;
 	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.w = m_mirrorPlane.D( );
 	
-	// 조명 업데이트 (인덱스 1이 포인트 라이트)
-	static Vector3 lightDev = Vector3(0.8f, 0.0f, 0.0f);
-	if (m_lightRotate) {
-		lightDev = Vector3::Transform(lightDev, Matrix::CreateRotationY(dt * 3.141592f * 0.5f));
-	}
-	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 1.0f, 2.0f) + lightDev;
-	Vector3 focusPosition = Vector3(0.0f, 0.0f, 1.7f);
-	m_globalConstsCPU.lights[ 1 ].direction = focusPosition - m_globalConstsCPU.lights[0].position;
-	m_globalConstsCPU.lights[ 1 ].direction.Normalize( );
+	// 조명 업데이트
+	UpdateLights(dt);
 
 	// 공용 ConstantsBuffer 업데이트
 	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow);
@@ -252,7 +294,9 @@ void KuskApp::Update(float dt) {
 
 	// 조명의 위치 반영
 	for (int i = 0; i < MAX_LIGHTS; i++) {
-		m_lightSphere[ i ]->UpdateWorldRow(Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
+		m_lightSphere[ i ]->UpdateWorldRow(
+			Matrix::CreateScale(std::max(0.01f, m_globalConstsCPU.lights[i].radius)) * 
+			Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
 	}
 
 	// 마우스 이동/회전 반영
@@ -298,7 +342,7 @@ void KuskApp::Update(float dt) {
 
 void KuskApp::Render() {
 	
-	AppBase::SetViewport( );
+	AppBase::SetMainViewport( );
 
 	// 모든 샘플러들을 공통으로 사용
 	m_context->VSSetSamplers(0, UINT(Graphics::sampleStates.size( )), Graphics::sampleStates.data( ));
@@ -312,11 +356,11 @@ void KuskApp::Render() {
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	vector<ID3D11RenderTargetView*> rtvs = { m_floatRTV.Get( ) };
 	
-	// Depth Only Pass
-	m_context->OMSetRenderTargets(1, m_resolvedRTV.GetAddressOf( ), m_depthOnlyDSV.Get( ));
+	// Depth Only Pass (RTV 생략 가능)
+	m_context->OMSetRenderTargets(0, NULL, m_depthOnlyDSV.Get( ));
 	m_context->ClearDepthStencilView(m_depthOnlyDSV.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	
-	AppBase::SetPipelineState(Graphics::defaultSolidPSO);
+	AppBase::SetPipelineState(Graphics::depthOnlyPSO);
 	AppBase::SetGlobalConsts(m_globalConstsGPU);
 	for (auto& i : m_basicList)
 		i->Render(m_context);
@@ -324,11 +368,42 @@ void KuskApp::Render() {
 	m_skybox->Render(m_context);
 	m_mirror->Render(m_context);
 
+	// 그림자맵 만들기
+	AppBase::SetShadowViewport( ); // 그림자맵 해상도
+	AppBase::SetPipelineState(Graphics::depthOnlyPSO);
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		if (m_globalConstsCPU.lights[ i ].type & LIGHT_SHADOW) {
+			// RTV 생략 가능
+			m_context->OMSetRenderTargets(0, NULL, m_shadowDSVs[ i ].Get( ));
+			m_context->ClearDepthStencilView(m_shadowDSVs[ i ].Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
+			AppBase::SetGlobalConsts(m_shadowGlobalConstsGPU[ i ]);
+			for (auto& o : m_basicList) {
+				if (o->m_castShadow && o->m_isVisible) {
+					o->Render(m_context);
+				}
+			}
+			m_skybox->Render(m_context);
+			m_mirror->Render(m_context);
+		}
+	}
+	
+	// 다시 렌더링 해상도로 되돌리기
+	AppBase::SetMainViewport( );
+
 	/* 거울 1. 거울은 빼고 원래대로 그리기 */
 	for (size_t i = 0; i < rtvs.size( ); i++) {
 		m_context->ClearRenderTargetView(rtvs[ i ], clearColor);
 	}
 	m_context->OMSetRenderTargets(UINT(rtvs.size( )), rtvs.data( ), m_depthStencilView.Get( ));
+
+	// 그림자맵들도 공용 텍스쳐들 이후에 추가
+	// 유의 : 마지막 shadowDSV를 RenderTarget에서 해제한 후 설정
+	vector<ID3D11ShaderResourceView*> shadowSRVs;
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		shadowSRVs.push_back(m_shadowSRVs[ i ].Get( ));
+	}
+	m_context->PSSetShaderResources(15, UINT(shadowSRVs.size( )), shadowSRVs.data( ));
+
 	m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	AppBase::SetPipelineState(m_drawAsWire ? Graphics::defaultWirePSO
@@ -392,8 +467,13 @@ void KuskApp::Render() {
 	
 	// PostEffects
 	AppBase::SetPipelineState(Graphics::postEffectsPSO);
+	//vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
+	//	m_resolvedSRV.Get( ), m_depthOnlySRV.Get( ) };	// 20번에 넣어줌.
+	
+	// 그림자맵 확인용 임시
+	AppBase::SetGlobalConsts(m_shadowGlobalConstsGPU[ 1 ]);
 	vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
-		m_resolvedSRV.Get( ), m_depthOnlySRV.Get( ) };	// 20번에 넣어줌.
+		m_resolvedSRV.Get( ), m_shadowSRVs[1].Get()};
 	m_context->PSSetShaderResources(20, UINT(postEffectsSRVs.size( )), postEffectsSRVs.data( ));
 	m_context->OMSetRenderTargets(1, m_postEffectsRTV.GetAddressOf( ), NULL);
 	m_context->PSSetConstantBuffers(3, 1, m_postEffectsConstsGPU.GetAddressOf( ));
@@ -486,6 +566,7 @@ void KuskApp::UpdateGUI() {
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Light")) {
 		ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
+		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[0].radius, 0.0f, 0.5f);
 		ImGui::TreePop( );
 	}
 

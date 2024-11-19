@@ -48,7 +48,7 @@ float3 SchlickFresnel(float3 F0, float VdotH)
 
 float3 GetNormal(PixelShaderInput input)
 {
-    float3 normalWorld = input.normalWorld;
+    float3 normalWorld = normalize(input.normalWorld);
     if (useNormalMap) // NormalWorld를 교체
     {
         float3 normal = normalTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb;
@@ -128,7 +128,7 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return SchlickG1(NdotI, k) * SchlickG1(NdotO, k);
 }
 
-float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld)
+float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld, Texture2D shadowMap)
 {
     // Directional light
     float3 lightVec = light.type & LIGHT_DIRECTIONAL
@@ -149,6 +149,58 @@ float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld)
     // Shadow map
     float shadowFactor = 1.0;
     
+    if (light.type & LIGHT_SHADOW)
+    {
+        const float nearZ = 0.01; // 카메라 설정과 동일
+        
+        // 1. Project posWorld to light screen
+        // light.viewProj 사용
+        float4 lightScreen = mul(float4(posWorld, 1.0), light.viewProj);
+        lightScreen.xyz /= lightScreen.w;
+        
+        // 2. 카메라(=광원)에서 볼 때의 텍스쳐 좌표 계산
+        // [-1, 1]x[-1, 1] -> [0, 1]x[0, 1]
+        // 텍스쳐 좌표와 NDC는 y가 반대
+        float2 lightTexcoord = float2(lightScreen.x, -lightScreen.y);
+        lightTexcoord += 1.0;
+        lightTexcoord *= 0.5;
+        
+        // 3. 쉐도우맵에서 값 가져오기
+        float depth = shadowMap.Sample(shadowPointSampler, lightTexcoord).r;
+
+        // 4. 가려져 있다면 그림자로 표시
+        if (lightScreen.z > depth + 1e-3)
+        {
+            shadowFactor = 0.0f;
+        }
+        
+    }
+    
+    float radiance = light.radiance * spotFactor * att * shadowFactor;
+    
+    return radiance;
+}
+
+float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld)
+{
+    // Directional light
+    float3 lightVec = light.type & LIGHT_DIRECTIONAL
+                        ? -light.direction 
+                        : light.position - posWorld;
+    
+    float lightDist = length(lightVec);
+    lightVec /= lightDist;
+
+    // Spot light
+    float spotFactor = light.type & LIGHT_SPOT
+                        ? pow(max(-dot(lightVec, light.direction), 0.0), light.spotPower)
+                        : 1.0;
+    
+    // Distance attenuation
+    float att = saturate((light.fallOffEnd - lightDist) / (light.fallOffEnd - light.fallOffStart));
+    
+    // Shadow map
+    float shadowFactor = 1.0;
     float radiance = light.radiance * spotFactor * att * shadowFactor;
     
     return radiance;
@@ -183,7 +235,8 @@ PixelShaderOutput main(PixelShaderInput input) {
     float distMax = 20.0;
     float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));*/
 
-    [unroll]
+    // 임시로 unroll 사용
+    [unroll] // warning X3550: sampler array index must be a literal expression, forcing loop to unroll
     for (int i = 0; i < MAX_LIGHTS; ++i)
     {
         if (lights[i].type)
@@ -204,10 +257,12 @@ PixelShaderOutput main(PixelShaderInput input) {
         
             float D = NdfGGX(NdotH, roughness);
             float3 G = SchlickGGX(NdotI, NdotO, roughness);
-        
             // Note (2), 0으로 나누기 방지
             float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
-            float3 radiance = LightRadiance(lights[i], input.posWorld, normalWorld);
+            
+            float3 radiance = 0.0f;
+            
+            radiance = LightRadiance(lights[i], input.posWorld, normalWorld, shadowMaps[i]);
             directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
         }
     }
