@@ -51,3 +51,4 @@ protected:
 	vector<shared_ptr<Model>> m_basicList;
 };
 } // namespace kusk
+ 

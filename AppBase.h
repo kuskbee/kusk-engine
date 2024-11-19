@@ -18,6 +18,7 @@ namespace kusk {
 using DirectX::BoundingSphere;
 using DirectX::SimpleMath::Quaternion;
 using DirectX::SimpleMath::Vector3;
+using DirectX::SimpleMath::Plane;
 using Microsoft::WRL::ComPtr;
 using std::shared_ptr;
 using std::vector;
@@ -42,7 +43,7 @@ public:
 					  wstring specularFilename, wstring irradianceFilename,
 					  wstring brdfFilename);
 	void UpdateGlobalConstants(const Vector3& eyeWorld, const Matrix& viewRow,
-							   const Matrix& projRow, const Matrix& refl);
+							   const Matrix& projRow, const Matrix& refl, const Plane& mirrorPlane);
 	void SetGlobalConsts(ComPtr<ID3D11Buffer>& globalConstsGPU);
 
 	void CreateDepthBuffers( );

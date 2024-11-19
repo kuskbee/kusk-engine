@@ -244,7 +244,8 @@ void AppBase::InitCubemaps(wstring basePath, wstring envFilename,
 void AppBase::UpdateGlobalConstants(const Vector3& eyeWorld, 
                                     const Matrix& viewRow, 
                                     const Matrix& projRow, 
-                                    const Matrix& refl = Matrix( )) {
+                                    const Matrix& refl,
+                                    const Plane& mirrorPlane) {
 
     m_globalConstsCPU.eyeWorld = eyeWorld;
     m_globalConstsCPU.view = viewRow.Transpose( );
@@ -254,17 +255,17 @@ void AppBase::UpdateGlobalConstants(const Vector3& eyeWorld,
     // 그림자 렌더링에 사용
     m_globalConstsCPU.invViewProj = m_globalConstsCPU.viewProj.Invert( );
     
-    for (int i = 0; i < MAX_LIGHTS; i++) {
-        m_reflectGlobalConstsCPU.lights[ i ] = m_globalConstsCPU.lights[ i ];
-        m_reflectGlobalConstsCPU.lights[ i ].viewProj = m_reflectGlobalConstsCPU.lights[ i ].viewProj * refl.Transpose( );
-    }
-    m_reflectGlobalConstsCPU.eyeWorld = eyeWorld;
+    m_reflectGlobalConstsCPU = m_globalConstsCPU;
+    memcpy(&m_reflectGlobalConstsCPU, &m_globalConstsCPU, sizeof(m_globalConstsCPU));
     m_reflectGlobalConstsCPU.view = (refl * viewRow).Transpose( );
-    m_reflectGlobalConstsCPU.proj = m_globalConstsCPU.proj;
-    m_reflectGlobalConstsCPU.invProj = m_globalConstsCPU.invProj;
     m_reflectGlobalConstsCPU.viewProj = (refl * viewRow * projRow).Transpose( );
-    // 그림자 렌더링에 사용 (:TODO: 광원의 위치도 반사시킨 후에 계산해야 함)
+    // 그림자 렌더링에 사용
     m_reflectGlobalConstsCPU.invViewProj = m_reflectGlobalConstsCPU.viewProj.Invert();
+
+    m_reflectGlobalConstsCPU.mirrorPlane.x = mirrorPlane.Normal( ).x;
+    m_reflectGlobalConstsCPU.mirrorPlane.y = mirrorPlane.Normal( ).y;
+    m_reflectGlobalConstsCPU.mirrorPlane.z = mirrorPlane.Normal( ).z;
+    m_reflectGlobalConstsCPU.mirrorPlane.w = mirrorPlane.D( );
 
     m_globalConstsCPU.isMirror = false;
     m_reflectGlobalConstsCPU.isMirror = true;

@@ -261,8 +261,6 @@ void KuskApp::UpdateLights(float dt) {
 			// 그림자를 실제로 렌더링할 때 필요
 			m_globalConstsCPU.lights[ i ].viewProj = m_shadowGlobalConstsCPU[i].viewProj;
 			m_globalConstsCPU.lights[ i ].invProj = m_shadowGlobalConstsCPU[i].invProj;
-
-			//:TODO: 반사된 장면에도 그림자를 그리고 싶다면 조명도 반사시켜서 넣어주면 된다.
 		}
 	}
 }
@@ -277,17 +275,12 @@ void KuskApp::Update(float dt) {
 	const Matrix reflectRow = Matrix::CreateReflection(m_mirrorPlane);
 	const Matrix viewRow = m_camera.GetViewRow( );
 	const Matrix projRow = m_camera.GetProjRow( );
-
-	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.x = m_mirrorPlane.Normal( ).x;
-	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.y = m_mirrorPlane.Normal( ).y;
-	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.z = m_mirrorPlane.Normal( ).z;
-	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.w = m_mirrorPlane.D( );
 	
 	// 조명 업데이트
 	UpdateLights(dt);
 
 	// 공용 ConstantsBuffer 업데이트
-	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow);
+	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow, m_mirrorPlane);
 	
 	// 거울은 따로 처리
 	m_mirror->UpdateConstantBuffers(m_device, m_context);
