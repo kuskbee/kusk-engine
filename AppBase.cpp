@@ -197,9 +197,10 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // 키보드 키 눌림 갱신
         m_keyPressed[ wParam ] = true;
         
-        if (wParam == VK_SPACE) { // esc 키 종료
+        if (wParam == VK_ESCAPE) { // esc 키 종료
             DestroyWindow(hWnd);
         }
+        
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
         break;
     case WM_KEYUP :
@@ -211,6 +212,10 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             ComPtr<ID3D11Texture2D> backBuffer;
             m_swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf( )));
             D3D11Utils::WriteToFile(m_device, m_context, backBuffer, "captured.png");
+        }
+
+        if (wParam == VK_SPACE) {
+            m_lightRotate = !m_lightRotate;
         }
 
         // 키보드 키 해제 갱신
@@ -244,11 +249,16 @@ void AppBase::UpdateGlobalConstants(const Vector3& eyeWorld,
     m_globalConstsCPU.eyeWorld = eyeWorld;
     m_globalConstsCPU.view = viewRow.Transpose( );
     m_globalConstsCPU.proj = projRow.Transpose( );
+    m_globalConstsCPU.invProj = projRow.Invert( ).Transpose();
     m_globalConstsCPU.viewProj = (viewRow * projRow).Transpose( );
     
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        m_reflectGlobalConstsCPU.lights[i] = m_globalConstsCPU.lights[i];
+    }
     m_reflectGlobalConstsCPU.eyeWorld = eyeWorld;
     m_reflectGlobalConstsCPU.view = (refl * viewRow).Transpose( );
-    m_reflectGlobalConstsCPU.proj = projRow.Transpose( );
+    m_reflectGlobalConstsCPU.proj = m_globalConstsCPU.proj;
+    m_reflectGlobalConstsCPU.invProj = m_globalConstsCPU.invProj;
     m_reflectGlobalConstsCPU.viewProj = (refl * viewRow * projRow).Transpose( );
 
     m_globalConstsCPU.isMirror = false;
@@ -291,6 +301,26 @@ void AppBase::CreateDepthBuffers( ) {
     ComPtr<ID3D11Texture2D> depthStencilBuffer;
     ThrowIfFailed(m_device->CreateTexture2D(&desc, 0, depthStencilBuffer.GetAddressOf( )));
     ThrowIfFailed(m_device->CreateDepthStencilView(depthStencilBuffer.Get( ), NULL, m_depthStencilView.GetAddressOf( )));
+
+    // Depth Only
+    desc.Format = DXGI_FORMAT_R32_TYPELESS;
+    desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_depthOnlyBuffer.GetAddressOf( )));
+
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+    ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    ThrowIfFailed(m_device->CreateDepthStencilView(m_depthOnlyBuffer.Get( ), &dsvDesc, m_depthOnlyDSV.GetAddressOf( )));
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
+    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    ThrowIfFailed(m_device->CreateShaderResourceView(m_depthOnlyBuffer.Get( ), &srvDesc, m_depthOnlySRV.GetAddressOf( )));
 }
 
 void AppBase::SetPipelineState(const GraphicsPSO& pso) {
@@ -496,6 +526,9 @@ bool AppBase::InitDirect3D() {
     D3D11Utils::CreateConstBuffer(m_device, m_globalConstsCPU, m_globalConstsGPU);
     D3D11Utils::CreateConstBuffer(m_device, m_reflectGlobalConstsCPU, m_reflectGlobalConstsGPU);
 
+    // 후처리 효과용 ConstBuffer
+    D3D11Utils::CreateConstBuffer(m_device, m_postEffectsConstsCPU, m_postEffectsConstsGPU);
+
     return true;
 }
 
@@ -575,13 +608,16 @@ void AppBase::CreateBuffers( ) {
     desc.SampleDesc.Quality = 0;
 
     ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_resolvedBuffer.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateTexture2D(&desc, NULL, m_postEffectsBuffer.GetAddressOf( )));
     ThrowIfFailed(m_device->CreateShaderResourceView(m_resolvedBuffer.Get( ), NULL, m_resolvedSRV.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateShaderResourceView(m_postEffectsBuffer.Get( ), NULL, m_postEffectsSRV.GetAddressOf( )));
     ThrowIfFailed(m_device->CreateRenderTargetView(m_resolvedBuffer.Get( ), NULL, m_resolvedRTV.GetAddressOf( )));
+    ThrowIfFailed(m_device->CreateRenderTargetView(m_postEffectsBuffer.Get( ), NULL, m_postEffectsRTV.GetAddressOf( )));
     // m_resolvedRTV->GetDesc(&viewDesc);
 
     CreateDepthBuffers( );
 
-    m_postProcess.Initialize(m_device, m_context, { m_resolvedSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
+    m_postProcess.Initialize(m_device, m_context, { m_postEffectsSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
 }
 
 

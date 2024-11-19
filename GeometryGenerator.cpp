@@ -530,11 +530,12 @@ MeshData GeometryGenerator::SubdivideToSphere(const float radius, MeshData meshD
 }
 
 vector<MeshData> GeometryGenerator::ReadFromFile(std::string basePath,
-												 std::string filename) {
+												 std::string filename,
+												 bool revertNormals) {
 	using namespace DirectX;
 
 	ModelLoader modelLoader;
-	modelLoader.Load(basePath, filename);
+	modelLoader.Load(basePath, filename, revertNormals);
 	vector<MeshData>& meshes = modelLoader.meshes;
 
 	// Normalize vertices

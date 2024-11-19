@@ -3,7 +3,7 @@
 // Vertex Shader에서도 텍스쳐 사용
 Texture2D g_heightTexture : register(t0);
 
-cbuffer BasicVertexConstantData : register(b0)
+cbuffer MeshConstants : register(b0)
 {
     matrix world;   // Model(또는 Object) 좌표계 -> World로 변환
     matrix worldIT; // World의 InverseTranspose

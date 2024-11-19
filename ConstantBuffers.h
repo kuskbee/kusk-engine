@@ -2,10 +2,15 @@
 
 #include <directxtk/SimpleMath.h>
 
+// "Common.hlsli"와 동일해야 함
 #define MAX_LIGHTS 3
+#define LIGHT_OFF 0x00
+#define LIGHT_DIRECTIONAL 0x01
+#define LIGHT_POINT 0x02
+#define LIGHT_SPOT 0x03
+#define LIGHT_SHADOW 0x10
 
-namespace kusk
-{
+namespace kusk {
 
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector2;
@@ -26,6 +31,7 @@ __declspec(align(256)) struct MeshConstants {
 
 // 주로 Pixel 쉐이더에서 사용
 __declspec(align(256)) struct MaterialConstants {
+
 	Vector3 albedoFactor = Vector3(1.0f);
 	float roughnessFactor = 1.0f;
 	float metallicFactor = 1.0f;
@@ -38,35 +44,40 @@ __declspec(align(256)) struct MaterialConstants {
 	int useMetallicMap = 0;
 	int useRoughnessMap = 0;
 	int useEmissiveMap = 0;
-	float expose = 1.0f;
-	float gamma = 1.0f;
+
 	
 	// Rim 관련 데이터
-	Vector3 rimColor = Vector3(1.0f);
 	float rimPower = 0.01f;
+	Vector3 rimColor = Vector3(1.0f);
 	float rimStrength = 0.0f;
 	bool useSmoothstep = false;
-	float dummy;
+	Vector3 dummy;
 
 };
 
 // 조명
 struct Light {
-	Vector3 radiance = Vector3(0.0f); // strength
+	Vector3 radiance = Vector3(5.0f); // strength
 	float fallOffStart = 0.0f;
 	Vector3 direction = Vector3(0.0f, 0.0f, 1.0f);
-	float fallOffEnd = 10.0f;
+	float fallOffEnd = 20.0f;
 	Vector3 position = Vector3(0.0f, 0.0f, -2.0f);
-	float spotPower = 100.0f;
+	float spotPower = 6.0f;
+
+	// Light type bitmasking
+	// ex) LIGHT_SPOT | LIGHT_SHADOW
+	uint32_t type = LIGHT_OFF;
+	Vector3 dummy;
 };
 
 // register(b1) 사용
 __declspec(align(256)) struct GlobalConstants {
 	Matrix view;
 	Matrix proj;
+	Matrix invProj;
 	Matrix viewProj;
 	Vector3 eyeWorld;
-	float strengthIBL = 1.0f;
+	float strengthIBL = 0.2f;
 	int textureToDraw = 0;	// 0 : Env, 1 : Specular, 2 : Irradiance, 그외 : 검은색
 	float envLodBias = 0.0f;	// 환경맵 LodBias
 	float lodBias = 2.0f;		// 다른 물체들 LoadBias
@@ -75,6 +86,13 @@ __declspec(align(256)) struct GlobalConstants {
 	Vector4 mirrorPlane;
 
 	Light lights[ MAX_LIGHTS ];
+};
+
+// register(b3) 사용, PostEffectsPS.hlsl
+__declspec(align(256)) struct PostEffectsConstants {
+	int mode = 1; // 1: Rendered image, 2: DepthOnly
+	float depthScale = 1.0f;
+	float fogStrength = 0.0f;
 };
 
 } // namespace kusk

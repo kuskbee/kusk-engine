@@ -22,9 +22,9 @@ public:
 	vector<ImageFilter> m_bloomDownFilters;
 	vector<ImageFilter> m_bloomUpFilters;
 
-private:
 	shared_ptr<Mesh> m_mesh;
 
+private:
 	vector<ComPtr<ID3D11ShaderResourceView>> m_bloomSRVs;
 	vector<ComPtr<ID3D11RenderTargetView>> m_bloomRTVs;
 };

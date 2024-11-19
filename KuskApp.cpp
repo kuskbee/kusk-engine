@@ -47,6 +47,12 @@ bool KuskApp::Initialize() {
 
 	AppBase::InitCubemaps(OUTDOOR_BASE_PATH, OUTDOOR_ORGN_DDS, OUTDOOR_SPEC_DDS, OUTDOOR_DIFF_DDS, OUTDOOR_BRDF_DDS);
 
+	// 후처리용 화면 사각형
+	{
+		MeshData meshData = GeometryGenerator::MakeSquare( );
+		m_screenSquare = make_shared<Model>(m_device, m_context, vector{ meshData });
+	}
+
 	// 환경 박스 초기화
 	{
 		MeshData skyboxMesh = GeometryGenerator::MakeBox(40.0f);
@@ -54,45 +60,24 @@ bool KuskApp::Initialize() {
 		m_skybox = make_shared<Model>(m_device, m_context, vector{ skyboxMesh });
 	}
 
-	// 조명 설정
+	// 바닥(거울)
 	{
-		m_light.position = Vector3(0.0f, 0.5f, 1.7f);
-		m_light.radiance = Vector3(5.0f);
-		m_light.fallOffEnd = 20.0f;
-	}
-
-	// 거울
-	{
-		auto mesh = GeometryGenerator::MakeSquare(0.48f);
-		m_mirror = make_shared<Model>(m_device, m_context, vector{ mesh });
-		m_mirror->m_materialConstsCPU.albedoFactor = Vector3(0.3f);
-		m_mirror->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		m_mirror->m_materialConstsCPU.metallicFactor = 0.7f;
-		m_mirror->m_materialConstsCPU.roughnessFactor = 0.2f;
-
-		m_mirror->UpdateWorldRow(
-			Matrix::CreateScale(1.0f, 1.5f, 1.0f) *
-			Matrix::CreateRotationY(3.141592f * 0.5f) *
-			Matrix::CreateTranslation(0.5f, 0.25f, 2.0f));
-
-		m_mirrorPlane = SimpleMath::Plane(Vector3(0.5f, 0.25f, 2.0f), Vector3(-1.0f, 0.0f, 0.0f));
-	}
-
-	// 바닥
-	{
-		auto mesh = GeometryGenerator::MakeSquare(2.0f);
+		auto mesh = GeometryGenerator::MakeSquare(5.0f);
 		mesh.albedoTextureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 		m_ground = make_shared<Model>(m_device, m_context, vector{ mesh });
-		m_ground->m_materialConstsCPU.albedoFactor = Vector3(0.2f);
+		m_ground->m_materialConstsCPU.albedoFactor = Vector3(0.5f);
 		m_ground->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
 		m_ground->m_materialConstsCPU.metallicFactor = 0.2f;
 		m_ground->m_materialConstsCPU.roughnessFactor = 0.8f;
 
+		Vector3 position = Vector3(0.0f, -0.5f, 2.0f);
 		m_ground->UpdateWorldRow(
 			Matrix::CreateRotationX(3.141592f * 0.5f) *
-			Matrix::CreateTranslation(0.0f, -0.5f, 2.0f));
+			Matrix::CreateTranslation(position));
 
-		m_basicList.push_back(m_ground); // 리스트에 등록
+		m_mirrorPlane = SimpleMath::Plane(position, Vector3(0.0f, 1.0f, 0.0f));
+		m_mirror = m_ground; // 바닥에 거울처럼 반사 구현
+		// m_basicList.push_back(m_ground); // 거울은 리스트에 등록 X
 	}
 
 	// $box - test용
@@ -109,19 +94,23 @@ bool KuskApp::Initialize() {
 	// $mainObj
 	{
 		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
+
+		//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
 		
-		//vector<MeshData> meshes = { GeometryGenerator::MakeBox(0.15f) };
-		auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME);
-		
+		vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
+		/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
 		meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
 		meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
 		meshes[ 0 ].metallicTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_metalness.jpg");
 		meshes[ 0 ].normalTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_normal.jpg");
-		meshes[ 0 ].roughnessTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");
+		meshes[ 0 ].roughnessTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");*/
 
 		Vector3 center(0.0f, 0.0f, 2.0f);
 		m_mainObj = make_shared<Model>(m_device, m_context, meshes);
-		m_mainObj->m_materialConstsCPU.invertNormalMapY = false; // GLTF는 true로
+		m_mainObj->m_materialConstsCPU.invertNormalMapY = true; // GLTF는 true로
+		m_mainObj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
+		m_mainObj->m_materialConstsCPU.metallicFactor = 1.0f;
+		m_mainObj->m_materialConstsCPU.roughnessFactor = 1.0f;
 		m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
 
 		m_basicList.push_back(m_mainObj); // 리스트에 등록
@@ -130,15 +119,69 @@ bool KuskApp::Initialize() {
 		m_mainBoundingSphere = BoundingSphere(center, 0.4f);
 	}
 
+	// 추가 물체1 (파란 구)
+	{
+		MeshData mesh = GeometryGenerator::MakeSphere(0.2f, 200, 200);
+		Vector3 center(0.5f, 0.5f, 2.0f);
+		auto m_obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+		m_obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+		m_obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
+		m_obj->m_materialConstsCPU.roughnessFactor = 0.2f;
+		m_obj->m_materialConstsCPU.metallicFactor = 0.6f;
+		m_obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+		m_obj->UpdateConstantBuffers(m_device, m_context);
+
+		m_basicList.push_back(m_obj);
+	}
+
+	// 추가 물체2 (빨간 박스)
+	{
+		MeshData mesh = GeometryGenerator::MakeBox(0.2f);
+		Vector3 center(0.0f, 0.5f, 2.5f);
+		auto m_obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+		m_obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+		m_obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
+		m_obj->m_materialConstsCPU.roughnessFactor = 0.5f;
+		m_obj->m_materialConstsCPU.metallicFactor = 0.9f;
+		m_obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+		m_obj->UpdateConstantBuffers(m_device, m_context);
+
+		m_basicList.push_back(m_obj);
+	}
+
+	// 조명 설정
+	{
+		// 조명 0은 고정
+		m_globalConstsCPU.lights[ 0 ].position = Vector3(0.0f, 1.5f, 2.0f);
+		m_globalConstsCPU.lights[ 0 ].direction = Vector3(0.0f, -1.0f, 0.0f);
+		m_globalConstsCPU.lights[ 0 ].type =
+			LIGHT_POINT | LIGHT_SHADOW; // Spot with shadow
+
+		// 조명 1의 위치와 방향은 Update()에서 설정
+		m_globalConstsCPU.lights[ 1 ].radiance = Vector3(5.0f);
+		m_globalConstsCPU.lights[ 1 ].spotPower = 6.0f;
+		m_globalConstsCPU.lights[ 1 ].fallOffEnd = 20.0f;
+		m_globalConstsCPU.lights[ 1 ].type =
+			LIGHT_POINT | LIGHT_SHADOW; // Spot with shadow
+
+		// 조명 2는 꺼놓음
+		m_globalConstsCPU.lights[ 2 ].type = LIGHT_OFF;
+	}
+
 	// 조명 위치 표시
 	{
-		MeshData sphere = GeometryGenerator::MakeSphere(0.01f, 10, 10);
-		m_lightSphere = make_shared<Model>(m_device, m_context, vector{ sphere });
-		m_lightSphere->UpdateWorldRow(Matrix::CreateTranslation(m_light.position));
-		m_lightSphere->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
-		m_lightSphere->m_materialConstsCPU.emissionFactor = Vector3(1.0f, 1.0f, 0.0f);
-		
-		m_basicList.push_back(m_lightSphere); // 리스트에 등록
+		for (int i = 0; i < MAX_LIGHTS; i++) {
+			MeshData sphere = GeometryGenerator::MakeSphere(0.01f, 10, 10);
+			m_lightSphere[ i ] = make_shared<Model>(m_device, m_context, vector{ sphere });
+			m_lightSphere[ i ]->UpdateWorldRow(Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
+			m_lightSphere[ i ]->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
+			m_lightSphere[ i ]->m_materialConstsCPU.emissionFactor = Vector3(1.0f, 1.0f, 0.0f);
+
+			if (m_globalConstsCPU.lights[ i ].type == 0) {
+				m_lightSphere[ i ]->m_isVisible = false;
+			}
+			m_basicList.push_back(m_lightSphere[ i ]); // 리스트에 등록
+		}
 	}
 
 	// 커서 표시 
@@ -192,15 +235,25 @@ void KuskApp::Update(float dt) {
 	AppBase::m_reflectGlobalConstsCPU.mirrorPlane.w = m_mirrorPlane.D( );
 	
 	// 조명 업데이트 (인덱스 1이 포인트 라이트)
-	AppBase::m_globalConstsCPU.lights[ 1 ] = m_light;
-	AppBase::m_reflectGlobalConstsCPU.lights[ 1 ] = m_light;
+	static Vector3 lightDev = Vector3(0.8f, 0.0f, 0.0f);
+	if (m_lightRotate) {
+		lightDev = Vector3::Transform(lightDev, Matrix::CreateRotationY(dt * 3.141592f * 0.5f));
+	}
+	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 1.0f, 2.0f) + lightDev;
+	Vector3 focusPosition = Vector3(0.0f, 0.0f, 1.7f);
+	m_globalConstsCPU.lights[ 1 ].direction = focusPosition - m_globalConstsCPU.lights[0].position;
+	m_globalConstsCPU.lights[ 1 ].direction.Normalize( );
+
+	// 공용 ConstantsBuffer 업데이트
 	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow);
 	
 	// 거울은 따로 처리
 	m_mirror->UpdateConstantBuffers(m_device, m_context);
 
 	// 조명의 위치 반영
-	m_lightSphere->UpdateWorldRow(Matrix::CreateTranslation(m_light.position));
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		m_lightSphere[ i ]->UpdateWorldRow(Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
+	}
 
 	// 마우스 이동/회전 반영
 	if (m_leftButton || m_rightButton) {
@@ -258,16 +311,26 @@ void KuskApp::Render() {
 	
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	vector<ID3D11RenderTargetView*> rtvs = { m_floatRTV.Get( ) };
+	
+	// Depth Only Pass
+	m_context->OMSetRenderTargets(1, m_resolvedRTV.GetAddressOf( ), m_depthOnlyDSV.Get( ));
+	m_context->ClearDepthStencilView(m_depthOnlyDSV.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	
+	AppBase::SetPipelineState(Graphics::defaultSolidPSO);
+	AppBase::SetGlobalConsts(m_globalConstsGPU);
+	for (auto& i : m_basicList)
+		i->Render(m_context);
+
+	m_skybox->Render(m_context);
+	m_mirror->Render(m_context);
+
+	/* 거울 1. 거울은 빼고 원래대로 그리기 */
 	for (size_t i = 0; i < rtvs.size( ); i++) {
 		m_context->ClearRenderTargetView(rtvs[ i ], clearColor);
 	}
 	m_context->OMSetRenderTargets(UINT(rtvs.size( )), rtvs.data( ), m_depthStencilView.Get( ));
-	
-	
-
 	m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	/* 거울 1. 거울은 빼고 원래대로 그리기 */
 	AppBase::SetPipelineState(m_drawAsWire ? Graphics::defaultWirePSO
 										   : Graphics::defaultSolidPSO);
 	AppBase::SetGlobalConsts(m_globalConstsGPU);
@@ -296,12 +359,14 @@ void KuskApp::Render() {
 	/* 거울 2. 거울 위치만 StencilBuffer에 1로 표기 */
 
 	AppBase::SetPipelineState(Graphics::stencilMaskPSO);
+
 	m_mirror->Render(m_context);
 
 	/* 거울 3. 거울 위치에 반사된 물체들을 렌더링 */
 	AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectWirePSO
 										   : Graphics::reflectSolidPSO);
 	AppBase::SetGlobalConsts(m_reflectGlobalConstsGPU);
+
 	m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	
 	// 반사된 위치에 그리기
@@ -322,10 +387,19 @@ void KuskApp::Render() {
 
 	m_mirror->Render(m_context);
 	
-	// * 후처리
-
 	// MSAA로 Texture2DMS에 렌더링된 결과를 Texture2D로 변환(Resolve)
 	m_context->ResolveSubresource(m_resolvedBuffer.Get( ), 0, m_floatBuffer.Get( ), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	
+	// PostEffects
+	AppBase::SetPipelineState(Graphics::postEffectsPSO);
+	vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
+		m_resolvedSRV.Get( ), m_depthOnlySRV.Get( ) };	// 20번에 넣어줌.
+	m_context->PSSetShaderResources(20, UINT(postEffectsSRVs.size( )), postEffectsSRVs.data( ));
+	m_context->OMSetRenderTargets(1, m_postEffectsRTV.GetAddressOf( ), NULL);
+	m_context->PSSetConstantBuffers(3, 1, m_postEffectsConstsGPU.GetAddressOf( ));
+	m_screenSquare->Render(m_context);
+
+	// 단순 이미지 처리와 블룸
 	AppBase::SetPipelineState(Graphics::postProcessingPSO);
 	m_postProcess.Render(m_context);
 }
@@ -344,7 +418,7 @@ void KuskApp::UpdateGUI() {
 	}
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Env Map")) {
+	if (ImGui::TreeNode("Skybox")) {
 		ImGui::SliderFloat("Strength", &m_globalConstsCPU.strengthIBL, 0.0f,
 						  5.0f);
 		ImGui::RadioButton("Env", &m_globalConstsCPU.textureToDraw, 0);
@@ -358,13 +432,32 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Post Effects")) {
+		int flag = 0;
+		flag += ImGui::RadioButton("Render", &m_postEffectsConstsCPU.mode, 1);
+		ImGui::SameLine( );
+		flag += ImGui::RadioButton("Depth", &m_postEffectsConstsCPU.mode, 2);
+		flag += ImGui::SliderFloat(
+			"DepthScale", &m_postEffectsConstsCPU.depthScale, 0.0, 1.0);
+		flag += ImGui::SliderFloat("Fog", &m_postEffectsConstsCPU.fogStrength,
+								   0.0, 10.0);
+
+		if (flag)
+			D3D11Utils::UpdateBuffer(m_device, m_context,
+									 m_postEffectsConstsCPU,
+									 m_postEffectsConstsGPU);
+
+		ImGui::TreePop( );
+	}
+
 	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Processing")) {
 		int flag = 0;
 
 		flag += ImGui::SliderFloat("Bloom Strength", &m_postProcess.m_combineFilter.m_constData.strength, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat("Exposure", &m_postProcess.m_combineFilter.m_constData.exposure, 0.0f, 10.0f);
-		flag += ImGui::SliderFloat("Gamma", &m_postProcess.m_combineFilter.m_constData.gamma, 0.1f, 5.0f);
+		flag += ImGui::SliderFloat("Exposure", &m_postProcess.m_combineFilter.m_constData.option1, 0.0f, 10.0f);
+		flag += ImGui::SliderFloat("Gamma", &m_postProcess.m_combineFilter.m_constData.option2, 0.1f, 5.0f);
 
 		// 편의상 사용자 입력이 인식되면 바로 GPU 버퍼를 업데이트
 		if (flag) {
@@ -391,8 +484,8 @@ void KuskApp::UpdateGUI() {
 	}
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Point Light")) {
-		ImGui::SliderFloat3("Position", &m_light.position.x, -5.0f, 5.0f);
+	if (ImGui::TreeNode("Light")) {
+		ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
 		ImGui::TreePop( );
 	}
 

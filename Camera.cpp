@@ -32,10 +32,11 @@ void Camera::UpdateKeyboard(const float dt, bool const keyPressed[ 256 ]) {
 			MoveRight(dt);
 		if (keyPressed[ 'A' ])
 			MoveRight(-dt);
-		if (keyPressed[ 'Q' ])
-			MoveUp(dt);
 		if (keyPressed[ 'E' ])
+			MoveUp(dt);
+		if (keyPressed[ 'Q' ])
 			MoveUp(-dt);
+		
 	}
 }
 

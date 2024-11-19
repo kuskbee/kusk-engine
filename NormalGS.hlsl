@@ -1,6 +1,6 @@
 #include "Common.hlsli"
 
-cbuffer BasicVertexConstantData : register(b0)
+cbuffer MeshConstants : register(b0)
 {
     matrix world;
     matrix worldIT;

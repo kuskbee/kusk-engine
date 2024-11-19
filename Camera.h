@@ -27,14 +27,14 @@ public:
 	bool m_useFirstPersonView = false;
 
 private:
-	Vector3 m_position = Vector3(-1.28343f, 0.501636f, 1.64959f);
+	Vector3 m_position = Vector3(0.644748f, 0.151557f, 0.898394f);
 	Vector3 m_viewDir = Vector3(0.0f, 0.0f, 1.0f);
 	Vector3 m_upDir = Vector3(0.0f, 1.0f, 0.0f);
 	Vector3 m_rightDir = Vector3(1.0f, 0.0f, 0.0f);
 
 	// roll, pitch, yaw
-	float m_pitch = -0.135263f;
-	float m_yaw = 1.37445f;
+	float m_pitch = -0.0785397f;
+	float m_yaw = -0.618501f;
 
 	float m_speed = 3.0f;
 

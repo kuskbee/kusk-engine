@@ -56,9 +56,12 @@ string GetExtension(const string filename) {
 	return ext;
 }
 
-void ModelLoader::Load(std::string basePath, std::string filename) {
+void ModelLoader::Load(std::string basePath, std::string filename, bool revertNormals) {
 
 	string ext = GetExtension(filename);
+	if (ext == ".gltf") {
+		m_revertNormals = revertNormals;
+	}
 	
 	this->basePath = basePath;
 
@@ -177,6 +180,10 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 		else {
 			vertex.normalModel.y = mesh->mNormals[ i ].y;
 			vertex.normalModel.z = mesh->mNormals[ i ].z;
+		}
+
+		if (m_revertNormals) {
+			vertex.normalModel.y *= -1.0f;
 		}
 
 		vertex.normalModel.Normalize( );

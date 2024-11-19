@@ -26,15 +26,13 @@ cbuffer BasicPixelConstData : register(b0)
     int useMetallicMap;
     int useRoughnessMap;
     int useEmissiveMap;
-    float exposure;
-    float gamma;
     
     // Rim 관련 데이터
-    float3 rimColor;
     float rimPower;
+    float3 rimColor;
     float rimStrength;
     bool useSmoothstep;
-    float dummy;
+    float3 dummy;
 };
 
 struct PixelShaderOutput
@@ -130,6 +128,32 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return SchlickG1(NdotI, k) * SchlickG1(NdotO, k);
 }
 
+float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld)
+{
+    // Directional light
+    float3 lightVec = light.type & LIGHT_DIRECTIONAL
+                        ? -light.direction 
+                        : light.position - posWorld;
+    
+    float lightDist = length(lightVec);
+    lightVec /= lightDist;
+
+    // Spot light
+    float spotFactor = light.type & LIGHT_SPOT
+                        ? pow(max(-dot(lightVec, light.direction), 0.0), light.spotPower)
+                        : 1.0;
+    
+    // Distance attenuation
+    float att = saturate((light.fallOffEnd - lightDist) / (light.fallOffEnd - light.fallOffStart));
+    
+    // Shadow map
+    float shadowFactor = 1.0;
+    
+    float radiance = light.radiance * spotFactor * att * shadowFactor;
+    
+    return radiance;
+}
+
 PixelShaderOutput main(PixelShaderInput input) {
     
     if (isMirror && dot(input.posWorld.xyz, mirrorPlane.xyz) + mirrorPlane.w < 0.0)
@@ -159,44 +183,39 @@ PixelShaderOutput main(PixelShaderInput input) {
     float distMax = 20.0;
     float lod = 10.0 * saturate((dist - distMin) / (distMax - distMin));*/
 
-    /*[unroll]
-    for (i = 0; i < NUM_DIR_LIGHTS; ++i)
-    {
-        color += ComputeDirectionalLight(light[i], material, normalWorld, toEye);
-    }*/
-
-    // 포인트 라이트만 먼저 구현
     [unroll]
-    for (int i = NUM_DIR_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; ++i)
+    for (int i = 0; i < MAX_LIGHTS; ++i)
     {
-        float3 lightVec = light[i].position - input.posWorld;
-        float lightDist = length(lightVec);
-        lightVec /= lightDist;
-        float3 halfway = normalize(pixelToEye + lightVec);
-        float NdotI = max(0.0, dot(normalWorld, lightVec));
-        float NdotO = max(0.0, dot(normalWorld, pixelToEye));
-        float NdotH = max(0.0, dot(normalWorld, halfway));
+        if (lights[i].type)
+        {
+            float3 lightVec = lights[i].position - input.posWorld;
+            float lightDist = length(lightVec);
+            lightVec /= lightDist;
+            float3 halfway = normalize(pixelToEye + lightVec);
+            float NdotI = max(0.0, dot(normalWorld, lightVec));
+            float NdotO = max(0.0, dot(normalWorld, pixelToEye));
+            float NdotH = max(0.0, dot(normalWorld, halfway));
 
-        const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-        float3 F0 = lerp(Fdielectric, albedo, metallic);
-        float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
-        float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
-        float3 diffuseBRDF = kd * albedo;
+            const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+            float3 F0 = lerp(Fdielectric, albedo, metallic);
+            float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
+            float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
+            float3 diffuseBRDF = kd * albedo;
         
-        float D = NdfGGX(NdotH, roughness);
-        float3 G = SchlickGGX(NdotI, NdotO, roughness);
+            float D = NdfGGX(NdotH, roughness);
+            float3 G = SchlickGGX(NdotI, NdotO, roughness);
         
-        // Note (2), 0으로 나누기 방지
-        float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
-        float att = saturate((light[i].fallOffEnd - lightDist) / (light[i].fallOffEnd - light[i].fallOffStart));
-        float3 radiance = light[i].radiance * att;
-        directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+            // Note (2), 0으로 나누기 방지
+            float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
+            float3 radiance = LightRadiance(lights[i], input.posWorld, normalWorld);
+            directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+        }
     }
     
     /*[unroll]
     for (i = NUM_DIR_LIGHTS + NUM_POINT_LIGHTS; i < NUM_DIR_LIGHTS + NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS; ++i)
     {
-        color += ComputeSpotLight(light[i], material, input.posWorld, normalWorld, toEye);
+        color += ComputeSpotLight(lights[i], material, input.posWorld, normalWorld, toEye);
     }*/
         
     PixelShaderOutput output;

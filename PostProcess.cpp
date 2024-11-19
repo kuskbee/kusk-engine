@@ -50,8 +50,8 @@ void PostProcess::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceCo
 	m_combineFilter.SetShaderResources({ resources[ 0 ], m_bloomSRVs[ 0 ] });
 	m_combineFilter.SetRenderTargets(targets);
 	m_combineFilter.m_constData.strength = 0.0f; // Bloom Strength
-	m_combineFilter.m_constData.exposure = 1.0f;
-	m_combineFilter.m_constData.gamma = 2.2f;
+	m_combineFilter.m_constData.option1 = 1.0f; // exposure
+	m_combineFilter.m_constData.option2 = 2.2f; // gamma
 	m_combineFilter.UpdateConstantBuffers(device, context);
 }
 

@@ -36,8 +36,8 @@ public:
 		float dy;
 		float threshold;
 		float strength;
-		float exposure;
-		float gamma;
+		float option1; // exposure in CombinePS.hlsl
+		float option2; // gamma in CombinePS.hlsl
 		float option3;
 		float option4;
 	};

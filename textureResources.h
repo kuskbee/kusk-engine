@@ -66,3 +66,6 @@
 
 #define ARMORED_FEMALE_SOLDIER_MODEL_DIR "./Assets/Characters/armored-female-future-soldier/"
 #define ARMORED_FEMALE_SOLDIER_MODEL_FILENAME "angel_armor.fbx"
+
+#define VAGRANT_KNIGHTS_MODEL_DIR "./Assets/Models/medieval_vagrant_knights/"
+#define VAGRANT_KNIGHTS_MODEL_FILENAME "scene.gltf"

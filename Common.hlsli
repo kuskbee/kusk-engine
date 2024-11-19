@@ -5,9 +5,11 @@
 // Properties -> Item Type: Does not participate in build으로 설정
 
 #define MAX_LIGHTS 3 // 쉐이더에서도 #define 사용 가능
-#define NUM_DIR_LIGHTS 1
-#define NUM_POINT_LIGHTS 1 
-#define NUM_SPOT_LIGHTS 1
+#define LIGHT_OFF 0x00
+#define LIGHT_DIRECTIONAL 0x01
+#define LIGHT_POINT 0x02
+#define LIGHT_SPOT 0x03
+#define LIGHT_SHADOW 0x10
 
 // 샘플러들을 모든 쉐이더에서 공통으로 사용
 SamplerState linearWrapSampler : register(s0);
@@ -28,6 +30,9 @@ struct Light
     float fallOffEnd;
     float3 position;
     float spotPower;
+    
+    uint type;
+    float3 dummy;
 };
 
 // 공용 Constants
@@ -35,6 +40,7 @@ cbuffer GlobalConstants : register(b1)
 {
     matrix view;
     matrix proj;
+    matrix invProj;
     matrix viewProj;
     float3 eyeWorld;
     float strengthIBL;
@@ -46,7 +52,7 @@ cbuffer GlobalConstants : register(b1)
     bool isMirror;
     float4 mirrorPlane;
     
-    Light light[MAX_LIGHTS];
+    Light lights[MAX_LIGHTS];
 };
 
 struct VertexShaderInput

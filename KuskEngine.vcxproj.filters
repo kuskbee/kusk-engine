@@ -33,12 +33,6 @@
     <ClCompile Include="D3D11Utils.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="BasicMeshGroup.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="CubeMapping.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="Camera.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -52,6 +46,15 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="PostProcess.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphicsCommon.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphicsPSO.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Model.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,9 +71,6 @@
     <ClInclude Include="Mesh.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Vertex.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -80,19 +80,7 @@
     <ClInclude Include="ModelLoader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="CubeMapping.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="D3D11Utils.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="BasicMeshGroup.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="BasicConstantData.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="Light.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ImageFilter.h">
@@ -113,6 +101,21 @@
     <ClInclude Include="PostProcess.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="ConstantBuffers.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsCommon.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsPSO.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Model.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="ModelInstance.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BloomDownPS.hlsl" />
@@ -126,14 +129,17 @@
     <FxCompile Include="BillboardPointsPS.hlsl" />
     <FxCompile Include="BillboardPointsVS.hlsl" />
     <FxCompile Include="CombinePS.hlsl" />
-    <FxCompile Include="CubeMappingPS.hlsl" />
-    <FxCompile Include="CubeMappingVS.hlsl" />
     <FxCompile Include="NormalGS.hlsl" />
     <FxCompile Include="NormalPS.hlsl" />
     <FxCompile Include="NormalVS.hlsl" />
     <FxCompile Include="SamplingPS.hlsl" />
     <FxCompile Include="SamplingVS.hlsl" />
     <FxCompile Include="BillboardPointsGS.hlsl" />
+    <FxCompile Include="SkyboxPS.hlsl" />
+    <FxCompile Include="SkyboxVS.hlsl" />
+    <FxCompile Include="PostEffectsPS.hlsl" />
+    <FxCompile Include="DepthOnlyVS.hlsl" />
+    <FxCompile Include="DepthOnlyPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />

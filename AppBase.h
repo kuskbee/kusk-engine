@@ -71,15 +71,22 @@ public:
 	ComPtr<ID3D11RenderTargetView> m_backBufferRTV;
 
 	// 삼각형 레스터화 -> float(MSAA) -> resolved(No MSAA)
+	// -> PostEffects(안개, ...)
 	// -> 후처리(블룸, 톤매핑) -> backBuffer(최종 SwapChain Present)
 	ComPtr<ID3D11Texture2D> m_floatBuffer;
 	ComPtr<ID3D11Texture2D> m_resolvedBuffer;
+	ComPtr<ID3D11Texture2D> m_postEffectsBuffer;
 	ComPtr<ID3D11RenderTargetView> m_floatRTV;
 	ComPtr<ID3D11RenderTargetView> m_resolvedRTV;
+	ComPtr<ID3D11RenderTargetView> m_postEffectsRTV;
 	ComPtr<ID3D11ShaderResourceView> m_resolvedSRV;
+	ComPtr<ID3D11ShaderResourceView> m_postEffectsSRV;
 
-	// Depth Buffer
+	// Depth Buffer 관련
+	ComPtr<ID3D11Texture2D> m_depthOnlyBuffer; // No MSAA
+	ComPtr<ID3D11DepthStencilView> m_depthOnlyDSV;
 	ComPtr<ID3D11DepthStencilView> m_depthStencilView;
+	ComPtr<ID3D11ShaderResourceView> m_depthOnlySRV;
 
 	Camera m_camera;
 	
@@ -95,7 +102,10 @@ public:
 	float m_cursorNdcX = 0.0f;
 	float m_cursorNdcY = 0.0f;
 
-	// 후처리 필터
+	// 렌더링 -> PostEffects -> PostProcess
+	PostEffectsConstants m_postEffectsConstsCPU;
+	ComPtr<ID3D11Buffer> m_postEffectsConstsGPU;
+	
 	PostProcess m_postProcess;
 
 	// 거울 구현을 더 효율적으로 하기 위해 ConstBuffers들 분리
@@ -109,6 +119,8 @@ public:
 	ComPtr<ID3D11ShaderResourceView> m_irradianceSRV;
 	ComPtr<ID3D11ShaderResourceView> m_specularSRV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfSRV;
+
+	bool m_lightRotate = false;
 };
 
 } // namespace kusk

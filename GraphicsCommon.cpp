@@ -29,6 +29,7 @@ ComPtr<ID3D11VertexShader> basicVS;
 ComPtr<ID3D11VertexShader> skyboxVS;
 ComPtr<ID3D11VertexShader> samplingVS;
 ComPtr<ID3D11VertexShader> normalVS;
+ComPtr<ID3D11VertexShader> depthOnlyVS;
 
 ComPtr<ID3D11PixelShader> basicPS;
 ComPtr<ID3D11PixelShader> skyboxPS;
@@ -36,7 +37,8 @@ ComPtr<ID3D11PixelShader> combinePS;
 ComPtr<ID3D11PixelShader> bloomDownPS;
 ComPtr<ID3D11PixelShader> bloomUpPS;
 ComPtr<ID3D11PixelShader> normalPS;
-ComPtr<ID3D11PixelShader> simplePS;
+ComPtr<ID3D11PixelShader> depthOnlyPS;
+ComPtr<ID3D11PixelShader> postEffectsPS;
 
 ComPtr<ID3D11GeometryShader> normalGS;
 
@@ -59,6 +61,7 @@ GraphicsPSO skyboxWirePSO;
 GraphicsPSO reflectSkyboxSolidPSO;
 GraphicsPSO reflectSkyboxWirePSO;
 GraphicsPSO normalsPSO;
+GraphicsPSO postEffectsPSO;
 GraphicsPSO postProcessingPSO;
 
 } // namespace Graphics
@@ -252,6 +255,7 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"NormalVS.hlsl", basicIEs, normalVS, basicIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SamplingVS.hlsl", samplingIEs, samplingVS, samplingIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SkyboxVS.hlsl", skyboxIEs, skyboxVS, skyboxIL);
+	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"DepthOnlyVS.hlsl", skyboxIEs, depthOnlyVS, skyboxIL);
 
 	D3D11Utils::CreatePixelShader(device, L"BasicPS.hlsl", basicPS);
 	D3D11Utils::CreatePixelShader(device, L"NormalPS.hlsl", normalPS);
@@ -259,7 +263,8 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 	D3D11Utils::CreatePixelShader(device, L"CombinePS.hlsl", combinePS);
 	D3D11Utils::CreatePixelShader(device, L"BloomDownPS.hlsl", bloomDownPS);
 	D3D11Utils::CreatePixelShader(device, L"BloomUpPS.hlsl", bloomUpPS);
-	D3D11Utils::CreatePixelShader(device, L"SimplePS.hlsl", simplePS);
+	D3D11Utils::CreatePixelShader(device, L"DepthOnlyPS.hlsl", depthOnlyPS);
+	D3D11Utils::CreatePixelShader(device, L"PostEffectsPS.hlsl", postEffectsPS);
 
 	D3D11Utils::CreateGeometryShader(device, L"NormalGS.hlsl", normalGS);
 }
@@ -281,7 +286,8 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	stencilMaskPSO = defaultSolidPSO;
 	stencilMaskPSO.m_depthStencilState = maskDSS;
 	stencilMaskPSO.m_stencilRef = 1;
-	stencilMaskPSO.m_pixelShader = simplePS;
+	stencilMaskPSO.m_vertexShader = depthOnlyVS;
+	stencilMaskPSO.m_pixelShader = depthOnlyPS;
 
 	// reflectSolidPSO: 반사되면 Winding 반대
 	reflectSolidPSO = defaultSolidPSO;
@@ -334,8 +340,15 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	normalsPSO.m_pixelShader = normalPS;
 	normalsPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 
+	// postEffectsPSO
+	postEffectsPSO.m_vertexShader = samplingVS;
+	postEffectsPSO.m_pixelShader = postEffectsPS;
+	postEffectsPSO.m_inputLayout = samplingIL;
+	postEffectsPSO.m_rasterizerState = postProcessingRS;
+
 	// postProcessingPSO
 	postProcessingPSO.m_vertexShader = samplingVS;
+	postProcessingPSO.m_pixelShader = depthOnlyPS; // dummy
 	postProcessingPSO.m_inputLayout = samplingIL;
 	postProcessingPSO.m_rasterizerState = postProcessingRS;
 }

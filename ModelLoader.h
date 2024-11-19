@@ -16,7 +16,7 @@ namespace kusk {
 
 class ModelLoader {
 public:
-	void Load(std::string basePath, std::string filename);
+	void Load(std::string basePath, std::string filename, bool revertNormals);
 
 	void ProcessNode(aiNode* node, const aiScene* scene, const std::string& ext,
 					 DirectX::SimpleMath::Matrix tr);
@@ -30,6 +30,7 @@ public:
 public:
 	std::string basePath;
 	std::vector<MeshData> meshes;
+	bool m_revertNormals = false;
 };
 
 } // namespace kusk
