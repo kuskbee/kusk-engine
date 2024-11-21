@@ -154,16 +154,18 @@ bool KuskApp::Initialize() {
 	{
 		// 조명 0은 고정
 		m_globalConstsCPU.lights[ 0 ].radiance = Vector3(5.0f);
-		m_globalConstsCPU.lights[ 0 ].position = Vector3(0.0f, 1.5f, 1.5f);
+		m_globalConstsCPU.lights[ 0 ].position = Vector3(0.0f, 1.5f, 1.1f);
 		m_globalConstsCPU.lights[ 0 ].direction = Vector3(0.0f, -1.0f, 0.0f);
-		m_globalConstsCPU.lights[ 0 ].spotPower = 6.0f;
+		m_globalConstsCPU.lights[ 0 ].spotPower = 3.0f;
+		m_globalConstsCPU.lights[ 0 ].radius = 0.02f;
 		m_globalConstsCPU.lights[ 0 ].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Spot with shadow
 
 		// 조명 1의 위치와 방향은 Update()에서 설정
 		m_globalConstsCPU.lights[ 1 ].radiance = Vector3(5.0f);
-		m_globalConstsCPU.lights[ 1 ].spotPower = 6.0f;
+		m_globalConstsCPU.lights[ 1 ].spotPower = 3.0f;
 		m_globalConstsCPU.lights[ 1 ].fallOffEnd = 20.0f;
+		m_globalConstsCPU.lights[ 1 ].radius = 0.02f;
 		m_globalConstsCPU.lights[ 1 ].type =
 			LIGHT_SPOT | LIGHT_SHADOW; // Spot with shadow
 
@@ -225,11 +227,11 @@ bool KuskApp::Initialize() {
 
 void KuskApp::UpdateLights(float dt) {
 	// 회전하는 light[1] 업데이트 (Dev=Deviation 편차)
-	static Vector3 lightDev = Vector3(0.8f, 0.0f, 0.0f);
+	static Vector3 lightDev = Vector3(1.0f, 0.0f, 0.0f);
 	if (m_lightRotate) {
 		lightDev = Vector3::Transform(lightDev, Matrix::CreateRotationY(dt * 3.141592f * 0.5f));
 	}
-	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 0.5f, 2.0f) + lightDev;
+	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 1.1f, 2.0f) + lightDev;
 	Vector3 focusPosition = Vector3(0.0f, -0.5f, 1.7f);
 	m_globalConstsCPU.lights[ 1 ].direction = focusPosition - m_globalConstsCPU.lights[ 1 ].position;
 	m_globalConstsCPU.lights[ 1 ].direction.Normalize( );
@@ -248,13 +250,24 @@ void KuskApp::UpdateLights(float dt) {
 				light.position, light.position + light.direction, up);
 
 			Matrix lightProjRow = XMMatrixPerspectiveFovLH(
-				XMConvertToRadians(120.0f), 1.0f, 0.01f, 100.0f);
+				XMConvertToRadians(120.0f), 1.0f, 0.1f, 10.0f);
 
 			m_shadowGlobalConstsCPU[ i ].eyeWorld = light.position;
 			m_shadowGlobalConstsCPU[ i ].view = lightViewRow.Transpose( );
 			m_shadowGlobalConstsCPU[ i ].proj = lightProjRow.Transpose( );
 			m_shadowGlobalConstsCPU[ i ].invProj = lightProjRow.Invert( ).Transpose( );
 			m_shadowGlobalConstsCPU[ i ].viewProj = (lightViewRow * lightProjRow).Transpose( );
+
+			// LIGHT_FRUSTUM_WIDTH 확인
+		   // Vector4 eye(0.0f, 0.0f, 0.0f, 1.0f);
+		   // Vector4 xLeft(-1.0f, -1.0f, 0.0f, 1.0f);
+		   // Vector4 xRight(1.0f, 1.0f, 0.0f, 1.0f);
+		   // eye = Vector4::Transform(eye, lightProjRow);
+		   // xLeft = Vector4::Transform(xLeft, lightProjRow.Invert());
+		   // xRight = Vector4::Transform(xRight, lightProjRow.Invert());
+		   // xLeft /= xLeft.w;
+		   // xRight /= xRight.w;
+		   // cout << "LIGHT_FRUSTUM_WIDTH = " << xRight.x - xLeft.x << endl;
 
 			D3D11Utils::UpdateBuffer(m_device, m_context, m_shadowGlobalConstsCPU[ i ], m_shadowGlobalConstsGPU[ i ]);
 
@@ -403,9 +416,13 @@ void KuskApp::Render() {
 										   : Graphics::defaultSolidPSO);
 	AppBase::SetGlobalConsts(m_globalConstsGPU);
 
-	// 거울은 빼고 그림.
 	for (auto& i : m_basicList) {
 		i->Render(m_context);
+	}
+
+	// 거울 반사를 그릴 필요가 없으면 불투명 거울만 그리기
+	if (m_mirrorAlpha == 1.0f) {
+		m_mirror->Render(m_context);
 	}
 	
 	AppBase::SetPipelineState(Graphics::normalsPSO);
@@ -423,50 +440,53 @@ void KuskApp::Render() {
 	//m_billboardPoints.Render(m_context);
 	//m_tessellatedQuad.Render(m_context);
 
+	if (m_mirrorAlpha < 1.0f) { // 거울을 그려야하는 상황
 
-	/* 거울 2. 거울 위치만 StencilBuffer에 1로 표기 */
+		/* 거울 2. 거울 위치만 StencilBuffer에 1로 표기 */
+		AppBase::SetPipelineState(Graphics::stencilMaskPSO);
 
-	AppBase::SetPipelineState(Graphics::stencilMaskPSO);
+		m_mirror->Render(m_context);
 
-	m_mirror->Render(m_context);
+		/* 거울 3. 거울 위치에 반사된 물체들을 렌더링 */
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectWirePSO
+											   : Graphics::reflectSolidPSO);
+		AppBase::SetGlobalConsts(m_reflectGlobalConstsGPU);
 
-	/* 거울 3. 거울 위치에 반사된 물체들을 렌더링 */
-	AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectWirePSO
-										   : Graphics::reflectSolidPSO);
-	AppBase::SetGlobalConsts(m_reflectGlobalConstsGPU);
+		m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
-	
-	// 반사된 위치에 그리기
-	for (auto& i : m_basicList) {
-		i->Render(m_context);
+		// 반사된 위치에 그리기
+		for (auto& i : m_basicList) {
+			i->Render(m_context);
+		}
+
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectSkyboxWirePSO
+											   : Graphics::reflectSkyboxSolidPSO);
+
+		m_skybox->Render(m_context);
+
+
+		/* 거울 4. 거울 자체의 재질을 "Blend"로 그림 */
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::mirrorBlendWirePSO
+											   : Graphics::mirrorBlendSolidPSO);
+		AppBase::SetGlobalConsts(m_globalConstsGPU);
+
+		m_mirror->Render(m_context);
 	}
 
-	AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectSkyboxWirePSO
-										   : Graphics::reflectSkyboxSolidPSO);
-
-	m_skybox->Render(m_context);
-
-
-	/* 거울 4. 거울 자체의 재질을 "Blend"로 그림 */
-	AppBase::SetPipelineState(m_drawAsWire ? Graphics::mirrorBlendWirePSO
-										   : Graphics::mirrorBlendSolidPSO);
-	AppBase::SetGlobalConsts(m_globalConstsGPU);
-
-	m_mirror->Render(m_context);
-	
 	// MSAA로 Texture2DMS에 렌더링된 결과를 Texture2D로 변환(Resolve)
 	m_context->ResolveSubresource(m_resolvedBuffer.Get( ), 0, m_floatBuffer.Get( ), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	
 	// PostEffects
 	AppBase::SetPipelineState(Graphics::postEffectsPSO);
-	//vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
-	//	m_resolvedSRV.Get( ), m_depthOnlySRV.Get( ) };	// 20번에 넣어줌.
-	
-	// 그림자맵 확인용 임시
-	AppBase::SetGlobalConsts(m_shadowGlobalConstsGPU[ 1 ]);
 	vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
-		m_resolvedSRV.Get( ), m_shadowSRVs[1].Get()};
+		m_resolvedSRV.Get( ), m_depthOnlySRV.Get( ) };	// 20번에 넣어줌.
+	AppBase::SetGlobalConsts(m_globalConstsGPU);
+
+	// 그림자맵 확인용 임시
+	/*AppBase::SetGlobalConsts(m_shadowGlobalConstsGPU[ 1 ]);
+	vector<ID3D11ShaderResourceView*> postEffectsSRVs = {
+		m_resolvedSRV.Get( ), m_shadowSRVs[1].Get()};*/
+	
 	m_context->PSSetShaderResources(20, UINT(postEffectsSRVs.size( )), postEffectsSRVs.data( ));
 	m_context->OMSetRenderTargets(1, m_postEffectsRTV.GetAddressOf( ), NULL);
 	m_context->PSSetConstantBuffers(3, 1, m_postEffectsConstsGPU.GetAddressOf( ));
@@ -558,8 +578,8 @@ void KuskApp::UpdateGUI() {
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Light")) {
-		ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
-		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[0].radius, 0.0f, 0.5f);
+		//ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
+		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[1].radius, 0.0f, 0.1f);
 		ImGui::TreePop( );
 	}
 

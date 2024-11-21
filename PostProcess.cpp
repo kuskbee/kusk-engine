@@ -65,12 +65,15 @@ void PostProcess::Render(ComPtr<ID3D11DeviceContext>& context) {
 	context->IASetVertexBuffers(0, 1, m_mesh->vertexBuffer.GetAddressOf( ), &stride, &offset);
 	context->IASetIndexBuffer(m_mesh->indexBuffer.Get( ), DXGI_FORMAT_R32_UINT, 0);
 
-	for (int i = 0; i < m_bloomDownFilters.size( ); i++) {
-		RenderImageFilter(context, m_bloomDownFilters[ i ]);
-	}
+	// Bloom이 필요한 경우에만 계산
+	if(m_combineFilter.m_constData.strength > 0.0f)	{
+		for (int i = 0; i < m_bloomDownFilters.size( ); i++) {
+			RenderImageFilter(context, m_bloomDownFilters[ i ]);
+		}
 
-	for (int i = 0; i < m_bloomUpFilters.size( ); i++) {
-		RenderImageFilter(context, m_bloomUpFilters[ i ]);
+		for (int i = 0; i < m_bloomUpFilters.size( ); i++) {
+			RenderImageFilter(context, m_bloomUpFilters[ i ]);
+		}
 	}
 
 	RenderImageFilter(context, m_combineFilter);

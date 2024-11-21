@@ -128,6 +128,81 @@ float SchlickGGX(float NdotI, float NdotO, float roughness)
     return SchlickG1(NdotI, k) * SchlickG1(NdotO, k);
 }
 
+// NdcDepthToViewDepth
+float N2V(float ndcDepth, matrix invProj)
+{
+    float4 pointView = mul(float4(0, 0, ndcDepth, 1), invProj);
+    return pointView.z / pointView.w;
+}
+
+#define NEAR_PLANE 0.1
+#define LIGHT_FRUSTUM_WIDTH 0.34641 //<- 계산으로 찾은 값
+
+float PCF_Filter(float2 uv, float zReceiverNdc, float filterRadiusUV, Texture2D shadowMap)
+{
+    float sum = 0.0f;
+    for (int i = 0; i < 64; ++i)
+    {
+        float2 offset = diskSamples64[i] * filterRadiusUV;
+        sum += shadowMap.SampleCmpLevelZero(shadowCompareSampler, uv + offset, zReceiverNdc);
+    }
+    
+    return sum / 64;
+}
+
+void FindBlocker(out float avgBlockerDepthView, out float numBlockers, float2 uv,
+                 float zReceiverView, Texture2D shadowMap, matrix invProj, float lightRadiusWorld)
+{
+    float lightRadiusUV = lightRadiusWorld / LIGHT_FRUSTUM_WIDTH;
+    float searchRadius = lightRadiusUV * (zReceiverView - NEAR_PLANE) / zReceiverView;
+    
+    float blockerSum = 0.0;
+    numBlockers = 0;
+    
+    for (int i = 0; i < 64; ++i)
+    {
+        float shadowMapDepth = shadowMap.Sample(shadowPointSampler, uv + diskSamples64[i] * searchRadius).r;
+
+        // Ndc Depth -> View Depth
+        shadowMapDepth = N2V(shadowMapDepth, invProj);
+        
+        if (shadowMapDepth < zReceiverView)
+        {
+            blockerSum += shadowMapDepth;
+            numBlockers++;            
+        }
+    }
+    
+    avgBlockerDepthView = blockerSum / numBlockers;
+}
+
+float PCSS(float2 uv, float zReceiverNdc, Texture2D shadowMap, matrix invProj, float lightRadiusWorld)
+{
+    float lightRadiusUV = lightRadiusWorld / LIGHT_FRUSTUM_WIDTH;
+    float zReceiverView = N2V(zReceiverNdc, invProj);
+
+    // STEP 1 : blocker Search
+    float avgBlockerDepthView = 0;
+    float numBlockers = 0;
+    
+    FindBlocker(avgBlockerDepthView, numBlockers, uv, zReceiverView, shadowMap, invProj, lightRadiusWorld);
+    
+    if (numBlockers < 1)
+    {
+        // There are no occluders so early out
+        return 1.0;
+    }
+    else
+    {
+        // STEP 2 : penumbra size
+        float penumbraRatio = (zReceiverView - avgBlockerDepthView) / avgBlockerDepthView;
+        float filterRadiusUV = penumbraRatio * lightRadiusUV * (NEAR_PLANE / zReceiverView);
+
+        // STEP 3 : filtering
+        return PCF_Filter(uv, zReceiverNdc, filterRadiusUV, shadowMap);
+    }
+}
+
 float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld, Texture2D shadowMap)
 {
     // Directional light
@@ -166,14 +241,21 @@ float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld, Texture2D
         lightTexcoord *= 0.5;
         
         // 3. 쉐도우맵에서 값 가져오기
-        float depth = shadowMap.Sample(shadowPointSampler, lightTexcoord).r;
+        //float depth = shadowMap.Sample(shadowPointSampler, lightTexcoord).r;
 
         // 4. 가려져 있다면 그림자로 표시
-        if (lightScreen.z > depth + 1e-3)
-        {
-            shadowFactor = 0.0f;
-        }
+        //if (lightScreen.z > depth + 1e-3)
+        //{
+        //    shadowFactor = 0.0f;
+        //}
         
+        uint width, height, numMips;
+        shadowMap.GetDimensions(0, width, height, numMips);
+       
+        // Texel size
+        //float dx = 5.0 / (float) width;
+        //shadowFactor = PCF_Filter(lightTexcoord.xy, lightScreen.z - 0.001, dx, shadowMap);
+        shadowFactor = PCSS(lightTexcoord.xy, lightScreen.z - 0.001, shadowMap, light.invProj, light.radius);
     }
     
     float radiance = light.radiance * spotFactor * att * shadowFactor;
