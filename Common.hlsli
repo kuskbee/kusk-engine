@@ -40,7 +40,8 @@ struct Light
     
     uint type;
     float radius;
-    float2 dummy;
+    float haloRadius;
+    float haloStrength;
     
     matrix viewProj;
     matrix invProj;

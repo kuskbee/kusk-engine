@@ -471,7 +471,8 @@ void KuskApp::Render() {
 		AppBase::SetGlobalConsts(m_globalConstsGPU);
 
 		m_mirror->Render(m_context);
-	}
+
+	} // end of if (m_mirrorAlpha < 1.0f)
 
 	// MSAA로 Texture2DMS에 렌더링된 결과를 Texture2D로 변환(Resolve)
 	m_context->ResolveSubresource(m_resolvedBuffer.Get( ), 0, m_floatBuffer.Get( ), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
@@ -577,8 +578,10 @@ void KuskApp::UpdateGUI() {
 	}
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Light")) {
+	if (ImGui::TreeNode("Light")) { 
 		//ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
+		ImGui::SliderFloat("Halo Radius", &m_globalConstsCPU.lights[1].haloRadius, 0.0f, 2.0f);
+		ImGui::SliderFloat("Halo Strength", &m_globalConstsCPU.lights[1].haloStrength, 0.0f, 1.0f);
 		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[1].radius, 0.0f, 0.1f);
 		ImGui::TreePop( );
 	}
