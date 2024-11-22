@@ -95,9 +95,9 @@ bool KuskApp::Initialize() {
 	{
 		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
 
-		//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
+		auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
 		
-		vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
+		//vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
 		/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
 		meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
 		meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
@@ -582,7 +582,7 @@ void KuskApp::UpdateGUI() {
 		//ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
 		ImGui::SliderFloat("Halo Radius", &m_globalConstsCPU.lights[1].haloRadius, 0.0f, 2.0f);
 		ImGui::SliderFloat("Halo Strength", &m_globalConstsCPU.lights[1].haloStrength, 0.0f, 1.0f);
-		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[1].radius, 0.0f, 0.1f);
+		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[1].radius, 0.0f, 0.5f);
 		ImGui::TreePop( );
 	}
 

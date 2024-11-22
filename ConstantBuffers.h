@@ -69,8 +69,8 @@ struct Light {
 	uint32_t type = LIGHT_OFF;
 	float radius = 0.0f; // 반지름
 	
-	float haloRadius = 2.0f;
-	float haloStrength = 1.0f;
+	float haloRadius = 0.0f;
+	float haloStrength = 0.0f;
 
 	Matrix viewProj;	// 그림자 렌더링에 필요
 	Matrix invProj;		// 그림자 렌더링 디버깅용

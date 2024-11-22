@@ -103,14 +103,14 @@ float3 AmbientLightingByIBL(float3 albedo, float3 normalW, float3 pixelToEye, fl
 
 // GGX / Towbridge-Reitz normal distribution function
 // Uses Disney's reparametrization of alpha = roughness^2.
-float NdfGGX(float NdotH, float roughness)
+float NdfGGX(float NdotH, float roughness, float alphaPrime)
 {
     // Note (3)
     float alpha = roughness * roughness;
     float alphaSq = alpha * alpha;
     float denom = (NdotH * NdotH) * (alphaSq - 1.0) + 1.0;
     
-    return alphaSq / (3.141592 * denom * denom);
+    return alphaPrime * alphaPrime / (3.141592 * denom * denom);
 }
 
 // Single term for separable Schlick-GGX below.
@@ -141,13 +141,13 @@ float N2V(float ndcDepth, matrix invProj)
 float PCF_Filter(float2 uv, float zReceiverNdc, float filterRadiusUV, Texture2D shadowMap)
 {
     float sum = 0.0f;
-    for (int i = 0; i < 64; ++i)
+    for (int i = 0; i < 128; ++i)
     {
-        float2 offset = diskSamples64[i] * filterRadiusUV;
+        float2 offset = diskSamples128[i] * filterRadiusUV;
         sum += shadowMap.SampleCmpLevelZero(shadowCompareSampler, uv + offset, zReceiverNdc);
     }
     
-    return sum / 64;
+    return sum / 128;
 }
 
 void FindBlocker(out float avgBlockerDepthView, out float numBlockers, float2 uv,
@@ -159,9 +159,9 @@ void FindBlocker(out float avgBlockerDepthView, out float numBlockers, float2 uv
     float blockerSum = 0.0;
     numBlockers = 0;
     
-    for (int i = 0; i < 64; ++i)
+    for (int i = 0; i < 128; ++i)
     {
-        float shadowMapDepth = shadowMap.Sample(shadowPointSampler, uv + diskSamples64[i] * searchRadius).r;
+        float shadowMapDepth = shadowMap.Sample(shadowPointSampler, uv + diskSamples128[i] * searchRadius).r;
 
         // Ndc Depth -> View Depth
         shadowMapDepth = N2V(shadowMapDepth, invProj);
@@ -203,12 +203,12 @@ float PCSS(float2 uv, float zReceiverNdc, Texture2D shadowMap, matrix invProj, f
     }
 }
 
-float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld, Texture2D shadowMap)
+float3 LightRadiance(Light light, float3 representativePoint, float3 posWorld, float3 normalWorld, Texture2D shadowMap)
 {
     // Directional light
     float3 lightVec = light.type & LIGHT_DIRECTIONAL
                         ? -light.direction 
-                        : light.position - posWorld;
+                        : representativePoint - posWorld;
     
     float lightDist = length(lightVec);
     lightVec /= lightDist;
@@ -252,37 +252,11 @@ float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld, Texture2D
         uint width, height, numMips;
         shadowMap.GetDimensions(0, width, height, numMips);
        
-        // Texel size
         //float dx = 5.0 / (float) width;
         //shadowFactor = PCF_Filter(lightTexcoord.xy, lightScreen.z - 0.001, dx, shadowMap);
         shadowFactor = PCSS(lightTexcoord.xy, lightScreen.z - 0.001, shadowMap, light.invProj, light.radius);
     }
     
-    float radiance = light.radiance * spotFactor * att * shadowFactor;
-    
-    return radiance;
-}
-
-float3 LightRadiance(Light light, float3 posWorld, float3 normalWorld)
-{
-    // Directional light
-    float3 lightVec = light.type & LIGHT_DIRECTIONAL
-                        ? -light.direction 
-                        : light.position - posWorld;
-    
-    float lightDist = length(lightVec);
-    lightVec /= lightDist;
-
-    // Spot light
-    float spotFactor = light.type & LIGHT_SPOT
-                        ? pow(max(-dot(lightVec, light.direction), 0.0), light.spotPower)
-                        : 1.0;
-    
-    // Distance attenuation
-    float att = saturate((light.fallOffEnd - lightDist) / (light.fallOffEnd - light.fallOffStart));
-    
-    // Shadow map
-    float shadowFactor = 1.0;
     float radiance = light.radiance * spotFactor * att * shadowFactor;
     
     return radiance;
@@ -323,29 +297,42 @@ PixelShaderOutput main(PixelShaderInput input) {
     {
         if (lights[i].type)
         {
-            float3 lightVec = lights[i].position - input.posWorld;
+            float3 L = lights[i].position - input.posWorld;
+            float3 r = normalize(reflect(eyeWorld - input.posWorld, normalWorld));
+            float3 centerToRay = dot(L, r) * r - L;
+            float3 representativePoint = L + centerToRay * clamp(lights[i].radius / length(centerToRay), 0.0, 1.0);
+            representativePoint += input.posWorld;
+            
+            float3 lightVec = representativePoint - input.posWorld;
+            //float3 lightVec = lights[i].position - input.posWorld;
+            
             float lightDist = length(lightVec);
             lightVec /= lightDist;
             float3 halfway = normalize(pixelToEye + lightVec);
             float NdotI = max(0.0, dot(normalWorld, lightVec));
             float NdotO = max(0.0, dot(normalWorld, pixelToEye));
             float NdotH = max(0.0, dot(normalWorld, halfway));
-
+            
             const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
             float3 F0 = lerp(Fdielectric, albedo, metallic);
             float3 F = SchlickFresnel(F0, max(0.0, dot(halfway, pixelToEye)));
             float3 kd = lerp(float3(1, 1, 1) - F, float3(0, 0, 0), metallic);
             float3 diffuseBRDF = kd * albedo;
+            
+            float alpha = roughness * roughness;
+            float alphaPrime = saturate(alpha + lights[i].radius / (2.0 * lightDist));
         
-            float D = NdfGGX(NdotH, roughness);
+            float D = NdfGGX(NdotH, roughness, alphaPrime);
             float3 G = SchlickGGX(NdotI, NdotO, roughness);
             // Note (2), 0으로 나누기 방지
             float3 specularBRDF = (F * D * G) / max(1e-5, 4.0 * NdotI * NdotO);
             
             float3 radiance = 0.0f;
             
-            radiance = LightRadiance(lights[i], input.posWorld, normalWorld, shadowMaps[i]);
-            directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
+            radiance = LightRadiance(lights[i], representativePoint, input.posWorld, normalWorld, shadowMaps[i]);
+            
+            if (abs(dot(float3(1, 1, 1), radiance)) > 1e-5) // <- radiance가 (0, 0, 0)일 경우 더하지 않음.
+                directLighting += (diffuseBRDF + specularBRDF) * radiance * NdotI;
         }
     }
     
