@@ -87,6 +87,9 @@ int AppBase::Run() {
             UpdateGUI(); // 추가적으로 사용할 GUI
 
             ImGui::End();
+
+            UpdateObjectCreationFrameGUI( );
+
             ImGui::Render();
             
             Update(ImGui::GetIO().DeltaTime);

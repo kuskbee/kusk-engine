@@ -10,7 +10,7 @@ namespace kusk {
 using namespace std;
 using namespace DirectX::SimpleMath;
 
-void UpdateNormal(vector<MeshData>& meshes) {
+void UpdateNormals(vector<MeshData>& meshes) {
 
 	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
 	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
@@ -79,7 +79,7 @@ void ModelLoader::Load(std::string basePath, std::string filename, bool revertNo
 		ProcessNode(pScene->mRootNode, pScene, ext, tr);
 	}
 
-	// UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
+	UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
 
 	UpdateTangents( );
 }
@@ -150,7 +150,7 @@ string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
 		std::string fullpath = this->basePath + std::string(std::filesystem::path(filepath.C_Str( )).filename( ).string( ));
 		
 		//test
-		cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
+		//cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
 		return fullpath;
 	}
 	else {

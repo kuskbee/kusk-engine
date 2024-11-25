@@ -10,6 +10,12 @@
 
 namespace kusk {
 
+#define SPHERE_PARAMS "Sphere Parameters"
+#define SQUARE_PARAMS "Square Parameters"
+#define SQUARE_GRID_PARAMS "Square Grid Parameters"
+#define CYLINDER_PARAMS "Cylinder Parameters"
+#define BOX_PARAMS "Box Parameters"
+
 using namespace std;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -95,9 +101,9 @@ bool KuskApp::Initialize() {
 	{
 		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
 
-		auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
+		//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
 		
-		//vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
+		vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
 		/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
 		meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
 		meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
@@ -678,6 +684,155 @@ void KuskApp::UpdateGUI() {
 								 m_tessellatedQuad.m_constantBuffer);
 	}*/
 
+}
+
+void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode) {
+
+	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x * 0.5f,
+		ImGui::GetIO( ).DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f)); 
+
+	if (ImGui::BeginPopupModal(name, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+		uiCode( );
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+		if (ImGui::Button("Confirm")) {
+			confirmCode( );
+			m_currentPopup.clear( );
+			ImGui::CloseCurrentPopup( );
+		}
+		ImGui::PopStyleColor(4);
+		ImGui::SameLine( );
+				
+		if (ImGui::Button("Close")) {
+			m_currentPopup.clear( );
+			ImGui::CloseCurrentPopup( );
+		}
+
+		ImGui::EndPopup( );
+	}
+}
+
+void KuskApp::UpdateObjectCreationFrameGUI( ) {
+	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x - 10, 10), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+	ImGui::Begin("Object Creation Menu");
+	if (ImGui::Button("Make Sphere")) {
+		m_currentPopup = SPHERE_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+	if (ImGui::Button("Make Square")) {
+		m_currentPopup = SQUARE_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+	if (ImGui::Button("Make Square Grid")) {
+		m_currentPopup = SQUARE_GRID_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+	if (ImGui::Button("Make Cylinder")) {
+		m_currentPopup = CYLINDER_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+	if (ImGui::Button("Make Box")) {
+		m_currentPopup = BOX_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+
+	if (m_currentPopup == SPHERE_PARAMS) {
+		ShowPopup(SPHERE_PARAMS, [&]( ) {
+			ImGui::SliderFloat("Radius", &m_modelParams.radius, 0.1f, 1.0f, "%.2f");
+			ImGui::SliderInt("Num Slices", &m_modelParams.numSlices, 2, 200);
+			ImGui::SliderInt("Num Stacks", &m_modelParams.numStacks, 2, 200);
+			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
+		}, 
+		[&]( ) {
+			CreateSphere(m_modelParams.radius, m_modelParams.numSlices, m_modelParams.numStacks, m_modelParams.tex_scale);
+		});
+	}
+	else if (m_currentPopup == SQUARE_PARAMS) {
+		ShowPopup(SQUARE_PARAMS, [&]( ) {
+			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 1.0f, "%.2f");
+			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
+		},
+		[&]( ) {
+			CreateSquare(m_modelParams.scale, m_modelParams.tex_scale);
+		});
+	}
+	else if (m_currentPopup == SQUARE_GRID_PARAMS) {
+		ShowPopup(SQUARE_GRID_PARAMS, [&]( ) {
+			ImGui::SliderInt("Num Slices", &m_modelParams.numSlices, 2, 200);
+			ImGui::SliderInt("Num Stacks", &m_modelParams.numStacks, 2, 200);
+			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 1.0f, "%.2f");
+			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
+		},
+		[&]( ) {
+			CreateSquareGrid(m_modelParams.numSlices, m_modelParams.numStacks,
+			m_modelParams.scale, m_modelParams.tex_scale);
+		});
+	}
+	else if (m_currentPopup == CYLINDER_PARAMS) {
+		ShowPopup(CYLINDER_PARAMS, [&]( ) {
+			ImGui::SliderFloat("Bottom Radius", &m_modelParams.bottomRadius, 0.1f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Top Radius", &m_modelParams.topRadius, 0.1f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Height", &m_modelParams.height, 0.1f, 2.0f, "%.2f");
+			ImGui::SliderInt("Num Slices", &m_modelParams.numSlices, 2, 200);
+		},
+		[&]( ) {
+			CreateCylinder(m_modelParams.bottomRadius, m_modelParams.topRadius,
+			m_modelParams.height, m_modelParams.numSlices);
+		});
+	}
+	else if (m_currentPopup == BOX_PARAMS) {
+		ShowPopup(BOX_PARAMS, [&]( ) {
+			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 1.0f, "%.2f");
+		},
+		[&]( ) {
+			CreateBox(m_modelParams.scale);
+		});
+	}
+	ImGui::End( );
+}
+
+//:TODO: 적당한 곳에 정의를 옮기자..
+void KuskApp::CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale) {
+	MeshData mesh = GeometryGenerator::MakeSphere(radius, numSlices, numStacks, texScale);
+	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
+}
+
+void KuskApp::CreateSquare(float scale, Vector2& texScale) {
+
+	MeshData mesh = GeometryGenerator::MakeSquare(scale, texScale);
+	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
+}
+
+void KuskApp::CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale) {
+
+	MeshData mesh = GeometryGenerator::MakeSquareGrid(numSlices, numStacks, scale, texScale);
+	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
+}
+
+void KuskApp::CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices) {
+
+	MeshData mesh = GeometryGenerator::MakeCylinder(bottomRadius, topRadius, height, numSlices);
+	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
+}
+
+void KuskApp::CreateBox(float scale) {
+
+	MeshData mesh = GeometryGenerator::MakeBox(scale);
+	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
 }
 
 } // namespace kusk

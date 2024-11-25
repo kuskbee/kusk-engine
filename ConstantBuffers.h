@@ -32,9 +32,9 @@ __declspec(align(256)) struct MeshConstants {
 // 주로 Pixel 쉐이더에서 사용
 __declspec(align(256)) struct MaterialConstants {
 
-	Vector3 albedoFactor = Vector3(1.0f);
-	float roughnessFactor = 1.0f;
-	float metallicFactor = 1.0f;
+	Vector3 albedoFactor = Vector3(0.1f);
+	float roughnessFactor = 0.5f;
+	float metallicFactor = 0.3f;
 	Vector3 emissionFactor = Vector3(0.0f);
 
 	int useAlbedoMap = 0;

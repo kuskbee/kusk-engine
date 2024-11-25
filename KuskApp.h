@@ -27,6 +27,17 @@ public:
 
 	void UpdateLights(float dt);
 
+	// 물체 생성 관련
+	void CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale);
+	void CreateSquare(float scale, Vector2& texScale);
+	void CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale);
+	void CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices);
+	void CreateBox(float scale);
+
+	// ImGui Popup 관련
+	virtual void UpdateObjectCreationFrameGUI() override;
+	void ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode);
+
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	//BillboardPoints m_billboardPoints;

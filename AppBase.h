@@ -17,12 +17,28 @@ namespace kusk {
 
 using DirectX::BoundingSphere;
 using DirectX::SimpleMath::Quaternion;
+using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 using DirectX::SimpleMath::Plane;
 using Microsoft::WRL::ComPtr;
 using std::shared_ptr;
 using std::vector;
 using std::wstring;
+
+// Model 생성에 필요한 파라미터
+// :TODO: 정의 적당한곳에 옮기자..
+
+struct ModelCreationParams
+{
+	float scale = 1.0f;
+	Vector2 tex_scale = Vector2(1.0f);
+	int numSlices = 20;
+	int numStacks = 20;
+	float bottomRadius = 1.0f;
+	float topRadius = 1.0f;
+	float height = 1.0f;
+	float radius = 1.0f;
+};
 
 class AppBase {
 public:
@@ -50,6 +66,9 @@ public:
 	void SetPipelineState(const GraphicsPSO& pso);
 	bool UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
 							Vector3& dragTranslation, Vector3& pickPoint);
+
+	// ImGui Popup 관련
+	virtual void UpdateObjectCreationFrameGUI() = 0;
 
 protected:
 	bool InitMainWindow( );
@@ -132,6 +151,11 @@ public:
 	ComPtr<ID3D11ShaderResourceView> m_brdfSRV;
 
 	bool m_lightRotate = false;
+protected:
+	//ImGui Popup 관련
+	std::string m_currentPopup;
+
+	ModelCreationParams m_modelParams;
 };
 
 } // namespace kusk
