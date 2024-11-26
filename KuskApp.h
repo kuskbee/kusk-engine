@@ -25,6 +25,7 @@ public:
 	virtual void Render() override;
 
 	void UpdateLights(float dt);
+	void UpdateMousePicking( );
 
 	// 물체 생성 관련
 	void CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale);

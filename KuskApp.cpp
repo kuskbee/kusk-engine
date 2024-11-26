@@ -273,34 +273,12 @@ void KuskApp::UpdateLights(float dt) {
 	}
 }
 
-void KuskApp::Update(float dt) {
-	
-	// 카메라의 이동
-	m_camera.UpdateKeyboard(dt, m_keyPressed);
-
-	// 반사 행렬 추가
-	const Vector3 eyeWorld = m_camera.GetEyePos( );
-	const Matrix reflectRow = Matrix::CreateReflection(m_mirrorPlane);
-	const Matrix viewRow = m_camera.GetViewRow( );
-	const Matrix projRow = m_camera.GetProjRow( );
-	
-	// 조명 업데이트
-	UpdateLights(dt);
-
-	// 공용 ConstantsBuffer 업데이트
-	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow, m_mirrorPlane);
-	
-	// 거울은 따로 처리
-	m_mirror->UpdateConstantBuffers(m_device, m_context);
-
-	// 조명의 위치 반영
-	for (int i = 0; i < MAX_LIGHTS; i++) {
-		m_lightSphere[ i ]->UpdateWorldRow(
-			Matrix::CreateScale(std::max(0.01f, m_globalConstsCPU.lights[i].radius)) * 
-			Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
+void KuskApp::UpdateMousePicking( ) {
+	// ImGui가 마우스 입력을 처리 중이면 Picking 건너뜀
+	if (ImGui::GetIO( ).WantCaptureMouse) {
+		return; 
 	}
 
-	// 마우스 이동/회전 반영
 	if (m_leftButton || m_rightButton) {
 
 		Quaternion finalQtnion;
@@ -329,7 +307,7 @@ void KuskApp::Update(float dt) {
 
 		if (minModelIndex >= 0) {
 			auto& pickedModel = m_basicList[ minModelIndex ];
-			Vector3 translation = pickedModel->m_worldRow.Translation();
+			Vector3 translation = pickedModel->m_worldRow.Translation( );
 			pickedModel->m_worldRow.Translation(Vector3(0.0f));
 			pickedModel->UpdateWorldRow(
 				pickedModel->m_worldRow * Matrix::CreateFromQuaternion(finalQtnion) *
@@ -356,6 +334,37 @@ void KuskApp::Update(float dt) {
 	else {
 		m_cursorSphere->m_isVisible = false;
 	}
+}
+
+void KuskApp::Update(float dt) {
+	
+	// 카메라의 이동
+	m_camera.UpdateKeyboard(dt, m_keyPressed);
+
+	// 반사 행렬 추가
+	const Vector3 eyeWorld = m_camera.GetEyePos( );
+	const Matrix reflectRow = Matrix::CreateReflection(m_mirrorPlane);
+	const Matrix viewRow = m_camera.GetViewRow( );
+	const Matrix projRow = m_camera.GetProjRow( );
+	
+	// 조명 업데이트
+	UpdateLights(dt);
+
+	// 공용 ConstantsBuffer 업데이트
+	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow, m_mirrorPlane);
+	
+	// 거울은 따로 처리
+	m_mirror->UpdateConstantBuffers(m_device, m_context);
+
+	// 조명의 위치 반영
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		m_lightSphere[ i ]->UpdateWorldRow(
+			Matrix::CreateScale(std::max(0.01f, m_globalConstsCPU.lights[i].radius)) * 
+			Matrix::CreateTranslation(m_globalConstsCPU.lights[ i ].position));
+	}
+
+	// 마우스 이동/회전 반영, 물체 선택 처리
+	UpdateMousePicking( );
 
 	// 거울 외의 물체들은 for문으로 처리
 	for (auto& i : m_basicList) {
@@ -646,6 +655,12 @@ void KuskApp::UpdateGUI() {
 			}
 
 			ImGui::Checkbox("Draw Normals", &selectedObj->m_drawNormals);
+
+			if (ImGui::Button("Delete this object")) {
+				int idx = m_selectedModelIndex;
+				m_selectedModelIndex = -1;
+				m_basicList.erase(m_basicList.begin( ) + idx);
+			}
 
 			ImGui::TreePop( );
 		}
