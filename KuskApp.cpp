@@ -4,6 +4,11 @@
 #include <directxtk/DDSTextureLoader.h>
 #include <vector>
 
+// file browser
+#include <windows.h>
+#include <commdlg.h>
+#include <filesystem>
+
 #include "textureResources.h"
 #include "GeometryGenerator.h"
 #include "GraphicsCommon.h"
@@ -15,6 +20,7 @@ namespace kusk {
 #define SQUARE_GRID_PARAMS "Square Grid Parameters"
 #define CYLINDER_PARAMS "Cylinder Parameters"
 #define BOX_PARAMS "Box Parameters"
+#define MODELING_FILE_PARAMS "Modeling File Parameters"
 
 using namespace std;
 using namespace DirectX;
@@ -686,7 +692,7 @@ void KuskApp::UpdateGUI() {
 
 }
 
-void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode) {
+void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode = nullptr) {
 
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x * 0.5f,
 		ImGui::GetIO( ).DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f)); 
@@ -694,30 +700,53 @@ void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::fu
 	if (ImGui::BeginPopupModal(name, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 		uiCode( );
 
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+		if (confirmCode) {
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-		if (ImGui::Button("Confirm")) {
-			confirmCode( );
-			m_currentPopup.clear( );
-			ImGui::CloseCurrentPopup( );
-		}
-		ImGui::PopStyleColor(4);
-		ImGui::SameLine( );
-				
-		if (ImGui::Button("Close")) {
-			m_currentPopup.clear( );
-			ImGui::CloseCurrentPopup( );
-		}
+			if (ImGui::Button("Confirm")) {
+				confirmCode( );
+				m_currentPopup.clear( );
+				ImGui::CloseCurrentPopup( );
+			}
+			ImGui::PopStyleColor(4);
+			ImGui::SameLine( );
+
+			if (ImGui::Button("Close")) {
+				m_currentPopup.clear( );
+				ImGui::CloseCurrentPopup( );
+			}
+		}		
 
 		ImGui::EndPopup( );
 	}
 }
 
+std::string OpenFileDialog( ) {
+	char filePath[ MAX_PATH ] = "";
+
+	OPENFILENAMEA ofn;
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = NULL; // 소유자 창 (NULL = 없음)
+	ofn.lpstrFilter = "Model Files\0*.fbx;*.gltf\0"; // 필터 설정
+	ofn.lpstrFile = filePath; // 파일 경로를 저장할 버퍼
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+	if (GetOpenFileNameA(&ofn)) {
+		return std::string(filePath); // 선택된 파일 경로 반환
+	}
+
+	return ""; // 사용자가 취소하거나 오류 발생
+}
+
 void KuskApp::UpdateObjectCreationFrameGUI( ) {
+
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x - 10, 10), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+
 	ImGui::Begin("Object Creation Menu");
 	if (ImGui::Button("Make Sphere")) {
 		m_currentPopup = SPHERE_PARAMS;
@@ -737,6 +766,10 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 	}
 	if (ImGui::Button("Make Box")) {
 		m_currentPopup = BOX_PARAMS;
+		ImGui::OpenPopup(m_currentPopup.c_str( ));
+	}
+	if (ImGui::Button("Make Model from a modeling file")) {
+		m_currentPopup = MODELING_FILE_PARAMS;
 		ImGui::OpenPopup(m_currentPopup.c_str( ));
 	}
 
@@ -792,6 +825,44 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			CreateBox(m_modelParams.scale);
 		});
 	}
+	else if (m_currentPopup == MODELING_FILE_PARAMS) {
+		ShowPopup(MODELING_FILE_PARAMS, [&]( ) {
+
+			if (!m_modelParams.selectedFilePath.empty( )) {
+				ImGui::Text("Selected File: %s", m_modelParams.selectedFilePath.c_str( ));
+			}
+
+			if (ImGui::Button("Open File Explorer")) {
+				std::string filePath = OpenFileDialog( );
+				if (!filePath.empty( )) {
+					m_modelParams.selectedFilePath = filePath; // 선택된 파일 경로 저장
+				}
+			}
+			
+			ImGui::BeginDisabled(m_modelParams.selectedFilePath.empty( ));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+			if (ImGui::Button("Confirm")) {
+				CreateModelFromFile(m_modelParams.selectedFilePath);
+				m_modelParams.selectedFilePath.clear( );
+
+				m_currentPopup.clear( );
+				ImGui::CloseCurrentPopup( );
+			}
+			ImGui::EndDisabled( );
+			ImGui::PopStyleColor(4);
+			ImGui::SameLine( );
+
+			if (ImGui::Button("Close")) {
+				m_currentPopup.clear( );
+				ImGui::CloseCurrentPopup( );
+			}
+			
+			
+		});
+	}
 	ImGui::End( );
 }
 
@@ -831,6 +902,25 @@ void KuskApp::CreateBox(float scale) {
 
 	MeshData mesh = GeometryGenerator::MakeBox(scale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+
+	m_basicList.push_back(obj);
+}
+
+void KuskApp::CreateModelFromFile(const std::string& fullPath) {
+
+	std::filesystem::path filePath(fullPath);
+	std::string dirPath = filePath.parent_path( ).string( ) + "\\";
+	std::string fileName = filePath.filename( ).string( );
+	std::string ext = filePath.extension( ).string( );
+
+	auto meshes = GeometryGenerator::ReadFromFile(dirPath, fileName);
+	auto obj = make_shared<Model>(m_device, m_context, meshes);
+	obj->m_materialConstsCPU.invertNormalMapY = (ext == ".gltf") ? true : false;
+	obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
+	obj->m_materialConstsCPU.roughnessFactor = 0.3f;
+	obj->m_materialConstsCPU.metallicFactor = 0.8f;
+	obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+	obj->UpdateConstantBuffers(m_device, m_context);
 
 	m_basicList.push_back(obj);
 }

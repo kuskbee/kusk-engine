@@ -33,6 +33,7 @@ public:
 	void CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale);
 	void CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices);
 	void CreateBox(float scale);
+	void CreateModelFromFile(const std::string& fullPath);
 
 	// ImGui Popup 관련
 	virtual void UpdateObjectCreationFrameGUI() override;

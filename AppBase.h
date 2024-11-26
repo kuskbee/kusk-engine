@@ -38,6 +38,7 @@ struct ModelCreationParams
 	float topRadius = 1.0f;
 	float height = 1.0f;
 	float radius = 1.0f;
+	std::string selectedFilePath;
 };
 
 class AppBase {
