@@ -366,7 +366,7 @@ void AppBase::SetPipelineState(const GraphicsPSO& pso) {
 }
 
 bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
-                                 Vector3& dragTranslation, Vector3& pickPoint) {
+                                 Vector3& dragTranslation, Vector3& pickPoint, float& distance) {
     const Matrix viewRow = m_camera.GetViewRow( );
     const Matrix projRow = m_camera.GetProjRow( );
 
@@ -403,6 +403,7 @@ bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
         SimpleMath::Ray curRay = SimpleMath::Ray(cursorWorldNear, dir);
         float dist = 0.0f;
         if (curRay.Intersects(bs, dist)) {
+            distance = dist;
             pickPoint = cursorWorldNear + dist * dir;
 
             // mainSphere를 어떻게 회전시킬지 결정

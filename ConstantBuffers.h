@@ -44,15 +44,7 @@ __declspec(align(256)) struct MaterialConstants {
 	int useMetallicMap = 0;
 	int useRoughnessMap = 0;
 	int useEmissiveMap = 0;
-
-	
-	// Rim 관련 데이터
-	float rimPower = 0.01f;
-	Vector3 rimColor = Vector3(1.0f);
-	float rimStrength = 0.0f;
-	bool useSmoothstep = false;
-	Vector3 dummy = Vector3(0.0f);
-
+	int isSelected = 0;
 };
 
 // 조명

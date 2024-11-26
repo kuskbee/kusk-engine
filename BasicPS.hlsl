@@ -26,13 +26,7 @@ cbuffer BasicPixelConstData : register(b0)
     int useMetallicMap;
     int useRoughnessMap;
     int useEmissiveMap;
-    
-    // Rim 관련 데이터
-    float rimPower;
-    float3 rimColor;
-    float rimStrength;
-    bool useSmoothstep;
-    float3 dummy;
+    int isSelected;
 };
 
 struct PixelShaderOutput
@@ -346,12 +340,14 @@ PixelShaderOutput main(PixelShaderInput input) {
     output.pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
         
     // Rim Lighting
-    float rim = 1.0 - dot(pixelToEye, normalWorld);
-    if (useSmoothstep)
+    if (isSelected)
+    {
+        float rim = 1.0 - dot(pixelToEye, normalWorld);
         rim = smoothstep(0.0, 1.0, rim);
-    rim = pow(abs(rim), rimPower);
-    float3 rimEffect = rim * rimColor * rimStrength;
-    output.pixelColor += float4(rimEffect, 1.0);
+        rim = pow(abs(rim), 10.0);
+        float3 rimEffect = rim * float3(0.0, 1.0, 1.0) * 10.0;
+        output.pixelColor += float4(rimEffect, 1.0);
+    }
     
     output.pixelColor = clamp(output.pixelColor, 0.0, 1000.0);
     

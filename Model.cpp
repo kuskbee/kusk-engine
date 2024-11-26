@@ -30,6 +30,8 @@ void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>
 	D3D11Utils::CreateConstBuffer(device, m_meshConstsCPU, m_meshConstsGPU);
 	D3D11Utils::CreateConstBuffer(device, m_materialConstsCPU, m_materialConstsGPU);
 
+	Vector3 center(0.0f);
+	uint64_t vertexCnt = 0;
 	for (const auto& meshData : meshes) {
 		auto newMesh = std::make_shared<Mesh>( );
 		D3D11Utils::CreateVertexBuffer(device, meshData.vertices, newMesh->vertexBuffer);
@@ -90,7 +92,29 @@ void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>
 		newMesh->pixelConstBuffer = m_materialConstsGPU;
 
 		this->m_meshes.push_back(newMesh);
+
+		// 중심 계산
+		for (const auto& vertex : meshData.vertices) {
+			center += vertex.position;
+		}
+		vertexCnt += meshData.vertices.size( );
 	}
+
+	// Bounding Sphere 구하기
+	center /= static_cast< float >(vertexCnt);
+	// 가장 먼 점에서 반지름 계산
+	float radius = 0.0f;
+	for (const auto& meshData : meshes) {
+		for (const auto& vertex : meshData.vertices) {
+			float distance = (vertex.position - center).Length( );
+			if (distance > radius) {
+				radius = distance;
+			}
+		}
+	}
+	m_boundingSphere = BoundingSphere(center, radius);
+	cout << "center : (" << center.x << "," << center.y << "," << center.z << "), ";
+	cout << "radius : " << radius << endl;
 }
 
 void Model::UpdateConstantBuffers(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context) {
@@ -138,7 +162,8 @@ void Model::UpdateWorldRow(const Matrix& worldRow) {
 
 	m_meshConstsCPU.world =	worldRow.Transpose();
 	m_meshConstsCPU.worldIT = m_worldITRow.Transpose();
-}
 
+	m_boundingSphere.Center = worldRow.Translation( );
+}
 
 } // namespace kusk

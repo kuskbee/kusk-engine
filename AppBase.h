@@ -66,7 +66,7 @@ public:
 	void CreateDepthBuffers( );
 	void SetPipelineState(const GraphicsPSO& pso);
 	bool UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
-							Vector3& dragTranslation, Vector3& pickPoint);
+							Vector3& dragTranslation, Vector3& pickPoint, float& distance);
 
 	// ImGui Popup 관련
 	virtual void UpdateObjectCreationFrameGUI() = 0;
@@ -124,6 +124,7 @@ public:
 	bool m_leftButton = false;
 	bool m_rightButton = false;
 	bool m_dragStartFlag = false;
+	int m_selectedModelIndex = -1;
 
 	D3D11_VIEWPORT m_screenViewport;
 

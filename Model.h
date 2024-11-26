@@ -12,6 +12,7 @@
 
 namespace kusk
 {
+using DirectX::BoundingSphere;
 class Model
 {
 public:
@@ -35,6 +36,9 @@ public:
 	void UpdateWorldRow(const Matrix& worldRow);
 
 public:
+
+	BoundingSphere m_boundingSphere;
+
 	Matrix m_worldRow = Matrix( );		// Model(Object) To World 행렬
 	Matrix m_worldITRow = Matrix( );	// InverseTranspose
 
@@ -44,6 +48,7 @@ public:
 	bool m_drawNormals = false;
 	bool m_isVisible = true;
 	bool m_castShadow = true;
+	bool m_isPickable = true;
 
 	std::vector<shared_ptr<Mesh>> m_meshes;
 

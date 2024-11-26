@@ -63,6 +63,7 @@ bool KuskApp::Initialize() {
 	{
 		MeshData meshData = GeometryGenerator::MakeSquare( );
 		m_screenSquare = make_shared<Model>(m_device, m_context, vector{ meshData });
+		m_screenSquare->m_isPickable = false;
 	}
 
 	// 환경 박스 초기화
@@ -70,6 +71,7 @@ bool KuskApp::Initialize() {
 		MeshData skyboxMesh = GeometryGenerator::MakeBox(40.0f);
 		std::reverse(skyboxMesh.indices.begin( ), skyboxMesh.indices.end( ));
 		m_skybox = make_shared<Model>(m_device, m_context, vector{ skyboxMesh });
+		m_skybox->m_isPickable = false;
 	}
 
 	// 바닥(거울)
@@ -77,6 +79,7 @@ bool KuskApp::Initialize() {
 		auto mesh = GeometryGenerator::MakeSquare(5.0f);
 		//mesh.albedoTextureFilename = BLENDER_UV_GRID_2K_TEXTURE;
 		m_ground = make_shared<Model>(m_device, m_context, vector{ mesh });
+		m_ground->m_isPickable = false;
 		m_ground->m_materialConstsCPU.albedoFactor = Vector3(0.1f);
 		m_ground->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
 		m_ground->m_materialConstsCPU.metallicFactor = 0.5f;
@@ -127,9 +130,6 @@ bool KuskApp::Initialize() {
 		m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
 
 		m_basicList.push_back(m_mainObj); // 리스트에 등록
-
-		// 동일한 크기와 위치에 BoundingSphere 만들기
-		m_mainBoundingSphere = BoundingSphere(center, 0.4f);
 	}
 
 	// 추가 물체1 (파란 구)
@@ -194,6 +194,7 @@ bool KuskApp::Initialize() {
 			m_lightSphere[ i ]->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
 			m_lightSphere[ i ]->m_materialConstsCPU.emissionFactor = Vector3(1.0f, 1.0f, 0.0f);
 			m_lightSphere[ i ]->m_castShadow = false; // 조명 표시 물체들은 그림자 X
+			m_lightSphere[ i ]->m_isPickable = false; // 피킹 X
 
 			if (m_globalConstsCPU.lights[ i ].type == 0) {
 				m_lightSphere[ i ]->m_isVisible = false;
@@ -209,30 +210,12 @@ bool KuskApp::Initialize() {
 		m_cursorSphere = make_shared<Model>(m_device, m_context, vector{ sphere });
 		m_cursorSphere->m_isVisible = false; // 마우스가 눌렸을 때만 보임
 		m_cursorSphere->m_castShadow = false; // 그림자 X
+		m_cursorSphere->m_isPickable = false; // 피킹 X
 		m_cursorSphere->m_materialConstsCPU.albedoFactor = Vector3(0.0f);
 		m_cursorSphere->m_materialConstsCPU.emissionFactor = Vector3(0.0f, 1.0f, 1.0f);
 		
 		m_basicList.push_back(m_cursorSphere); // 리스트에 등록
 	}
-
-	// $character
-	/* {
-		m_meshGroupCharacter.Initialize(
-		m_device, m_context, "c:/workspaces/honglab/models/zelda/", "zeldaPosed001.fbx");
-		m_meshGroupCharacter.m_irradianceSRV = m_cubeMapping.m_irradianceSRV;
-		m_meshGroupCharacter.m_specularSRV = m_cubeMapping.m_specularSRV;
-		Matrix modelMat = Matrix::CreateTranslation({ 0.0f, 0.2f, 3.0f });
-		Matrix invTransposeRow = modelMat;
-		invTransposeRow.Translation(Vector3(0.0f));
-		invTransposeRow = invTransposeRow.Invert( ).Transpose( );
-		m_meshGroupCharacter.m_basicVertexConstData.modelWorld = modelMat.Transpose( );
-		m_meshGroupCharacter.m_basicVertexConstData.invTranspose = invTransposeRow.Transpose( );
-		m_meshGroupCharacter.m_basicVertexConstData.useHeightMap = false;
-		m_meshGroupCharacter.m_basicPixelConstData.useAlbedoMap = true;
-		m_meshGroupCharacter.m_basicPixelConstData.useNormalMap = false;
-		m_meshGroupCharacter.m_basicPixelConstData.useAOMap = false;
-		m_meshGroupCharacter.UpdateConstantBuffers(m_device, m_context);
-	}*/
 
 	return true;
 }
@@ -319,23 +302,55 @@ void KuskApp::Update(float dt) {
 
 	// 마우스 이동/회전 반영
 	if (m_leftButton || m_rightButton) {
-		Quaternion q;
-		Vector3 dragTranslation;
-		Vector3 pickPoint;
-		if (UpdateMouseControl(m_mainBoundingSphere, q, dragTranslation, pickPoint)) {
-			Vector3 translation = m_mainObj->m_worldRow.Translation( );
-			m_mainObj->m_worldRow.Translation(Vector3(0.0f));
-			m_mainObj->UpdateWorldRow(
-				m_mainObj->m_worldRow * Matrix::CreateFromQuaternion(q) *
-				Matrix::CreateTranslation(dragTranslation + translation));
-			m_mainBoundingSphere.Center = m_mainObj->m_worldRow.Translation( );
+
+		Quaternion finalQtnion;
+		Vector3 finalDragTrsl;
+		Vector3 finalPickPoint;
+		float minDistance = D3D11_FLOAT32_MAX;
+		int minModelIndex = -1;
+
+		for (size_t i = 0; i < m_basicList.size( ); i++) {
+			if (!m_basicList[ i ]->m_isPickable) continue;
+
+			Quaternion q;
+			Vector3 dragTranslation;
+			Vector3 pickPoint;
+			float distance = 0.0f;
+			if (UpdateMouseControl(m_basicList[ i ]->m_boundingSphere, q, dragTranslation, pickPoint, distance)) {
+				if (minDistance > distance) {
+					minDistance = distance;
+					finalQtnion = q;
+					finalDragTrsl = dragTranslation;
+					finalPickPoint = pickPoint;
+					minModelIndex = i;
+				}
+			}
+		}
+
+		if (minModelIndex >= 0) {
+			auto& pickedModel = m_basicList[ minModelIndex ];
+			Vector3 translation = pickedModel->m_worldRow.Translation();
+			pickedModel->m_worldRow.Translation(Vector3(0.0f));
+			pickedModel->UpdateWorldRow(
+				pickedModel->m_worldRow * Matrix::CreateFromQuaternion(finalQtnion) *
+				Matrix::CreateTranslation(finalDragTrsl + translation));
 
 			// 충돌 지점에 작은 구 그리기
 			m_cursorSphere->m_isVisible = true;
-			m_cursorSphere->UpdateWorldRow(Matrix::CreateTranslation(pickPoint));
+			m_cursorSphere->UpdateWorldRow(Matrix::CreateTranslation(finalPickPoint));
+
+			if (m_selectedModelIndex >= 0 && m_selectedModelIndex != minModelIndex) {
+				m_basicList[ m_selectedModelIndex ]->m_materialConstsCPU.isSelected = false;
+			}
+			m_selectedModelIndex = minModelIndex;
+			m_basicList[ m_selectedModelIndex ]->m_materialConstsCPU.isSelected = true;
 		}
 		else {
 			m_cursorSphere->m_isVisible = false;
+			if (m_selectedModelIndex >= 0) {
+				m_basicList[ m_selectedModelIndex ]->m_materialConstsCPU.isSelected = false;
+				m_selectedModelIndex = -1;
+			}
 		}
 	}
 	else {
@@ -519,6 +534,7 @@ void KuskApp::UpdateGUI() {
 		if (ImGui::Checkbox("MSAA ON", &m_useMSAA)) {
 			CreateBuffers( );
 		}
+		ImGui::SliderFloat("LodBias", &m_globalConstsCPU.lodBias, 0.0f, 10.0f);
 
 		ImGui::TreePop( );
 	}
@@ -598,54 +614,42 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	// $mainObj
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Material")) {
-		ImGui::SliderFloat("LodBias", &m_globalConstsCPU.lodBias, 0.0f, 10.0f);
+	if (m_selectedModelIndex >= 0) {
+		auto& selectedObj = m_basicList[ m_selectedModelIndex ];
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (ImGui::TreeNode("Selected Object's Material")) {
+			int flag = 0;
 
-		int flag = 0;
+			flag += ImGui::SliderFloat(
+				"Metallic", &selectedObj->m_materialConstsCPU.metallicFactor, 0.0f, 1.0f);
+			flag += ImGui::SliderFloat(
+				"Roughness", &selectedObj->m_materialConstsCPU.roughnessFactor, 0.0f, 1.0f);
+			flag += ImGui::CheckboxFlags(
+				"AlbedoTexture", &selectedObj->m_materialConstsCPU.useAlbedoMap, 1);
+			flag += ImGui::CheckboxFlags(
+				"EmissiveTexture", &selectedObj->m_materialConstsCPU.useEmissiveMap, 1);
+			flag += ImGui::CheckboxFlags(
+				"Use NormalMapping", &selectedObj->m_materialConstsCPU.useNormalMap, 1);
+			flag += ImGui::CheckboxFlags(
+				"Use AO", &selectedObj->m_materialConstsCPU.useAOMap, 1);
+			flag += ImGui::CheckboxFlags(
+				"Use HeightMapping", &selectedObj->m_meshConstsCPU.useHeightMap, 1);
+			flag += ImGui::SliderFloat(
+				"HeightScale", &selectedObj->m_meshConstsCPU.heightScale, 0.0f, 0.1f);
+			flag += ImGui::CheckboxFlags(
+				"Use MetallicMap", &selectedObj->m_materialConstsCPU.useMetallicMap, 1);
+			flag += ImGui::CheckboxFlags(
+				"Use RoughnessMap", &selectedObj->m_materialConstsCPU.useRoughnessMap, 1);
 
-		flag += ImGui::SliderFloat(
-			"Metallic", &m_mainObj->m_materialConstsCPU.metallicFactor, 0.0f, 1.0f);
-		flag += ImGui::SliderFloat(
-			"Roughness", &m_mainObj->m_materialConstsCPU.roughnessFactor, 0.0f, 1.0f);
-		flag += ImGui::CheckboxFlags(
-			"AlbedoTexture", &m_mainObj->m_materialConstsCPU.useAlbedoMap, 1);
-		flag += ImGui::CheckboxFlags(
-			"EmissiveTexture", &m_mainObj->m_materialConstsCPU.useEmissiveMap, 1);
-		flag += ImGui::CheckboxFlags(
-			"Use NormalMapping", &m_mainObj->m_materialConstsCPU.useNormalMap, 1);
-		flag += ImGui::CheckboxFlags(
-			"Use AO", &m_mainObj->m_materialConstsCPU.useAOMap, 1);
-		flag += ImGui::CheckboxFlags(
-			"Use HeightMapping", &m_mainObj->m_meshConstsCPU.useHeightMap, 1);
-		flag += ImGui::SliderFloat(
-			"HeightScale", &m_mainObj->m_meshConstsCPU.heightScale, 0.0f, 0.1f);
-		flag += ImGui::CheckboxFlags(
-			"Use MetallicMap", &m_mainObj->m_materialConstsCPU.useMetallicMap, 1);
-		flag += ImGui::CheckboxFlags(
-			"Use RoughnessMap", &m_mainObj->m_materialConstsCPU.useRoughnessMap, 1);
+			if (flag) {
+				selectedObj->UpdateConstantBuffers(m_device, m_context);
+			}
 
-		if (flag) {
-			m_mainObj->UpdateConstantBuffers(m_device, m_context);
-		}
+			ImGui::Checkbox("Draw Normals", &selectedObj->m_drawNormals);
 
-		ImGui::Checkbox("Draw Normals", &m_mainObj->m_drawNormals);
-
-		ImGui::SetNextItemOpen(false, ImGuiCond_Once);
-		if (ImGui::TreeNode("Rim Effect")) {
-			ImGui::SliderFloat("Rim Strength",
-						   &m_mainObj->m_materialConstsCPU.rimStrength, 0.0f, 10.0f);
-			ImGui::Checkbox("Use Smoothstep",
-							&m_mainObj->m_materialConstsCPU.useSmoothstep);
-			ImGui::SliderFloat3("Rim Color", &m_mainObj->m_materialConstsCPU.rimColor.x, 0.0f, 1.0f);
-			ImGui::SliderFloat("Rim Power", &m_mainObj->m_materialConstsCPU.rimPower, 0.01f, 10.0f);
 			ImGui::TreePop( );
 		}
-
-		ImGui::TreePop( );
 	}
-	
 
 	/*
 		

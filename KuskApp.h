@@ -12,7 +12,6 @@
 
 namespace kusk {
 
-using DirectX::BoundingSphere;
 using DirectX::SimpleMath::Vector3;
 
 class KuskApp : public AppBase
@@ -49,10 +48,6 @@ protected:
 	shared_ptr<Model> m_skybox;
 	shared_ptr<Model> m_cursorSphere;
 	shared_ptr<Model> m_screenSquare;
-
-	BoundingSphere m_mainBoundingSphere;
-
-	//BasicMeshGroup m_meshGroupCharacter;
 
 	// 거울
 	shared_ptr<Model> m_mirror;
