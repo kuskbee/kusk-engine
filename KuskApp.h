@@ -9,6 +9,7 @@
 #include "GeometryGenerator.h"
 #include "ImageFilter.h"
 #include "Model.h"
+#include "JsonManager.h"
 
 namespace kusk {
 
@@ -27,6 +28,9 @@ public:
 	void UpdateLights(float dt);
 	void UpdateMousePicking( );
 
+	// ImGui Popup 관련
+	virtual void UpdateObjectCreationFrameGUI() override;
+
 	// 물체 생성 관련
 	void CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale);
 	void CreateSquare(float scale, Vector2& texScale);
@@ -35,11 +39,9 @@ public:
 	void CreateBox(float scale);
 	void CreateModelFromFile(const std::string& fullPath);
 
-	// ImGui Popup 관련
-	virtual void UpdateObjectCreationFrameGUI() override;
-
-	void ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode);
-	std::string OpenFileDialog(std::string filterName, std::string exts);
+	// Json 관련
+	void LoadSceneDataAsJSON(std::string& filePath);
+	void SaveSceneDataAsJSON(std::string& filePath);
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
@@ -59,6 +61,9 @@ protected:
 
 	// 거울이 아닌 물체들의 리스트 (for문으로 그리기 위함)
 	vector<shared_ptr<Model>> m_basicList;
+
+	// 장면으로 저장되는 물체 리스트
+	vector<shared_ptr<Model>> m_savedList;
 };
 } // namespace kusk
  

@@ -4,7 +4,7 @@
 #include "D3D11Utils.h"
 #include "Mesh.h"
 #include "MeshData.h"
-
+#include "JsonManager.h"
 
 
 // 참고: DirectX-Graphics-Samples
@@ -13,6 +13,7 @@
 namespace kusk
 {
 using DirectX::BoundingSphere;
+
 class Model
 {
 public:
@@ -21,12 +22,22 @@ public:
 		const std::string& basePath, const std::string& filename);
 	Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 		const std::vector<MeshData>& meshes);
+	Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+		const rapidjson::Value& value);
 
 	void Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 		const std::string& basePath, const std::string& filename);
 	void Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 		const std::vector<MeshData>& meshes);
 
+	// Json
+	void InitializeFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+		const rapidjson::Value& value);
+	void InitializeDataFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
+		const rapidjson::Value& value);
+	rapidjson::Value ToJson(rapidjson::Document::AllocatorType& allocator) const;
+
+	//
 	void UpdateConstantBuffers(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context);
 
 	void Render(ComPtr<ID3D11DeviceContext>& context);
@@ -53,6 +64,7 @@ public:
 	std::vector<shared_ptr<Mesh>> m_meshes;
 
 	// JSON 저장용
+	ModelCreationParams m_modelCreationParams;
 	std::string m_modelingFilePath;
 	
 	// Mesh가 하나 있는 Model만 아래 내용 저장.

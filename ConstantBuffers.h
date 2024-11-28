@@ -22,8 +22,8 @@ using DirectX::SimpleMath::Vector4;
 
 // 주로 Vertex/Geometry 쉐이더에서 사용
 __declspec(align(256)) struct MeshConstants {
-	Matrix world;
-	Matrix worldIT;
+	Matrix world = Matrix();
+	Matrix worldIT = Matrix();
 	int useHeightMap = 0;
 	float heightScale = 0.0f;
 	Vector2 dummy;

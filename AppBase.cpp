@@ -670,5 +670,85 @@ void AppBase::CreateBuffers( ) {
     m_postProcess.Initialize(m_device, m_context, { m_postEffectsSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
 }
 
+void AppBase::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode) {
+
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x * 0.5f,
+        ImGui::GetIO( ).DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal(name, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        uiCode( );
+
+        if (confirmCode) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+            if (ImGui::Button("Confirm")) {
+                confirmCode( );
+                m_currentPopup.clear( );
+                ImGui::CloseCurrentPopup( );
+            }
+            ImGui::PopStyleColor(4);
+            ImGui::SameLine( );
+
+            if (ImGui::Button("Close")) {
+                m_currentPopup.clear( );
+                ImGui::CloseCurrentPopup( );
+            }
+        }
+
+        ImGui::EndPopup( );
+    }
+}
+
+std::string AppBase::OpenFileDialog(std::string filterName, std::string exts) {
+    char filePath[ MAX_PATH ] = "";
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    std::vector<char> combinedFilter;
+    combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
+    combinedFilter.push_back('\0');
+    combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
+    combinedFilter.push_back('\0');
+    ofn.lpstrFilter = combinedFilter.data( );
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        return std::string(filePath);
+    }
+
+    return "";
+}
+
+std::string AppBase::SaveFileDialog(std::string filterName, std::string exts, std::string defaultExt) {
+    char filePath[ MAX_PATH ] = "";
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    std::vector<char> combinedFilter;
+    combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
+    combinedFilter.push_back('\0');
+    combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
+    combinedFilter.push_back('\0');
+    ofn.lpstrFilter = combinedFilter.data( );
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_OVERWRITEPROMPT; // 덮어쓰기 경고
+    ofn.lpstrDefExt = defaultExt.c_str( );
+
+    if (GetSaveFileNameA(&ofn)) {
+        return std::string(filePath); // 선택된 파일 경로 반환
+    }
+
+    return "";
+}
 
 } // namespace kusk

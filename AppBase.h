@@ -25,22 +25,6 @@ using std::shared_ptr;
 using std::vector;
 using std::wstring;
 
-// Model 생성에 필요한 파라미터
-// :TODO: 정의 적당한곳에 옮기자..
-
-struct ModelCreationParams
-{
-	float scale = 1.0f;
-	Vector2 tex_scale = Vector2(1.0f);
-	int numSlices = 20;
-	int numStacks = 20;
-	float bottomRadius = 1.0f;
-	float topRadius = 1.0f;
-	float height = 1.0f;
-	float radius = 1.0f;
-	std::string selectedFilePath;
-};
-
 class AppBase {
 public:
 	AppBase( );
@@ -70,6 +54,10 @@ public:
 
 	// ImGui Popup 관련
 	virtual void UpdateObjectCreationFrameGUI() = 0;
+
+	void ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode=nullptr);
+	std::string OpenFileDialog(std::string filterName, std::string exts);
+	std::string SaveFileDialog(std::string filterName, std::string exts, std::string defaultExt);
 
 protected:
 	bool InitMainWindow( );
@@ -161,5 +149,3 @@ protected:
 };
 
 } // namespace kusk
-
-

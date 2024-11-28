@@ -95,71 +95,96 @@ bool KuskApp::Initialize() {
 		// m_basicList.push_back(m_ground); // 거울은 리스트에 등록 X
 	}
 
-	// $box - test용
-	{
-		vector<MeshData> meshes = { GeometryGenerator::MakeBox(0.15f) };
-		Vector3 center(1.5f, 0.25f, 2.0f);
-		m_box = make_shared<Model>(m_device, m_context, meshes);
-		m_box->UpdateWorldRow(Matrix::CreateTranslation(center));
+	if (false) {
+		// $box - test용
+		{
+			vector<MeshData> meshes = { GeometryGenerator::MakeBox(0.15f) };
+			Vector3 center(1.5f, 0.25f, 2.0f);
+			m_box = make_shared<Model>(m_device, m_context, meshes);
+			m_box->UpdateWorldRow(Matrix::CreateTranslation(center));
+			//
+			m_box->m_modelCreationParams.type = MESH_TYPE_BOX;
+			m_box->m_modelCreationParams.scale = 0.15f;
 
-		m_basicList.push_back(m_box); // 리스트에 등록
-	}
+			m_basicList.push_back(m_box); // 리스트에 등록
+			m_savedList.push_back(m_box);
+		}
 
 
-	// $mainObj
-	{
-		//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
+		// $mainObj
+		{
+			//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
 
-		//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
-		
-		vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
-		/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
-		meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
-		meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
-		meshes[ 0 ].metallicTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_metalness.jpg");
-		meshes[ 0 ].normalTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_normal.jpg");
-		meshes[ 0 ].roughnessTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");*/
+			//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
 
-		Vector3 center(0.0f, 0.0f, 2.0f);
-		m_mainObj = make_shared<Model>(m_device, m_context, meshes);
-		m_mainObj->m_materialConstsCPU.invertNormalMapY = true; // GLTF는 true로
-		m_mainObj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
-		m_mainObj->m_materialConstsCPU.roughnessFactor = 0.3f;
-		m_mainObj->m_materialConstsCPU.metallicFactor = 0.8f;
-		m_mainObj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
+			vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
+			/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
+			meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
+			meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
+			meshes[ 0 ].metallicTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_metalness.jpg");
+			meshes[ 0 ].normalTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_normal.jpg");
+			meshes[ 0 ].roughnessTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");*/
 
-		m_basicList.push_back(m_mainObj); // 리스트에 등록
-	}
+			Vector3 center(0.0f, 0.0f, 2.0f);
+			m_mainObj = make_shared<Model>(m_device, m_context, meshes);
+			m_mainObj->m_materialConstsCPU.invertNormalMapY = true; // GLTF는 true로
+			m_mainObj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
+			m_mainObj->m_materialConstsCPU.roughnessFactor = 0.3f;
+			m_mainObj->m_materialConstsCPU.metallicFactor = 0.8f;
+			m_mainObj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+			m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
 
-	// 추가 물체1 (파란 구)
-	{
-		MeshData mesh = GeometryGenerator::MakeSphere(0.2f, 200, 200);
-		Vector3 center(0.5f, 0.5f, 2.0f);
-		auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-		obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-		obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
-		obj->m_materialConstsCPU.roughnessFactor = 0.2f;
-		obj->m_materialConstsCPU.metallicFactor = 0.6f;
-		obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		obj->UpdateConstantBuffers(m_device, m_context);
+			//
+			m_mainObj->m_modelCreationParams.type = MESH_TYPE_SPHERE;
+			m_mainObj->m_modelCreationParams.radius = 0.4f;
+			m_mainObj->m_modelCreationParams.numSlices = 50;
+			m_mainObj->m_modelCreationParams.numStacks = 50;
 
-		m_basicList.push_back(obj);
-	}
+			m_basicList.push_back(m_mainObj); // 리스트에 등록
+			m_savedList.push_back(m_mainObj);
+		}
 
-	// 추가 물체2 (빨간 박스)
-	{
-		MeshData mesh = GeometryGenerator::MakeBox(0.2f);
-		Vector3 center(0.0f, 0.5f, 2.5f);
-		auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-		obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-		obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
-		obj->m_materialConstsCPU.roughnessFactor = 0.5f;
-		obj->m_materialConstsCPU.metallicFactor = 0.9f;
-		obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-		obj->UpdateConstantBuffers(m_device, m_context);
+		// 추가 물체1 (파란 구)
+		{
+			MeshData mesh = GeometryGenerator::MakeSphere(0.2f, 200, 200);
+			Vector3 center(0.5f, 0.5f, 2.0f);
+			auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+			obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+			obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
+			obj->m_materialConstsCPU.roughnessFactor = 0.2f;
+			obj->m_materialConstsCPU.metallicFactor = 0.6f;
+			obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+			obj->UpdateConstantBuffers(m_device, m_context);
 
-		m_basicList.push_back(obj);
+			//
+			obj->m_modelCreationParams.type = MESH_TYPE_SPHERE;
+			obj->m_modelCreationParams.radius = 0.2f;
+			obj->m_modelCreationParams.numSlices = 200;
+			obj->m_modelCreationParams.numStacks = 200;
+
+			m_basicList.push_back(obj);
+			m_savedList.push_back(obj);
+		}
+
+		// 추가 물체2 (빨간 박스)
+		{
+			MeshData mesh = GeometryGenerator::MakeBox(0.2f);
+			Vector3 center(0.0f, 0.5f, 2.5f);
+			auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+			obj->UpdateWorldRow(Matrix::CreateTranslation(center));
+			obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
+			obj->m_materialConstsCPU.roughnessFactor = 0.5f;
+			obj->m_materialConstsCPU.metallicFactor = 0.9f;
+			obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
+			obj->UpdateConstantBuffers(m_device, m_context);
+
+			//
+			obj->m_modelCreationParams.type = MESH_TYPE_BOX;
+			obj->m_modelCreationParams.scale = 0.2f;
+
+			m_basicList.push_back(obj);
+			m_savedList.push_back(obj);
+		}
 	}
 
 	// 조명 설정
@@ -536,6 +561,30 @@ void KuskApp::Render() {
 
 void KuskApp::UpdateGUI() {
 
+	// JSON LOAD / SAVE
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Scene Json DATA")) {
+		static const std::string filterName = "Json data files";
+		static const std::string filterExts = "*.json";
+		static const std::string defualtExts = "json";
+
+		if (ImGui::Button("LOAD JSON")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( )) {
+				LoadSceneDataAsJSON(filePath);
+			}
+		}
+		ImGui::SameLine( );
+		if (ImGui::Button("SAVE JSON")) {
+			std::string filePath = SaveFileDialog(filterName, filterExts, defualtExts);
+			if (!filePath.empty( )) {
+				SaveSceneDataAsJSON(filePath);
+			}
+		}
+
+		ImGui::TreePop( );
+	}
+
 	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("General")) {
 		ImGui::Checkbox("Use FPV", &m_camera.m_useFirstPersonView);
@@ -847,62 +896,6 @@ void KuskApp::UpdateGUI() {
 
 }
 
-void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode = nullptr) {
-
-	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x * 0.5f,
-		ImGui::GetIO( ).DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f)); 
-
-	if (ImGui::BeginPopupModal(name, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
-		uiCode( );
-
-		if (confirmCode) {
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-			if (ImGui::Button("Confirm")) {
-				confirmCode( );
-				m_currentPopup.clear( );
-				ImGui::CloseCurrentPopup( );
-			}
-			ImGui::PopStyleColor(4);
-			ImGui::SameLine( );
-
-			if (ImGui::Button("Close")) {
-				m_currentPopup.clear( );
-				ImGui::CloseCurrentPopup( );
-			}
-		}		
-
-		ImGui::EndPopup( );
-	}
-}
-
-std::string KuskApp::OpenFileDialog(std::string filterName, std::string exts) {
-	char filePath[ MAX_PATH ] = "";
-
-	OPENFILENAMEA ofn;
-	ZeroMemory(&ofn, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = NULL; // 소유자 창 (NULL = 없음)
-	std::vector<char> combinedFilter;
-	combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
-	combinedFilter.push_back('\0');
-	combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
-	combinedFilter.push_back('\0');
-	ofn.lpstrFilter = combinedFilter.data(); // 필터 설정
-	ofn.lpstrFile = filePath; // 파일 경로를 저장할 버퍼
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-	if (GetOpenFileNameA(&ofn)) {
-		return std::string(filePath); // 선택된 파일 경로 반환
-	}
-
-	return ""; // 사용자가 취소하거나 오류 발생
-}
-
 void KuskApp::UpdateObjectCreationFrameGUI( ) {
 
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x - 10, 10), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
@@ -941,6 +934,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
 		}, 
 		[&]( ) {
+			m_modelParams.type = MESH_TYPE_SPHERE;
 			CreateSphere(m_modelParams.radius, m_modelParams.numSlices, m_modelParams.numStacks, m_modelParams.tex_scale);
 		});
 	}
@@ -950,6 +944,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
 		},
 		[&]( ) {
+			m_modelParams.type = MESH_TYPE_SQUARE;
 			CreateSquare(m_modelParams.scale, m_modelParams.tex_scale);
 		});
 	}
@@ -961,6 +956,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
 		},
 		[&]( ) {
+			m_modelParams.type = MESH_TYPE_SQUARE_GRID;
 			CreateSquareGrid(m_modelParams.numSlices, m_modelParams.numStacks,
 			m_modelParams.scale, m_modelParams.tex_scale);
 		});
@@ -973,6 +969,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			ImGui::SliderInt("Num Slices", &m_modelParams.numSlices, 2, 200);
 		},
 		[&]( ) {
+			m_modelParams.type = MESH_TYPE_CYLINDER;
 			CreateCylinder(m_modelParams.bottomRadius, m_modelParams.topRadius,
 			m_modelParams.height, m_modelParams.numSlices);
 		});
@@ -982,6 +979,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 1.0f, "%.2f");
 		},
 		[&]( ) {
+			m_modelParams.type = MESH_TYPE_BOX;
 			CreateBox(m_modelParams.scale);
 		});
 	}
@@ -1030,40 +1028,50 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 void KuskApp::CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale) {
 	MeshData mesh = GeometryGenerator::MakeSphere(radius, numSlices, numStacks, texScale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
 }
 
 void KuskApp::CreateSquare(float scale, Vector2& texScale) {
 
 	MeshData mesh = GeometryGenerator::MakeSquare(scale, texScale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
 }
 
 void KuskApp::CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale) {
 
 	MeshData mesh = GeometryGenerator::MakeSquareGrid(numSlices, numStacks, scale, texScale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
 }
 
 void KuskApp::CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices) {
 
 	MeshData mesh = GeometryGenerator::MakeCylinder(bottomRadius, topRadius, height, numSlices);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
 }
 
 void KuskApp::CreateBox(float scale) {
 
 	MeshData mesh = GeometryGenerator::MakeBox(scale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
 }
 
 void KuskApp::CreateModelFromFile(const std::string& fullPath) {
@@ -1081,8 +1089,55 @@ void KuskApp::CreateModelFromFile(const std::string& fullPath) {
 	obj->m_materialConstsCPU.metallicFactor = 0.8f;
 	obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
 	obj->UpdateConstantBuffers(m_device, m_context);
+	obj->m_modelCreationParams = m_modelParams;
 
 	m_basicList.push_back(obj);
+	m_savedList.push_back(obj);
+}
+
+void KuskApp::LoadSceneDataAsJSON(std::string& filePath) {
+
+	// 장면 초기화
+	m_basicList.clear( );
+	m_savedList.clear( );
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		m_basicList.push_back(m_lightSphere[ i ]);
+	}
+	m_basicList.push_back(m_cursorSphere);
+
+	// JSON 파일의 데이터로 모델 생성 후 리스트 등록
+	rapidjson::Document doc;
+	doc = JsonManager::LoadJson(filePath);
+
+	if (doc.HasMember("Models")) {
+		rapidjson::GenericArray models = doc[ "Models" ].GetArray();
+
+		for (rapidjson::Value& model : models) {
+			auto obj = make_shared<Model>(m_device, m_context, model);
+			m_basicList.push_back(obj);
+			m_savedList.push_back(obj);
+		}
+	}
+}
+
+void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
+	
+	rapidjson::Document doc;
+	doc.SetObject( );
+	
+	rapidjson::Document::AllocatorType& allocator = doc.GetAllocator( );
+
+	rapidjson::Value models(rapidjson::kArrayType);
+
+	for (auto& obj : m_savedList) {
+		rapidjson::Value model;
+		model = obj->ToJson(allocator);
+		models.PushBack(model, allocator);
+	}
+
+	doc.AddMember("Models", models, allocator);
+
+	JsonManager::SaveJson(filePath, doc);
 }
 
 } // namespace kusk

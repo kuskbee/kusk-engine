@@ -22,4 +22,29 @@ struct MeshData {
 	std::string roughnessTextureFilename;
 };
 
+
+// Model 생성에 필요한 파라미터
+enum MESH_TYPE {
+	MESH_TYPE_NONE = 0,
+	MESH_TYPE_SPHERE,
+	MESH_TYPE_SQUARE,
+	MESH_TYPE_SQUARE_GRID,
+	MESH_TYPE_CYLINDER,
+	MESH_TYPE_BOX,
+};
+
+struct ModelCreationParams
+{
+	float scale = 1.0f;
+	Vector2 tex_scale = Vector2(1.0f);
+	int numSlices = 20;
+	int numStacks = 20;
+	float bottomRadius = 1.0f;
+	float topRadius = 1.0f;
+	float height = 1.0f;
+	float radius = 1.0f;
+	MESH_TYPE type = MESH_TYPE_NONE;
+	std::string selectedFilePath;
+};
+
 } // namespace kusk
