@@ -37,7 +37,9 @@ public:
 
 	// ImGui Popup 관련
 	virtual void UpdateObjectCreationFrameGUI() override;
+
 	void ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode);
+	std::string OpenFileDialog(std::string filterName, std::string exts);
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;

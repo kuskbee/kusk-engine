@@ -52,6 +52,19 @@ public:
 
 	std::vector<shared_ptr<Mesh>> m_meshes;
 
+	// JSON 저장용
+	std::string m_modelingFilePath;
+	
+	// Mesh가 하나 있는 Model만 아래 내용 저장.
+	// (Mesh가 여러 개일 경우 Modelling 파일로 부터 가져온다고 간주)
+	std::string m_albedoTextureFilePath;
+	std::string m_emissiveTextureFilePath;
+	std::string m_normalTextureFilePath;
+	std::string m_heightTextureFilePath;
+	std::string m_aoTextureFilePath; // Ambient Occlusion
+	std::string m_metallicTextureFilePath;
+	std::string m_roughnessTextureFilePath;
+
 private:
 	ComPtr<ID3D11Buffer> m_meshConstsGPU;
 	ComPtr<ID3D11Buffer> m_materialConstsGPU;

@@ -16,8 +16,9 @@ Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 			 const std::string& basePath, const std::string& filename) {
 
+	m_modelingFilePath = filename;
 	auto meshes = GeometryGenerator::ReadFromFile(basePath, filename);
-
+	
 	Initialize(device, context, meshes);
 }
 

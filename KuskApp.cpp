@@ -664,6 +664,142 @@ void KuskApp::UpdateGUI() {
 
 			ImGui::TreePop( );
 		}
+
+		// 메쉬가 하나일 때만 texture 수정할 수 있도록 표시
+		if (selectedObj->m_meshes.size( ) == 1) {
+			static const std::string filterName = "Image files";
+			static const std::string filterExts = "*.jpg;*.jpeg;*.png";
+
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			if (ImGui::TreeNode("Selected Object's Textures")) {
+				auto& mesh = selectedObj->m_meshes[ 0 ];
+
+				// $albedo
+				if (!selectedObj->m_albedoTextureFilePath.empty( )) {
+					ImGui::Text("albedo texture: %s", selectedObj->m_albedoTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("albedo texture: NONE");
+				}
+
+				if (ImGui::Button("Change Albedo Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_albedoTextureFilePath = filePath;
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->albedoTexture, mesh->albedoSRV);
+						selectedObj->m_materialConstsCPU.useAlbedoMap = true;
+					}
+				}
+
+				// $emissive
+				if (!selectedObj->m_emissiveTextureFilePath.empty( )) {
+					ImGui::Text("emissive texture: %s", selectedObj->m_emissiveTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("emissive texture: NONE");
+				}
+
+				if (ImGui::Button("Change Emissive Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_emissiveTextureFilePath = filePath;
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->emissiveTexture, mesh->emissiveSRV);
+						selectedObj->m_materialConstsCPU.useEmissiveMap = true;
+					}
+				}
+
+				// $normal
+				if (!selectedObj->m_normalTextureFilePath.empty( )) {
+					ImGui::Text("normal texture: %s", selectedObj->m_normalTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("normal texture: NONE");
+				}
+
+				if (ImGui::Button("Change Normal Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_normalTextureFilePath = filePath;
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->normalTexture, mesh->normalSRV);
+						selectedObj->m_materialConstsCPU.useNormalMap = true;
+					}
+				}
+
+				// $height
+				if (!selectedObj->m_heightTextureFilePath.empty( )) {
+					ImGui::Text("height texture: %s", selectedObj->m_heightTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("height texture: NONE");
+				}
+
+				if (ImGui::Button("Change Height Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_heightTextureFilePath = filePath;
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->heightTexture, mesh->heightSRV);
+						selectedObj->m_meshConstsCPU.useHeightMap = true;
+					}
+				}
+
+				// $ambient occlusion
+				if (!selectedObj->m_aoTextureFilePath.empty( )) {
+					ImGui::Text("AO texture: %s", selectedObj->m_aoTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("AO texture: NONE");
+				}
+
+				if (ImGui::Button("Change AO Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_aoTextureFilePath = filePath;
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->aoTexture, mesh->aoSRV);
+						selectedObj->m_materialConstsCPU.useAOMap = true;
+					}
+				}
+
+				// $metallic
+				if (!selectedObj->m_metallicTextureFilePath.empty( )) {
+					ImGui::Text("metallic texture: %s", selectedObj->m_metallicTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("metallic texture: NONE");
+				}
+
+				if (ImGui::Button("Change Metallic Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_metallicTextureFilePath = filePath;
+						D3D11Utils::CreateMetallicRoughnessTexture(m_device, m_context, filePath, selectedObj->m_roughnessTextureFilePath,
+																	mesh->metallicRoughnessTexture,
+																	mesh->metallicRoughnessSRV);
+						selectedObj->m_materialConstsCPU.useMetallicMap = true;
+					}
+				}
+
+				// $roughness
+				if (!selectedObj->m_roughnessTextureFilePath.empty( )) {
+					ImGui::Text("roughness texture: %s", selectedObj->m_roughnessTextureFilePath.c_str( ));
+				}
+				else {
+					ImGui::Text("roughness texture: NONE");
+				}
+
+				if (ImGui::Button("Change Roughness Texture")) {
+					std::string filePath = OpenFileDialog(filterName, filterExts);
+					if (!filePath.empty( )) {
+						selectedObj->m_roughnessTextureFilePath = filePath;
+						D3D11Utils::CreateMetallicRoughnessTexture(m_device, m_context, selectedObj->m_metallicTextureFilePath, filePath,
+																	mesh->metallicRoughnessTexture,
+																	mesh->metallicRoughnessSRV);
+						selectedObj->m_materialConstsCPU.useRoughnessMap = true;
+					}
+				}
+
+				ImGui::TreePop( );
+			}
+		}
 	}
 
 	/*
@@ -743,14 +879,19 @@ void KuskApp::ShowPopup(const char* name, std::function<void( )> uiCode, std::fu
 	}
 }
 
-std::string OpenFileDialog( ) {
+std::string KuskApp::OpenFileDialog(std::string filterName, std::string exts) {
 	char filePath[ MAX_PATH ] = "";
 
 	OPENFILENAMEA ofn;
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = NULL; // 소유자 창 (NULL = 없음)
-	ofn.lpstrFilter = "Model Files\0*.fbx;*.gltf\0"; // 필터 설정
+	std::vector<char> combinedFilter;
+	combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
+	combinedFilter.push_back('\0');
+	combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
+	combinedFilter.push_back('\0');
+	ofn.lpstrFilter = combinedFilter.data(); // 필터 설정
 	ofn.lpstrFile = filePath; // 파일 경로를 저장할 버퍼
 	ofn.nMaxFile = MAX_PATH;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
@@ -852,7 +993,7 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			}
 
 			if (ImGui::Button("Open File Explorer")) {
-				std::string filePath = OpenFileDialog( );
+				std::string filePath = OpenFileDialog("Model Files", "*.fbx;*.gltf");
 				if (!filePath.empty( )) {
 					m_modelParams.selectedFilePath = filePath; // 선택된 파일 경로 저장
 				}
