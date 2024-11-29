@@ -45,11 +45,14 @@ public:
 	rapidjson::Value LightToJSON(Light& l, rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value EnvDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value ScreenDataToJSON(rapidjson::Document::AllocatorType& allocator);
-	
 	rapidjson::Value PostEffectDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value PostProcessingDataToJSON(rapidjson::Document::AllocatorType& allocator);
+
 	void LightFromJSON(rapidjson::Value& lightData, Light& l);
 	void EnvDataFromJSON(rapidjson::Value& value);
+	void PostEffectDataFromJSON(rapidjson::Value& value);
+	void PostProcessingDataFromJSON(rapidjson::Value& value);
+	void ScreenDataFromJSON(rapidjson::Value& value);
 		
 
 protected: 

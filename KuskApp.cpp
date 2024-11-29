@@ -1241,11 +1241,20 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 
 	if (doc.HasMember("Scene")) {
 		rapidjson::Value& scene = doc[ "Scene" ];
+		if (scene.HasMember("screen")) {
+			ScreenDataFromJSON(scene[ "screen" ]);
+		}
 		if (scene.HasMember("env")) {
 			EnvDataFromJSON(scene[ "env" ]);
 		}
 		if (scene.HasMember("camera")) {
 			m_camera.CameraDataFromJSON(scene[ "camera" ]);
+		}
+		if (scene.HasMember("post_effects")) {
+			PostEffectDataFromJSON(scene[ "post_effects" ]);
+		}
+		if (scene.HasMember("post_processing")) {
+			PostProcessingDataFromJSON(scene[ "post_processing" ]);
 		}
 	}
 }
@@ -1278,12 +1287,26 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 	// 장면 정보
 	rapidjson::Value scene(rapidjson::kObjectType);
 	rapidjson::Value tmpObj(rapidjson::kObjectType);
-	// - 환경 정보 저장
+
+	// 장면 - 환경 정보 저장
 	tmpObj = EnvDataToJSON(allocator);
 	scene.AddMember("env", tmpObj, allocator);
-	// - 카메라 정보 저장
+
+	// 장면 - 카메라 정보 저장
 	tmpObj = m_camera.CameraDataToJSON(allocator);
 	scene.AddMember("camera", tmpObj, allocator);
+
+	// 장면 - PostEffect 정보 저장
+	tmpObj = PostEffectDataToJSON(allocator);
+	scene.AddMember("post_effects", tmpObj, allocator);
+
+	// 장면 - PostProcessing 정보 저장
+	tmpObj = PostProcessingDataToJSON(allocator);
+	scene.AddMember("post_processing", tmpObj, allocator);
+
+	// 장면 - Screen 정보 저장
+	tmpObj = ScreenDataToJSON(allocator);
+	scene.AddMember("screen", tmpObj, allocator);
 
 	doc.AddMember("Scene", scene, allocator);
 
@@ -1397,6 +1420,62 @@ void KuskApp::EnvDataFromJSON(rapidjson::Value& value) {
 				JsonManager::UTF8ToWString(m_cubemapTextureSpecularFilePath),
 				JsonManager::UTF8ToWString(m_cubemapTextureIrradianceFilePath),
 				JsonManager::UTF8ToWString(m_cubemapTextureBrdfFilePath));
+}
+
+rapidjson::Value KuskApp::PostEffectDataToJSON(rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+	value.AddMember("fog_strength", m_postEffectsConstsCPU.fogStrength, allocator);
+	
+	return value;
+}
+
+void KuskApp::PostEffectDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("fog_strength")) {
+		m_postEffectsConstsCPU.fogStrength = value[ "fog_strength" ].GetFloat( );
+	}
+	D3D11Utils::UpdateBuffer(m_device, m_context, m_postEffectsConstsCPU, m_postEffectsConstsGPU);
+}
+
+rapidjson::Value KuskApp::PostProcessingDataToJSON(rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+	value.AddMember("bloom_strength", m_postProcess.m_combineFilter.m_constData.strength, allocator);
+	value.AddMember("exposure", m_postProcess.m_combineFilter.m_constData.option1, allocator);
+	value.AddMember("gamma", m_postProcess.m_combineFilter.m_constData.option2, allocator);
+
+	return value;
+}
+
+void KuskApp::PostProcessingDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("bloom_strength")) {
+		m_postProcess.m_combineFilter.m_constData.strength = value[ "bloom_strength" ].GetFloat( );
+	}
+	if (value.HasMember("exposure")) {
+		m_postProcess.m_combineFilter.m_constData.option1 = value[ "exposure" ].GetFloat( );
+	}
+	if (value.HasMember("gamma")) {
+		m_postProcess.m_combineFilter.m_constData.option2 = value[ "gamma" ].GetFloat( );
+	}
+
+	m_postProcess.m_combineFilter.UpdateConstantBuffers(m_device, m_context);
+}
+
+rapidjson::Value KuskApp::ScreenDataToJSON(rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+	value.AddMember("screen_width", m_screenWidth, allocator);
+	value.AddMember("screen_height", m_screenHeight, allocator);
+
+	return value;
+}
+
+void KuskApp::ScreenDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("screen_width")) {
+		m_screenWidth = value[ "screen_width" ].GetInt( );
+	}
+	if (value.HasMember("screen_height")) {
+		m_screenHeight = value[ "screen_height" ].GetInt( );
+	}
+
+	SetWindowPos(m_mainWindow, 0, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_NOMOVE | SWP_SHOWWINDOW);
 }
 
 } // namespace kusk
