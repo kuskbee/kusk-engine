@@ -45,12 +45,12 @@ public:
 	rapidjson::Value LightToJSON(Light& l, rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value EnvDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value ScreenDataToJSON(rapidjson::Document::AllocatorType& allocator);
-	rapidjson::Value CameraDataToJSON(rapidjson::Document::AllocatorType& allocator);
+	
 	rapidjson::Value PostEffectDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value PostProcessingDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	void LightFromJSON(rapidjson::Value& lightData, Light& l);
 	void EnvDataFromJSON(rapidjson::Value& value);
-	
+		
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;

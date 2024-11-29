@@ -2,6 +2,8 @@
 
 #include <directxtk/SimpleMath.h>
 
+#include "JsonManager.h"
+
 namespace kusk {
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
@@ -22,6 +24,10 @@ public:
 	void MoveRight(float dt);
 	void MoveUp(float dt);
 	void SetAspectRatio(float aspect);
+
+	// Json
+	rapidjson::Value CameraDataToJSON(rapidjson::Document::AllocatorType& allocator);
+	void CameraDataFromJSON(rapidjson::Value& value);
 
 public:
 	bool m_useFirstPersonView = false;

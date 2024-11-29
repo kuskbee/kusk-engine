@@ -1244,6 +1244,9 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 		if (scene.HasMember("env")) {
 			EnvDataFromJSON(scene[ "env" ]);
 		}
+		if (scene.HasMember("camera")) {
+			m_camera.CameraDataFromJSON(scene[ "camera" ]);
+		}
 	}
 }
 
@@ -1274,10 +1277,13 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 
 	// 장면 정보
 	rapidjson::Value scene(rapidjson::kObjectType);
+	rapidjson::Value tmpObj(rapidjson::kObjectType);
 	// - 환경 정보 저장
-	rapidjson::Value env(rapidjson::kObjectType);
-	env = EnvDataToJSON(allocator);
-	scene.AddMember("env", env, allocator);
+	tmpObj = EnvDataToJSON(allocator);
+	scene.AddMember("env", tmpObj, allocator);
+	// - 카메라 정보 저장
+	tmpObj = m_camera.CameraDataToJSON(allocator);
+	scene.AddMember("camera", tmpObj, allocator);
 
 	doc.AddMember("Scene", scene, allocator);
 
@@ -1391,8 +1397,6 @@ void KuskApp::EnvDataFromJSON(rapidjson::Value& value) {
 				JsonManager::UTF8ToWString(m_cubemapTextureSpecularFilePath),
 				JsonManager::UTF8ToWString(m_cubemapTextureIrradianceFilePath),
 				JsonManager::UTF8ToWString(m_cubemapTextureBrdfFilePath));
-
-
 }
 
 } // namespace kusk
