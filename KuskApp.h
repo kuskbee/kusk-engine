@@ -40,8 +40,11 @@ public:
 	void CreateModelFromFile(const std::string& fullPath);
 
 	// Json 관련
-	void LoadSceneDataAsJSON(std::string& filePath);
+	void LoadSceneDataFromJSON(std::string& filePath);
 	void SaveSceneDataAsJSON(std::string& filePath);
+	rapidjson::Value LightToJSON(Light& l, rapidjson::Document::AllocatorType& allocator);
+	void LightFromJSON(rapidjson::Value& lightData, Light& l);
+	
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;

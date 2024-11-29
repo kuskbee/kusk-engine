@@ -571,7 +571,7 @@ void KuskApp::UpdateGUI() {
 		if (ImGui::Button("LOAD JSON")) {
 			std::string filePath = OpenFileDialog(filterName, filterExts);
 			if (!filePath.empty( )) {
-				LoadSceneDataAsJSON(filePath);
+				LoadSceneDataFromJSON(filePath);
 			}
 		}
 		ImGui::SameLine( );
@@ -1135,7 +1135,7 @@ void KuskApp::CreateModelFromFile(const std::string& fullPath) {
 	m_savedList.push_back(obj);
 }
 
-void KuskApp::LoadSceneDataAsJSON(std::string& filePath) {
+void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 
 	// 장면 초기화
 	m_basicList.clear( );
@@ -1158,6 +1158,26 @@ void KuskApp::LoadSceneDataAsJSON(std::string& filePath) {
 			m_savedList.push_back(obj);
 		}
 	}
+
+	if (doc.HasMember("Lights")) {
+		rapidjson::GenericArray lights = doc[ "Lights" ].GetArray( );
+
+		int i = 0;
+		for (rapidjson::Value& lightData : lights) {
+			//
+			LightFromJSON(lightData, m_globalConstsCPU.lights[ i ]);
+			if (m_globalConstsCPU.lights[ i ].type == 0) {
+				m_lightSphere[ i ]->m_isVisible = false;
+			}
+			else {
+				m_lightSphere[ i ]->m_isVisible = true;
+			}
+			i++;
+
+			if (i == MAX_LIGHTS)
+				break;
+		}
+	}
 }
 
 void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
@@ -1177,8 +1197,67 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 	doc.AddMember("Models", models, allocator);
 
 	// 조명 정보 저장
+	rapidjson::Value lights(rapidjson::kArrayType);
+	for (int i = 0; i < MAX_LIGHTS; i++) {
+		rapidjson::Value light;
+		light = LightToJSON(m_globalConstsCPU.lights[i], allocator);
+		lights.PushBack(light, allocator);
+	}
+	doc.AddMember("Lights", lights, allocator);
 
 	JsonManager::SaveJson(filePath, doc);
+}
+
+rapidjson::Value KuskApp::LightToJSON(Light& l, rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+
+	value.AddMember("radiance", JsonManager::Vector3ToJson(l.radiance, allocator), allocator);
+	value.AddMember("direction", JsonManager::Vector3ToJson(l.direction, allocator), allocator);
+	value.AddMember("position", JsonManager::Vector3ToJson(l.position, allocator), allocator);
+	value.AddMember("fall_off_start", l.fallOffStart, allocator);
+	value.AddMember("fall_off_end", l.fallOffEnd, allocator);
+	value.AddMember("spot_power", l.spotPower, allocator);
+	value.AddMember("type", l.type, allocator);
+	value.AddMember("radius", l.radius, allocator);
+	value.AddMember("halo_radius", l.haloRadius, allocator);
+	value.AddMember("halo_strength", l.haloStrength, allocator);
+
+	return value;
+}
+
+void KuskApp::LightFromJSON(rapidjson::Value& lightData, Light& l)
+{
+	if (lightData.HasMember("radiance")) {
+		l.radiance = JsonManager::ParseVector3(lightData[ "radiance" ]);
+	}
+	if (lightData.HasMember("direction")) {
+		l.direction = JsonManager::ParseVector3(lightData[ "direction" ]);
+	}
+	if (lightData.HasMember("position")) {
+		l.position = JsonManager::ParseVector3(lightData[ "position" ]);
+	}
+	if (lightData.HasMember("fall_off_start")) {
+		l.fallOffStart = lightData[ "fall_off_start" ].GetFloat( );
+	}
+	if (lightData.HasMember("fall_off_end")) {
+		l.fallOffEnd = lightData[ "fall_off_end" ].GetFloat( );
+	}
+
+	if (lightData.HasMember("spot_power")) {
+		l.spotPower = lightData[ "spot_power" ].GetFloat( );
+	}
+	if (lightData.HasMember("type")) {
+		l.type = lightData[ "type" ].GetUint( );
+	}
+	if (lightData.HasMember("radius")) {
+		l.radius = lightData[ "radius" ].GetFloat( );
+	}
+	if (lightData.HasMember("halo_radius")) {
+		l.haloRadius = lightData[ "halo_radius" ].GetFloat( );
+	}
+	if (lightData.HasMember("halo_strength")) {
+		l.haloStrength = lightData[ "halo_strength" ].GetFloat( );
+	}
 }
 
 } // namespace kusk
