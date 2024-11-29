@@ -5,6 +5,7 @@
 
 #include "D3D11Utils.h"
 #include "GraphicsCommon.h"
+#include "JsonManager.h"
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
 // VCPKG를 통해 IMGUI를 사용할 경우 빨간줄로 경고가 뜰 수 있음
@@ -232,15 +233,21 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void AppBase::InitCubemaps(wstring basePath, wstring envFilename,
-                           wstring specularFilename, wstring irradianceFilename,
-                           wstring brdfFilename) {
+void AppBase::InitCubemaps(wstring envFilePath,
+                           wstring specularFilePath, wstring irradianceFilePath,
+                           wstring brdfFilePath) {
+
+    m_cubemapTextureEnvFilePath = JsonManager::WStringToUTF8(envFilePath);
+    m_cubemapTextureSpecularFilePath = JsonManager::WStringToUTF8(specularFilePath);
+    m_cubemapTextureIrradianceFilePath = JsonManager::WStringToUTF8(irradianceFilePath);
+    m_cubemapTextureBrdfFilePath = JsonManager::WStringToUTF8(brdfFilePath);
+
 
     // BRDF LookUp Table은 CubeMap이 아니라 2D 텍스쳐
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + envFilename).c_str( ), true, m_envSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + specularFilename).c_str( ), true, m_specularSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + irradianceFilename).c_str( ), true, m_irradianceSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + brdfFilename).c_str( ), false, m_brdfSRV);
+    D3D11Utils::CreateDDSTexture(m_device, envFilePath.c_str( ), true, m_envSRV);
+    D3D11Utils::CreateDDSTexture(m_device, specularFilePath.c_str( ), true, m_specularSRV);
+    D3D11Utils::CreateDDSTexture(m_device, irradianceFilePath.c_str( ), true, m_irradianceSRV);
+    D3D11Utils::CreateDDSTexture(m_device, brdfFilePath.c_str( ), false, m_brdfSRV);
 }
  
 // 여러 물체들이 공통적으로 사용하는 Const 업데이트

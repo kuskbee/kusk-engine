@@ -57,7 +57,7 @@ bool KuskApp::Initialize() {
 	// Shadertoy Media Files
 	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
 
-	AppBase::InitCubemaps(OUTDOOR_BASE_PATH, OUTDOOR_ORGN_DDS, OUTDOOR_SPEC_DDS, OUTDOOR_DIFF_DDS, OUTDOOR_BRDF_DDS);
+	AppBase::InitCubemaps(OUTDOOR_ORGN_DDS, OUTDOOR_SPEC_DDS, OUTDOOR_DIFF_DDS, OUTDOOR_BRDF_DDS);
 
 	// 후처리용 화면 사각형
 	{
@@ -325,7 +325,7 @@ void KuskApp::UpdateMousePicking( ) {
 					finalQtnion = q;
 					finalDragTrsl = dragTranslation;
 					finalPickPoint = pickPoint;
-					minModelIndex = i;
+					minModelIndex = int(i);
 				}
 			}
 		}
@@ -608,6 +608,66 @@ void KuskApp::UpdateGUI() {
 		ImGui::RadioButton("Irradiance", &m_globalConstsCPU.textureToDraw, 2);
 		ImGui::SliderFloat("EnvLodBias", &m_globalConstsCPU.envLodBias, 0.0f,
 						   10.0f);
+
+		static const std::string filterName = "DDS files";
+		static const std::string filterExts = "*.dds;";
+
+		// $envFile
+		if (!m_cubemapTextureEnvFilePath.empty( ))
+			ImGui::Text("env texture: %s", m_cubemapTextureEnvFilePath.c_str( ));
+		else
+			ImGui::Text("env texture: NONE");
+
+		if (ImGui::Button("Register Env Texture")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( ))
+				m_cubemapTextureEnvFilePath = filePath;
+		}
+
+		// $specularFile
+		if (!m_cubemapTextureSpecularFilePath.empty( ))
+			ImGui::Text("specular texture: %s", m_cubemapTextureSpecularFilePath.c_str( ));
+		else
+			ImGui::Text("specular texture: NONE");
+
+		if (ImGui::Button("Register Specular Texture")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( ))
+				m_cubemapTextureSpecularFilePath = filePath;
+		}
+
+		// $irradianceFile
+		if (!m_cubemapTextureIrradianceFilePath.empty( ))
+			ImGui::Text("irradiance texture: %s", m_cubemapTextureIrradianceFilePath.c_str( ));
+		else
+			ImGui::Text("irradiance texture: NONE");
+
+		if (ImGui::Button("Register Irradiance Texture")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( ))
+				m_cubemapTextureIrradianceFilePath = filePath;
+		}
+
+		// $BrdfFile
+		if (!m_cubemapTextureBrdfFilePath.empty( ))
+			ImGui::Text("brdf texture: %s", m_cubemapTextureBrdfFilePath.c_str( ));
+		else
+			ImGui::Text("brdf texture: NONE");
+
+		if (ImGui::Button("Register BRDF Texture")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( ))
+				m_cubemapTextureBrdfFilePath = filePath;
+		}
+
+		// $confirm
+		if (ImGui::Button("Apply Registered Textures to Cubemaps")) {
+			AppBase::InitCubemaps(
+				JsonManager::UTF8ToWString(m_cubemapTextureEnvFilePath), 
+				JsonManager::UTF8ToWString(m_cubemapTextureSpecularFilePath), 
+				JsonManager::UTF8ToWString(m_cubemapTextureIrradianceFilePath), 
+				JsonManager::UTF8ToWString(m_cubemapTextureBrdfFilePath));
+		}
 
 		ImGui::TreePop( );
 	}
@@ -1257,6 +1317,58 @@ void KuskApp::LightFromJSON(rapidjson::Value& lightData, Light& l)
 	}
 	if (lightData.HasMember("halo_strength")) {
 		l.haloStrength = lightData[ "halo_strength" ].GetFloat( );
+	}
+}
+
+rapidjson::Value KuskApp::EnvDataToJSON(rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+
+	value.AddMember("strength_ibl", m_globalConstsCPU.strengthIBL, allocator);
+	value.AddMember("textrue_to_draw", m_globalConstsCPU.textureToDraw, allocator);
+	value.AddMember("env_lod_bias", m_globalConstsCPU.envLodBias, allocator);
+	value.AddMember("lod_bias", m_globalConstsCPU.lodBias, allocator);
+
+	rapidjson::Value strValue(rapidjson::kStringType);
+	strValue.SetString(m_cubemapTextureEnvFilePath.c_str(), allocator);
+	value.AddMember("cubemap_orgn_dds", strValue, allocator);
+
+	strValue.SetString(m_cubemapTextureSpecularFilePath.c_str( ),  allocator);
+	value.AddMember("cubemap_spec_dds", strValue, allocator);
+
+	strValue.SetString(m_cubemapTextureIrradianceFilePath.c_str( ), allocator);
+	value.AddMember("cubemap_diff_dds", strValue, allocator);
+
+	strValue.SetString(m_cubemapTextureBrdfFilePath.c_str( ), allocator);
+	value.AddMember("cubemap_brdf_dds", strValue, allocator);
+
+	return value;
+}
+
+void KuskApp::EnvDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("strength_ibl")) {
+		m_globalConstsCPU.strengthIBL = value[ "strength_ibl" ].GetFloat( );
+	}
+	if (value.HasMember("textrue_to_draw")) {
+		m_globalConstsCPU.textureToDraw = value[ "textrue_to_draw" ].GetInt( );
+	}
+	if (value.HasMember("env_lod_bias")) {
+		m_globalConstsCPU.envLodBias = value[ "env_lod_bias" ].GetFloat( );
+	}
+	if (value.HasMember("lod_bias")) {
+		m_globalConstsCPU.lodBias = value[ "lod_bias" ].GetFloat( );
+	}
+
+	if (value.HasMember("cubemap_orgn_dds")) {
+		m_cubemapTextureEnvFilePath = value[ "cubemap_orgn_dds" ].GetString( );
+	}
+	if (value.HasMember("cubemap_spec_dds")) {
+		m_cubemapTextureSpecularFilePath = value[ "cubemap_spec_dds" ].GetString( );
+	}
+	if (value.HasMember("cubemap_diff_dds")) {
+		m_cubemapTextureIrradianceFilePath = value[ "cubemap_diff_dds" ].GetString( );
+	}
+	if (value.HasMember("cubemap_brdf_dds")) {
+		m_cubemapTextureBrdfFilePath = value[ "cubemap_brdf_dds" ].GetString( );
 	}
 }
 

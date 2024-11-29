@@ -40,9 +40,8 @@ public:
 	virtual void OnMouseMove(int mouseX, int mouseY);
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	void InitCubemaps(wstring basePath, wstring envFilename,
-					  wstring specularFilename, wstring irradianceFilename,
-					  wstring brdfFilename);
+	void InitCubemaps(wstring envFilePath, wstring specularFilePath,
+					  wstring irradianceFilePath, wstring brdfFilePath);
 	void UpdateGlobalConstants(const Vector3& eyeWorld, const Matrix& viewRow,
 							   const Matrix& projRow, const Matrix& refl, const Plane& mirrorPlane);
 	void SetGlobalConsts(ComPtr<ID3D11Buffer>& globalConstsGPU);
@@ -139,6 +138,12 @@ public:
 	ComPtr<ID3D11ShaderResourceView> m_irradianceSRV;
 	ComPtr<ID3D11ShaderResourceView> m_specularSRV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfSRV;
+
+	// IBL 텍스쳐 정보
+	std::string m_cubemapTextureEnvFilePath;
+	std::string m_cubemapTextureSpecularFilePath;
+	std::string m_cubemapTextureIrradianceFilePath;
+	std::string m_cubemapTextureBrdfFilePath;
 
 	bool m_lightRotate = false;
 protected:
