@@ -665,10 +665,50 @@ void KuskApp::UpdateGUI() {
 
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Light")) { 
-		//ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[0].position.x, -5.0f, 5.0f);
-		ImGui::SliderFloat("Halo Radius", &m_globalConstsCPU.lights[1].haloRadius, 0.0f, 2.0f);
-		ImGui::SliderFloat("Halo Strength", &m_globalConstsCPU.lights[1].haloStrength, 0.0f, 1.0f);
-		ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[1].radius, 0.0f, 0.5f);
+
+		for (int i = 0; i < MAX_LIGHTS; i++) {
+			std::string light_tab = std::to_string(i) + " Light";
+			if (ImGui::TreeNode(light_tab.c_str())) {
+				bool isLightOn = m_globalConstsCPU.lights[ i ].type == LIGHT_OFF ? false : true;
+				int type = m_globalConstsCPU.lights[ i ].type & ~LIGHT_SHADOW;
+				if (ImGui::Checkbox("Light ON/OFF", &isLightOn)) {
+					m_lightSphere[ i ]->m_isVisible = isLightOn;
+				}
+				if (!isLightOn)
+					type = LIGHT_OFF;
+				
+				if (isLightOn) {
+					if (type == LIGHT_OFF) type = LIGHT_SPOT; // default
+					ImGui::RadioButton("Directional Light", &type, LIGHT_DIRECTIONAL);
+					ImGui::SameLine( );
+					ImGui::RadioButton("Point Light", &type, LIGHT_POINT);
+					ImGui::SameLine( );
+					ImGui::RadioButton("Spot Light", &type, LIGHT_SPOT);
+
+					bool isShadow = m_globalConstsCPU.lights[ i ].type & LIGHT_SHADOW;
+					ImGui::Checkbox("Shadow ON/OFF", &isShadow);
+					if (isShadow)
+						type |= LIGHT_SHADOW;
+
+					if (i != 1) {
+						ImGui::SliderFloat3("Position", &m_globalConstsCPU.lights[ i ].position.x, -5.0f, 5.0f);
+					}
+					ImGui::SliderFloat3("Radiance", &m_globalConstsCPU.lights[ i ].radiance.x, 0.0f, 5.0f);
+					ImGui::SliderFloat("Radius", &m_globalConstsCPU.lights[ i ].radius, 0.0f, 0.5f);
+					ImGui::SliderFloat("Spot Power", &m_globalConstsCPU.lights[ i ].spotPower, 0.0f, 6.0f);
+					ImGui::SliderFloat("Fall Off Start", &m_globalConstsCPU.lights[ i ].fallOffStart, 0.0f, 20.0f);
+					ImGui::SliderFloat("Fall Off End", &m_globalConstsCPU.lights[ i ].fallOffEnd, 0.0f, 50.0f);
+					ImGui::Separator( );
+					ImGui::SliderFloat("Halo Radius", &m_globalConstsCPU.lights[ i ].haloRadius, 0.0f, 2.0f);
+					ImGui::SliderFloat("Halo Strength", &m_globalConstsCPU.lights[ i ].haloStrength, 0.0f, 1.0f);
+					
+				}
+
+				m_globalConstsCPU.lights[ i ].type = type;
+
+				ImGui::TreePop( );
+			}
+		}
 		ImGui::TreePop( );
 	}
 
@@ -1127,15 +1167,16 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 	
 	rapidjson::Document::AllocatorType& allocator = doc.GetAllocator( );
 
+	// 모델 정보 저장
 	rapidjson::Value models(rapidjson::kArrayType);
-
 	for (auto& obj : m_savedList) {
 		rapidjson::Value model;
 		model = obj->ToJson(allocator);
 		models.PushBack(model, allocator);
 	}
-
 	doc.AddMember("Models", models, allocator);
+
+	// 조명 정보 저장
 
 	JsonManager::SaveJson(filePath, doc);
 }

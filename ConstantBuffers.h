@@ -48,7 +48,7 @@ __declspec(align(256)) struct MaterialConstants {
 };
 
 // 조명
-struct Light {
+struct Light { 
 	Vector3 radiance = Vector3(5.0f); // strength
 	float fallOffStart = 0.0f;
 	Vector3 direction = Vector3(0.0f, 0.0f, 1.0f);
