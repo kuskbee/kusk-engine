@@ -1238,6 +1238,13 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 				break;
 		}
 	}
+
+	if (doc.HasMember("Scene")) {
+		rapidjson::Value& scene = doc[ "Scene" ];
+		if (scene.HasMember("env")) {
+			EnvDataFromJSON(scene[ "env" ]);
+		}
+	}
 }
 
 void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
@@ -1264,6 +1271,15 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 		lights.PushBack(light, allocator);
 	}
 	doc.AddMember("Lights", lights, allocator);
+
+	// 장면 정보
+	rapidjson::Value scene(rapidjson::kObjectType);
+	// - 환경 정보 저장
+	rapidjson::Value env(rapidjson::kObjectType);
+	env = EnvDataToJSON(allocator);
+	scene.AddMember("env", env, allocator);
+
+	doc.AddMember("Scene", scene, allocator);
 
 	JsonManager::SaveJson(filePath, doc);
 }
@@ -1370,6 +1386,13 @@ void KuskApp::EnvDataFromJSON(rapidjson::Value& value) {
 	if (value.HasMember("cubemap_brdf_dds")) {
 		m_cubemapTextureBrdfFilePath = value[ "cubemap_brdf_dds" ].GetString( );
 	}
+	AppBase::InitCubemaps(
+				JsonManager::UTF8ToWString(m_cubemapTextureEnvFilePath),
+				JsonManager::UTF8ToWString(m_cubemapTextureSpecularFilePath),
+				JsonManager::UTF8ToWString(m_cubemapTextureIrradianceFilePath),
+				JsonManager::UTF8ToWString(m_cubemapTextureBrdfFilePath));
+
+
 }
 
 } // namespace kusk
