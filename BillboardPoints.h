@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "D3D11Utils.h"
+#include "JsonManager.h"
 
 namespace kusk{
 using DirectX::SimpleMath::Matrix;
@@ -31,6 +32,11 @@ public:
 	void Render(ComPtr<ID3D11DeviceContext>& context);
 	void UpdateVertexBuffer(ComPtr<ID3D11Device>& device);
 	void UpdateConstBuffer(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context);
+
+	rapidjson::Value BillboardToJSON(rapidjson::Document::AllocatorType& allocator);
+	void InitializeFromJSON(ComPtr<ID3D11Device>& device,
+							ComPtr<ID3D11DeviceContext>& context,
+							rapidjson::Value& value);
 public:
 	BillboardPointsConstantData m_constantData;
 

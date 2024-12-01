@@ -59,6 +59,25 @@ void JsonManager::SaveJson(const std::string filePath, const rapidjson::Document
     }
 }
 
+Vector4 JsonManager::ParseVector4(const rapidjson::Value& value) {
+    if (!value.IsArray( ) || value.Size( ) != 4) {
+        throw std::runtime_error("Invalid Vector4 format: must be an array of size 4.");
+    }
+
+    for (auto& v : value.GetArray( )) {
+        if (!v.IsNumber( )) {
+            throw std::runtime_error("Invalid Vector4 format: all elements must be numbers.");
+        }
+    }
+
+    return Vector4(
+        value[ 0 ].GetFloat( ),    //x
+        value[ 1 ].GetFloat( ),    //y
+        value[ 2 ].GetFloat( ),     //z
+        value[ 3 ].GetFloat( )     //w
+    );
+}
+
 Vector3 JsonManager::ParseVector3(const rapidjson::Value& value) {
     if (!value.IsArray( ) || value.Size( ) != 3) {
         throw std::runtime_error("Invalid Vector3 format: must be an array of size 3.");
@@ -107,6 +126,16 @@ Matrix JsonManager::ParseMatrix(const rapidjson::Value& matrixArray) {
     return matrix;
 }
 
+rapidjson::Value JsonManager::Vector4ToJson(const Vector4& vec, rapidjson::Document::AllocatorType& allocator) {
+    rapidjson::Value value(rapidjson::kArrayType);
+
+    value.PushBack(vec.x, allocator)
+        .PushBack(vec.y, allocator)
+        .PushBack(vec.z, allocator)
+        .PushBack(vec.w, allocator);
+
+    return value;
+}
 
 rapidjson::Value JsonManager::Vector3ToJson(const Vector3& vec, rapidjson::Document::AllocatorType& allocator) {
     rapidjson::Value value(rapidjson::kArrayType);

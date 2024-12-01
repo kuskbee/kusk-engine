@@ -1206,14 +1206,25 @@ void KuskApp::UpdatePopupGUI( ) {
 		static int selectedIndex = 0;
 		int flag = 0;
 		if (!m_billboardPointsList.empty( )) {
-			std::vector<std::string> itemStrings;
-			std::vector<const char*> itemNames;
+			std::vector<std::string> itemStrings; 
+			itemStrings.reserve(m_billboardPointsList.size( ));
 			for (size_t i = 0; i < m_billboardPointsList.size( ); ++i) {
 				itemStrings.push_back(("Billboard " + std::to_string(i)));
-				itemNames.push_back(itemStrings.back().c_str());
 			}
 
-			ImGui::Combo("Select Billboard", &selectedIndex, itemNames.data( ), static_cast< int >(itemNames.size( )));
+			if (ImGui::BeginCombo("Select Billboard", itemStrings[ selectedIndex ].c_str( ))) {
+				for (size_t i = 0; i < itemStrings.size( ); ++i) {
+					const bool isSelected = (selectedIndex == i);
+					if (ImGui::Selectable(itemStrings[ i ].c_str( ), isSelected)) {
+						selectedIndex = i;
+					}
+
+					if (isSelected) {
+						ImGui::SetItemDefaultFocus( ); // 기본 포커스 설정
+					}
+				}
+				ImGui::EndCombo( );
+			}
 
 			if (selectedIndex < m_billboardPointsList.size( )) {
 				auto selectedBillboard = m_billboardPointsList[ selectedIndex ];
@@ -1229,7 +1240,7 @@ void KuskApp::UpdatePopupGUI( ) {
 					Vector3 tempPoint = { selectedBillboard->m_points[ i ].x, 
 									selectedBillboard->m_points[ i ].y, 
 									selectedBillboard->m_points[ i ].z };
-					if (ImGui::SliderFloat3(name.c_str( ), &tempPoint.x, -50.0f, 50.0f, "%.2f")) {
+					if (ImGui::SliderFloat3(name.c_str( ), &tempPoint.x, -5.0f, 5.0f, "%.2f")) {
 						selectedBillboard->m_points[ i ].x = tempPoint.x;
 						selectedBillboard->m_points[ i ].y = tempPoint.y;
 						selectedBillboard->m_points[ i ].z = tempPoint.z;
@@ -1359,6 +1370,7 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 		m_basicList.push_back(m_lightSphere[ i ]);
 	}
 	m_basicList.push_back(m_cursorSphere);
+	m_billboardPointsList.clear( );
 
 	// JSON 파일의 데이터로 모델 생성 후 리스트 등록
 	rapidjson::Document doc;
@@ -1412,6 +1424,15 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 			PostProcessingDataFromJSON(scene[ "post_processing" ]);
 		}
 	}
+
+	if (doc.HasMember("Billboards")) {
+		rapidjson::Value& billboards = doc[ "Billboards" ];
+		for (rapidjson::Value& bill : billboards.GetArray( )) {
+			auto billboard = make_shared<BillboardPoints>( );
+			billboard->InitializeFromJSON(m_device, m_context, bill);
+			m_billboardPointsList.push_back(billboard);
+		}	
+	}
 }
 
 void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
@@ -1464,6 +1485,15 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 	scene.AddMember("screen", tmpObj, allocator);
 
 	doc.AddMember("Scene", scene, allocator);
+
+	// 빌보드 정보 저장
+	rapidjson::Value billboards(rapidjson::kArrayType);
+	for (int i = 0; i < m_billboardPointsList.size( ); i++) {
+		rapidjson::Value billboard;
+		billboard = m_billboardPointsList[ i ]->BillboardToJSON(allocator);
+		billboards.PushBack(billboard, allocator);
+	}
+	doc.AddMember("Billboards", billboards, allocator);
 
 	JsonManager::SaveJson(filePath, doc);
 }
