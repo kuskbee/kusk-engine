@@ -32,6 +32,7 @@ ComPtr<ID3D11VertexShader> skyboxVS;
 ComPtr<ID3D11VertexShader> samplingVS;
 ComPtr<ID3D11VertexShader> normalVS;
 ComPtr<ID3D11VertexShader> depthOnlyVS;
+ComPtr<ID3D11VertexShader> billboardPointsVS;
 
 ComPtr<ID3D11PixelShader> basicPS;
 ComPtr<ID3D11PixelShader> skyboxPS;
@@ -41,14 +42,17 @@ ComPtr<ID3D11PixelShader> bloomUpPS;
 ComPtr<ID3D11PixelShader> normalPS;
 ComPtr<ID3D11PixelShader> depthOnlyPS;
 ComPtr<ID3D11PixelShader> postEffectsPS;
+ComPtr<ID3D11PixelShader> billboardPointsPS;
 
 ComPtr<ID3D11GeometryShader> normalGS;
+ComPtr<ID3D11GeometryShader> billboardPointsGS;
 
 // Input Layouts
 ComPtr<ID3D11InputLayout> basicIL;
 ComPtr<ID3D11InputLayout> samplingIL;
 ComPtr<ID3D11InputLayout> skyboxIL;
 ComPtr<ID3D11InputLayout> postProcessingIL;
+ComPtr<ID3D11InputLayout> billboardPointsIL;
 
 // Graphics Pipeline States
 GraphicsPSO defaultSolidPSO;
@@ -66,6 +70,10 @@ GraphicsPSO normalsPSO;
 GraphicsPSO depthOnlyPSO;
 GraphicsPSO postEffectsPSO;
 GraphicsPSO postProcessingPSO;
+GraphicsPSO billboardPointsSolidPSO;
+GraphicsPSO billboardPointsWirePSO;
+GraphicsPSO reflectBillboardPointsSolidPSO;
+GraphicsPSO reflectBillboardPointsWirePSO;
 
 } // namespace Graphics
 
@@ -275,11 +283,15 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
+	vector<D3D11_INPUT_ELEMENT_DESC> billboardPointsIEs = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
+
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BasicVS.hlsl", basicIEs, basicVS, basicIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"NormalVS.hlsl", basicIEs, normalVS, basicIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SamplingVS.hlsl", samplingIEs, samplingVS, samplingIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SkyboxVS.hlsl", skyboxIEs, skyboxVS, skyboxIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"DepthOnlyVS.hlsl", skyboxIEs, depthOnlyVS, skyboxIL);
+	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVS.hlsl", billboardPointsIEs, billboardPointsVS, billboardPointsIL);
 
 	D3D11Utils::CreatePixelShader(device, L"BasicPS.hlsl", basicPS);
 	D3D11Utils::CreatePixelShader(device, L"NormalPS.hlsl", normalPS);
@@ -289,8 +301,10 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 	D3D11Utils::CreatePixelShader(device, L"BloomUpPS.hlsl", bloomUpPS);
 	D3D11Utils::CreatePixelShader(device, L"DepthOnlyPS.hlsl", depthOnlyPS);
 	D3D11Utils::CreatePixelShader(device, L"PostEffectsPS.hlsl", postEffectsPS);
+	D3D11Utils::CreatePixelShader(device, L"BillboardPointsPS.hlsl", billboardPointsPS);
 
 	D3D11Utils::CreateGeometryShader(device, L"NormalGS.hlsl", normalGS);
+	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGS.hlsl", billboardPointsGS);
 }
 
 void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
@@ -380,6 +394,30 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	postProcessingPSO.m_pixelShader = depthOnlyPS; // dummy
 	postProcessingPSO.m_inputLayout = samplingIL;
 	postProcessingPSO.m_rasterizerState = postProcessingRS;
+
+	// billboardPointsSolidPSO
+	billboardPointsSolidPSO.m_vertexShader = billboardPointsVS;
+	billboardPointsSolidPSO.m_inputLayout = billboardPointsIL;
+	billboardPointsSolidPSO.m_pixelShader = billboardPointsPS;
+	billboardPointsSolidPSO.m_geometryShader = billboardPointsGS;
+	billboardPointsSolidPSO.m_depthStencilState = drawDSS;
+	billboardPointsSolidPSO.m_rasterizerState = solidRS;
+	billboardPointsSolidPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+
+	// billboardPointsWirePSO
+	billboardPointsWirePSO = billboardPointsSolidPSO;
+	billboardPointsWirePSO.m_rasterizerState = wireRS;
+
+	// reflectBillboardPointsSolidPSO
+	reflectBillboardPointsSolidPSO = billboardPointsSolidPSO;
+	reflectBillboardPointsSolidPSO.m_depthStencilState = drawMaskedDSS;
+	reflectBillboardPointsSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
+	reflectBillboardPointsSolidPSO.m_stencilRef = 1;
+
+	// reflectBillboardPointsWirePSO
+	reflectBillboardPointsWirePSO = reflectBillboardPointsSolidPSO;
+	reflectBillboardPointsWirePSO.m_rasterizerState = wireCCWRS; // 반시계
+	reflectBillboardPointsWirePSO.m_stencilRef = 1;
 }
 
 } // namespace kusk

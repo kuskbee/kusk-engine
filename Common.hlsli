@@ -205,4 +205,44 @@ static const float2 diskSamples128[128] =
     float2(0.7628938334406858, 0.7124073240762442),
 };
 
+float3 SchlickFresnel(float3 F0, float VdotH)
+{
+    return float3(F0 + (1.0 - F0) * pow(2.0, (-5.55473 * VdotH - 6.98316) * VdotH)); // Note (5)
+    // return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
+
+float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic)
+{
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+    float3 F = SchlickFresnel(F0, max(0.0, dot(normalWorld, pixelToEye)));
+    float3 kd = lerp(1.0 - F, 0.0, metallic);
+    
+    // 앞에서 사용했던 방법과 동일
+    float3 irradiance = irradianceIBLTex.SampleLevel(linearWrapSampler, normalWorld, 0).rgb;
+    
+    return kd * albedo * irradiance;
+}
+
+float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic, float roughness)
+{
+    float2 specularBRDF = brdfTex.SampleLevel(linearClampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
+    
+    // 앞에서 사용했던 방법과 동일
+    float3 specularIrradiance = specularIBLTex.SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;    
+    float3 F0 = lerp(Fdielectric, albedo, metallic);
+    
+    return (F0 * specularBRDF.x + specularBRDF.y) * specularIrradiance; // Note (8)
+}
+
+float3 AmbientLightingByIBL(float3 albedo, float3 normalW, float3 pixelToEye, float ao, float metallic, float roughness)
+{
+    float3 diffuseIBL = DiffuseIBL(albedo, normalW, pixelToEye, metallic);
+    float3 specularIBL = SpecularIBL(albedo, normalW, pixelToEye, metallic, roughness);
+    
+    return (diffuseIBL + specularIBL) * ao;
+}
+
+
 #endif // __COMMON_HLSLI__

@@ -1,18 +1,19 @@
+#include "Common.hlsli"
+
 cbuffer BillboardPointsConstantData : register(b0)
 {
-    float3 eyeWorld;
+    float3 albedoFactor;
+    float roughnessFactor;
+    float metallicFactor;
     float width;
-    Matrix modelWorld;
-    Matrix view;
-    Matrix proj;
 };
 
-struct GeometryShaderInput
+struct BillboardGeometryShaderInput
 {
     float4 pos : SV_POSITION;
 };
 
-struct PixelShaderInput
+struct BillboardPixelShaderInput
 {
     float4 pos : SV_POSITION; // Screen positon
     float4 posWorld : POSITION0;
@@ -22,8 +23,8 @@ struct PixelShaderInput
 };
 
 [maxvertexcount(4)] // 최대 출력 Vertex 갯수
-void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
-                              inout TriangleStream<PixelShaderInput> outputStream)
+void main(point BillboardGeometryShaderInput input[1], uint primID : SV_PrimitiveID,
+                              inout TriangleStream<BillboardPixelShaderInput> outputStream)
 {
     float hw = 0.5 * width;
     
@@ -32,7 +33,7 @@ void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
     front.w = 0.0;
     float4 right = float4(cross(up.xyz, normalize(front.xyz)), 0.0);
     
-    PixelShaderInput output;
+    BillboardPixelShaderInput output;
     
     output.center = input[0].pos; // 빌보드의 중심
     
@@ -45,19 +46,19 @@ void main(point GeometryShaderInput input[1], uint primID : SV_PrimitiveID,
     output.primID = primID;
     outputStream.Append(output);
     
-    output.posWorld = input[0].pos - hw * right + hw * up;
-    output.pos = output.posWorld;
-    output.pos = mul(output.pos, view);
-    output.pos = mul(output.pos, proj);
-    output.texCoord = float2(0.0, 0.0);
-    output.primID = primID;
-    outputStream.Append(output);
-    
     output.posWorld = input[0].pos + hw * right - hw * up;
     output.pos = output.posWorld;
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, proj);
     output.texCoord = float2(1.0, 1.0);
+    output.primID = primID;
+    outputStream.Append(output);
+    
+    output.posWorld = input[0].pos - hw * right + hw * up;
+    output.pos = output.posWorld;
+    output.pos = mul(output.pos, view);
+    output.pos = mul(output.pos, proj);
+    output.texCoord = float2(0.0, 0.0);
     output.primID = primID;
     outputStream.Append(output);
     

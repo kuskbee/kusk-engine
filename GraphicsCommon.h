@@ -35,6 +35,7 @@ extern ComPtr<ID3D11VertexShader> skyboxVS;
 extern ComPtr<ID3D11VertexShader> samplingVS;
 extern ComPtr<ID3D11VertexShader> normalVS;
 extern ComPtr<ID3D11VertexShader> depthOnlyVS;
+extern ComPtr<ID3D11VertexShader> billboardPointsVS;
 extern ComPtr<ID3D11PixelShader> basicPS;
 extern ComPtr<ID3D11PixelShader> skyboxPS;
 extern ComPtr<ID3D11PixelShader> combinePS;
@@ -43,13 +44,16 @@ extern ComPtr<ID3D11PixelShader> bloomUpPS;
 extern ComPtr<ID3D11PixelShader> normalPS;
 extern ComPtr<ID3D11PixelShader> depthOnlyPS;
 extern ComPtr<ID3D11PixelShader> postEffectsPS;
+extern ComPtr<ID3D11PixelShader> billboardPointsPS;
 extern ComPtr<ID3D11GeometryShader> normalGS;
+extern ComPtr<ID3D11GeometryShader> billboardPointsGS;
 
 // Input Layouts
 extern ComPtr<ID3D11InputLayout> basicIL;
 extern ComPtr<ID3D11InputLayout> samplingIL;
 extern ComPtr<ID3D11InputLayout> skyboxIL;
 extern ComPtr<ID3D11InputLayout> postProcessingIL;
+extern ComPtr<ID3D11InputLayout> billboardPointsIL;
 
 // Blend States
 extern ComPtr<ID3D11BlendState> mirrorBS;
@@ -70,6 +74,10 @@ extern GraphicsPSO normalsPSO;
 extern GraphicsPSO depthOnlyPSO;
 extern GraphicsPSO postEffectsPSO;
 extern GraphicsPSO postProcessingPSO;
+extern GraphicsPSO billboardPointsSolidPSO;
+extern GraphicsPSO billboardPointsWirePSO;
+extern GraphicsPSO reflectBillboardPointsSolidPSO;
+extern GraphicsPSO reflectBillboardPointsWirePSO;
 
 void InitCommonStates(ComPtr<ID3D11Device>& device);
 

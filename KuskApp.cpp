@@ -40,11 +40,12 @@ bool KuskApp::Initialize() {
 
 	// 배경 나무 텍스쳐
 	vector<Vector4> points;
-	Vector4 p = { -40.0f, 1.0f, 20.0f, 1.0f };
+	Vector4 p = { -40.0f, 1.0f, 1.0f, 1.0f };
 	for (int i = 0; i < 100; i++) {
 		points.push_back(p);
 		p.x += 2.0f;
 	}
+	
 	std::vector<std::string> treeTextureFilenames = {
 	"./Assets/Textures/TreeBillboards/1.png",
 	"./Assets/Textures/TreeBillboards/2.png",
@@ -52,7 +53,10 @@ bool KuskApp::Initialize() {
 	"./Assets/Textures/TreeBillboards/4.png",
 	"./Assets/Textures/TreeBillboards/5.png" };
 
-	m_billboardPoints.Initialize(m_device, m_context, points, 2.4f, L"BillboardPointsPS.hlsl", treeTextureFilenames);*/
+	auto billboardPoints = make_shared<BillboardPoints>( );
+
+	billboardPoints->Initialize(m_device, m_context, points, 2.4f, treeTextureFilenames);
+	m_billboardPointsList.push_back(billboardPoints);*/
 
 	// Shadertoy Media Files
 	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
@@ -403,8 +407,15 @@ void KuskApp::Update(float dt) {
 	m_tessellatedQuad.m_constantData.proj = projRow.Transpose( );
 	D3D11Utils::UpdateBuffer(m_device, m_context, m_tessellatedQuad.m_constantData, m_tessellatedQuad.m_constantBuffer);*/
 
+	/*for (int i = 0; i < m_billboardPointsList.size( ); i++) {
+		m_billboardPointsList[i]->m_constantData.eyeWorld = eyeWorld;
+		m_billboardPointsList[i]->m_constantData.view = viewRow.Transpose( );
+		m_billboardPointsList[i]->m_constantData.proj = projRow.Transpose( );
+		D3D11Utils::UpdateBuffer(m_device, m_context, 
+			m_billboardPointsList[ i ]->m_constantData, 
+			m_billboardPointsList[ i ]->m_constantBuffer);
+	}*/
 	
-	/*D3D11Utils::UpdateBuffer(m_device, m_context, m_billboardPoints.m_constantData, m_billboardPoints.m_constantBuffer);*/
 }
 
 void KuskApp::Render() {
@@ -485,7 +496,12 @@ void KuskApp::Render() {
 	if (m_mirrorAlpha == 1.0f) {
 		m_mirror->Render(m_context);
 	}
-	
+
+	AppBase::SetPipelineState(m_drawAsWire ? Graphics::billboardPointsWirePSO
+										   : Graphics::billboardPointsSolidPSO);
+	for(auto& b : m_billboardPointsList)
+		b->Render(m_context);
+
 	AppBase::SetPipelineState(Graphics::normalsPSO);
 	for (auto& i : m_basicList) {
 		if (i->m_drawNormals) {
@@ -495,10 +511,8 @@ void KuskApp::Render() {
 
 	AppBase::SetPipelineState(m_drawAsWire ? Graphics::skyboxWirePSO
 										   : Graphics::skyboxSolidPSO);
-
 	m_skybox->Render(m_context);
 
-	//m_billboardPoints.Render(m_context);
 	//m_tessellatedQuad.Render(m_context);
 
 	if (m_mirrorAlpha < 1.0f) { // 거울을 그려야하는 상황
@@ -519,6 +533,11 @@ void KuskApp::Render() {
 		for (auto& i : m_basicList) {
 			i->Render(m_context);
 		}
+
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectBillboardPointsWirePSO
+											   : Graphics::reflectBillboardPointsSolidPSO);
+		for (auto& b : m_billboardPointsList)
+			b->Render(m_context); //
 
 		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectSkyboxWirePSO
 											   : Graphics::reflectSkyboxSolidPSO);
@@ -667,6 +686,15 @@ void KuskApp::UpdateGUI() {
 				JsonManager::UTF8ToWString(m_cubemapTextureSpecularFilePath), 
 				JsonManager::UTF8ToWString(m_cubemapTextureIrradianceFilePath), 
 				JsonManager::UTF8ToWString(m_cubemapTextureBrdfFilePath));
+		}
+
+		ImGui::TreePop( );
+	}
+
+	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	if (ImGui::TreeNode("Billboard")) {
+		if (ImGui::Button("Billboard Edit")) {
+			m_showBillboardEditPopup = true;
 		}
 
 		ImGui::TreePop( );
@@ -1121,7 +1149,118 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 			
 		});
 	}
+
 	ImGui::End( );
+}
+
+void KuskApp::UpdatePopupGUI( ) {
+
+	// 빌보드 편집 Popup
+	if (m_showBillboardEditPopup) {
+		ImGui::Begin("Add Billboard", &m_showBillboardEditPopup);
+		static const std::string filterName = "Image files";
+		static const std::string filterExts = "*.jpg;*.jpeg;*.png";
+
+		if (m_billboardTextureList.size( )) {
+			for (size_t i = 0; i < m_billboardTextureList.size( ); ++i) {
+				ImGui::PushID(int(i)); // 고유 ID를 푸시하여 버튼 간 충돌 방지
+
+				std::filesystem::path filePath(m_billboardTextureList[ i ]);
+				std::string fileName = filePath.filename( ).string( );
+				ImGui::Text("File[%d] : %s", i, fileName.c_str( ));
+				ImGui::SameLine( );
+
+				// 삭제 버튼
+				if (ImGui::Button("Delete")) {
+					m_billboardTextureList.erase(m_billboardTextureList.begin( ) + i);
+					ImGui::PopID( ); // 삭제되었으므로 ID 스택 정리 후 루프 재진입
+					break;
+				}
+
+				ImGui::PopID( ); // ID 스택 정리
+			}
+		}
+		else {
+			ImGui::Text("The texture file list is empty."
+						"\nUnable to create a billboard. "
+						"\nPlease register your texture files.");
+		}
+		if (ImGui::Button("Add Texture")) {
+			std::string filePath = OpenFileDialog(filterName, filterExts);
+			if (!filePath.empty( )) {
+				m_billboardTextureList.push_back(filePath);
+			}
+		}
+		if (m_billboardTextureList.size( )) {
+			if (ImGui::Button("Create Billboard")) {
+				CreateBillboardPoints( );
+			}
+		}
+		ImVec2 windowPos = ImGui::GetWindowPos( );
+		ImVec2 windowSize = ImGui::GetWindowSize( );
+		ImGui::End( );
+
+		// 생성된 빌보드 편집 
+		ImGui::SetNextWindowPos(ImVec2(windowPos.x, windowPos.y + windowSize.y + 10), ImGuiCond_Always);
+		ImGui::Begin("Edit BillboardPoints");
+		static int selectedIndex = 0;
+		int flag = 0;
+		if (!m_billboardPointsList.empty( )) {
+			std::vector<std::string> itemStrings;
+			std::vector<const char*> itemNames;
+			for (size_t i = 0; i < m_billboardPointsList.size( ); ++i) {
+				itemStrings.push_back(("Billboard " + std::to_string(i)));
+				itemNames.push_back(itemStrings.back().c_str());
+			}
+
+			ImGui::Combo("Select Billboard", &selectedIndex, itemNames.data( ), static_cast< int >(itemNames.size( )));
+
+			if (selectedIndex < m_billboardPointsList.size( )) {
+				auto selectedBillboard = m_billboardPointsList[ selectedIndex ];
+				flag += ImGui::SliderFloat("width", &selectedBillboard->m_constantData.width, 0.1f, 4.0f, "%.2f");
+				flag += ImGui::SliderFloat3("albedo", &selectedBillboard->m_constantData.albedoFactor.x, 0.0f, 1.0f, "%.2f");
+				flag += ImGui::SliderFloat("roughness", &selectedBillboard->m_constantData.roughnessFactor, 0.0f, 1.0f, "%.2f");
+				flag += ImGui::SliderFloat("metallic", &selectedBillboard->m_constantData.metallicFactor, 0.0f, 1.0f, "%.2f");
+
+				ImGui::Text(":Points:");
+				for (size_t i = 0; i < selectedBillboard->m_points.size( ); ++i) {
+					ImGui::PushID(int(i));
+					std::string name = "point " + std::to_string(i);
+					Vector3 tempPoint = { selectedBillboard->m_points[ i ].x, 
+									selectedBillboard->m_points[ i ].y, 
+									selectedBillboard->m_points[ i ].z };
+					if (ImGui::SliderFloat3(name.c_str( ), &tempPoint.x, -50.0f, 50.0f, "%.2f")) {
+						selectedBillboard->m_points[ i ].x = tempPoint.x;
+						selectedBillboard->m_points[ i ].y = tempPoint.y;
+						selectedBillboard->m_points[ i ].z = tempPoint.z;
+						selectedBillboard->UpdateVertexBuffer(m_device);
+					}
+					ImGui::SameLine( );
+
+					if (ImGui::Button("Delete")) {
+						selectedBillboard->m_points.erase(selectedBillboard->m_points.begin( ) + i);
+						selectedBillboard->UpdateVertexBuffer(m_device); // 다시 vertexbuffer 만들기
+						ImGui::PopID( );
+						break;
+					}
+					ImGui::PopID( );
+				}
+				if (flag)
+					selectedBillboard->UpdateConstBuffer(m_device, m_context);
+
+				if (ImGui::Button("Add point")) {
+					selectedBillboard->m_points.push_back({ 0.0f, 1.0f, 2.0f, 1.0f });
+					selectedBillboard->UpdateVertexBuffer(m_device); // 다시 vertexbuffer 만들기
+				}
+			}
+
+		}
+		else {
+			ImGui::Text("No Billboard Points available.");
+		}
+		ImGui::End( );
+	}
+	
 }
 
 //:TODO: 적당한 곳에 정의를 옮기자..
@@ -1193,6 +1332,22 @@ void KuskApp::CreateModelFromFile(const std::string& fullPath) {
 
 	m_basicList.push_back(obj);
 	m_savedList.push_back(obj);
+}
+
+void KuskApp::CreateBillboardPoints( ) {
+	vector<Vector4> points;
+	Vector4 p = { -1.0f * m_billboardTextureList.size( ), 1.0f, 2.0f, 1.0f };
+	for (int i = 0; i < m_billboardTextureList.size( ); i++) {
+		points.push_back(p);
+		p.x += 1.8f;
+	}
+
+	auto billboardPoints = make_shared<BillboardPoints>( );
+	const float defaultWidth = 2.4f;
+	billboardPoints->Initialize(m_device, m_context, points, defaultWidth, m_billboardTextureList);
+	m_billboardPointsList.push_back(billboardPoints);
+
+	m_billboardTextureList.clear( );
 }
 
 void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {

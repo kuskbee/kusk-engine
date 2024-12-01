@@ -89,6 +89,8 @@ int AppBase::Run() {
 
             ImGui::End();
 
+            UpdatePopupGUI( );
+
             UpdateObjectCreationFrameGUI( );
 
             ImGui::Render();

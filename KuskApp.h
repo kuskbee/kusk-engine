@@ -10,6 +10,7 @@
 #include "ImageFilter.h"
 #include "Model.h"
 #include "JsonManager.h"
+#include "BillboardPoints.h"
 
 namespace kusk {
 
@@ -22,6 +23,7 @@ public:
 
 	virtual bool Initialize() override;
 	virtual void UpdateGUI() override;
+	virtual void UpdatePopupGUI() override;
 	virtual void Update(float dt) override;
 	virtual void Render() override;
 
@@ -38,10 +40,12 @@ public:
 	void CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices);
 	void CreateBox(float scale);
 	void CreateModelFromFile(const std::string& fullPath);
+	void CreateBillboardPoints();
 
 	// Json 관련
 	void LoadSceneDataFromJSON(std::string& filePath);
 	void SaveSceneDataAsJSON(std::string& filePath);
+
 	rapidjson::Value LightToJSON(Light& l, rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value EnvDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value ScreenDataToJSON(rapidjson::Document::AllocatorType& allocator);
@@ -57,7 +61,6 @@ public:
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
-	//BillboardPoints m_billboardPoints;
 	shared_ptr<Model> m_ground;
 	shared_ptr<Model> m_mainObj;
 	shared_ptr<Model> m_lightSphere[MAX_LIGHTS];
@@ -65,6 +68,7 @@ protected:
 	shared_ptr<Model> m_skybox;
 	shared_ptr<Model> m_cursorSphere;
 	shared_ptr<Model> m_screenSquare;
+	vector<shared_ptr<BillboardPoints>> m_billboardPointsList;
 
 	// 거울
 	shared_ptr<Model> m_mirror;
@@ -76,6 +80,11 @@ protected:
 
 	// 장면으로 저장되는 물체 리스트
 	vector<shared_ptr<Model>> m_savedList;
+
+	// Billboard 생성용 파라미터
+	bool m_showBillboardEditPopup = false;
+	vector<std::string> m_billboardTextureList;
+
 };
 } // namespace kusk
  

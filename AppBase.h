@@ -35,6 +35,7 @@ public:
 
 	virtual bool Initialize( );
 	virtual void UpdateGUI( ) = 0;
+	virtual void UpdatePopupGUI( ) = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Render( ) = 0;
 	virtual void OnMouseMove(int mouseX, int mouseY);
