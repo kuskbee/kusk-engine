@@ -122,6 +122,9 @@
     <ClInclude Include="JsonManager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="MouseControlState.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="BloomDownPS.hlsl" />

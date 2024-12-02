@@ -217,7 +217,9 @@ void KuskApp::UpdateMousePicking( ) {
 			Vector3 dragTranslation;
 			Vector3 pickPoint;
 			float distance = 0.0f;
-			if (UpdateMouseControl(m_basicList[ i ]->m_boundingSphere, q, dragTranslation, pickPoint, distance)) {
+			if (UpdateMouseControl(m_basicList[ i ]->m_boundingSphere, 
+								   q, dragTranslation, pickPoint, distance,
+								   m_basicList[ i ]->m_mouseState)) {
 				if (minDistance > distance) {
 					minDistance = distance;
 					finalQtnion = q;
@@ -255,6 +257,10 @@ void KuskApp::UpdateMousePicking( ) {
 		}
 	}
 	else {
+		for (size_t i = 0; i < m_basicList.size( ); i++) {
+			m_basicList[ i ]->m_mouseState.isDragging = false;
+		}
+
 		m_cursorSphere->m_isVisible = false;
 	}
 }
@@ -728,6 +734,8 @@ void KuskApp::UpdateGUI() {
 		if (ImGui::TreeNode("Selected Object's Material")) {
 			int flag = 0;
 
+			flag += ImGui::SliderFloat3(
+				"Albedo", &selectedObj->m_materialConstsCPU.albedoFactor.x, 0.0f, 1.0f);
 			flag += ImGui::SliderFloat(
 				"Metallic", &selectedObj->m_materialConstsCPU.metallicFactor, 0.0f, 1.0f);
 			flag += ImGui::SliderFloat(

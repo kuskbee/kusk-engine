@@ -179,16 +179,10 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
-        if (!m_leftButton && !m_rightButton) {
-            m_dragStartFlag = true;
-        }
         m_leftButton = true;
         break;
     case WM_RBUTTONDOWN:
         // cout << "WM_RBUTTONDOWN Right mouse button" << endl;
-        if (!m_rightButton && !m_leftButton) {
-            m_dragStartFlag = true;
-        }
         m_rightButton = true;
         break;
     case WM_LBUTTONUP:
@@ -375,14 +369,10 @@ void AppBase::SetPipelineState(const GraphicsPSO& pso) {
 }
 
 bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
-                                 Vector3& dragTranslation, Vector3& pickPoint, float& distance) {
+                                 Vector3& dragTranslation, Vector3& pickPoint, float& distance,
+                                 MouseControlState& mcs) {
     const Matrix viewRow = m_camera.GetViewRow( );
     const Matrix projRow = m_camera.GetProjRow( );
-
-    // mainSphere의 회전 계산용
-    static float prevRatio = 0.0f;
-    static Vector3 prevPos(0.0f);
-    static Vector3 prevVector(0.0f);
 
     // 회전과 이동 초기화
     q = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), 0.0f);
@@ -418,22 +408,21 @@ bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
             // mainSphere를 어떻게 회전시킬지 결정
             if (m_leftButton)
             {
-                if (m_dragStartFlag) { // 드래그를 시작하는 경우
-                    m_dragStartFlag = false;
-
-                    prevVector = pickPoint - Vector3(bs.Center);
-                    prevVector.Normalize( );
+                if (false == mcs.isDragging) { // 드래그를 시작하는 경우
+                    mcs.isDragging = true;
+                    mcs.prevVector = pickPoint - Vector3(bs.Center);
+                    mcs.prevVector.Normalize( );
                 }
                 else {
                     Vector3 currentVector = pickPoint - Vector3(bs.Center);
                     currentVector.Normalize( );
-                    float theta = acos(prevVector.Dot(currentVector));
+                    float theta = acos(mcs.prevVector.Dot(currentVector));
                     // 마우스가 조금이라도 움직였을 경우에만 회전시키기
                     if (theta > 3.141592f / 180.0f * 3.0f) {
-                        Vector3 axis = prevVector.Cross(currentVector);
+                        Vector3 axis = mcs.prevVector.Cross(currentVector);
                         axis.Normalize( );
                         q = SimpleMath::Quaternion::CreateFromAxisAngle(axis, theta);
-                        prevVector = currentVector;
+                        mcs.prevVector = currentVector;
                     }
                 }
                 return true; // selected
@@ -441,22 +430,22 @@ bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
             // mainSphere를 어떻게 이동시킬지 결정
             else if (m_rightButton)
             {
-                if (m_dragStartFlag) { // 드래그를 시작하는 경우
-                    m_dragStartFlag = false;
-
-                    prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
-                    prevPos = pickPoint;
+                if (false == mcs.isDragging) { // 드래그를 시작하는 경우
+                    mcs.isDragging = true;
+                    mcs.prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
+                    mcs.prevPos = pickPoint;
                 }
                 else {
-                    Vector3 newPos = cursorWorldNear + prevRatio * (cursorWorldFar - cursorWorldNear);
-                    dragTranslation = newPos - prevPos;
-                    prevPos = newPos;
+                    Vector3 newPos = cursorWorldNear + mcs.prevRatio * (cursorWorldFar - cursorWorldNear);
+                    dragTranslation = newPos - mcs.prevPos;
+                    mcs.prevPos = newPos;
                 }
                 return true; // selected
             }
         }
     }
 
+    mcs.isDragging = false;
     return false;
 }
 

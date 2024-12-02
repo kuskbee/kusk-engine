@@ -166,6 +166,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelInstance.h" />
     <ClInclude Include="ModelLoader.h" />
+    <ClInclude Include="MouseControlState.h" />
     <ClInclude Include="PostProcess.h" />
     <ClInclude Include="TessellatedQuad.h" />
     <ClInclude Include="textureResources.h" />

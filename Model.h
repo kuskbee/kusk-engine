@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "MeshData.h"
 #include "JsonManager.h"
+#include "MouseControlState.h"
 
 
 // 참고: DirectX-Graphics-Samples
@@ -77,6 +78,9 @@ public:
 	std::string m_aoTextureFilePath; // Ambient Occlusion
 	std::string m_metallicTextureFilePath;
 	std::string m_roughnessTextureFilePath;
+
+	// Picking 상태 저장
+	MouseControlState m_mouseState;
 
 private:
 	ComPtr<ID3D11Buffer> m_meshConstsGPU;
