@@ -35,7 +35,7 @@ public:
 
 	// 물체 생성 관련
 	void CreateSphere(float radius, int numSlices, int numStacks, Vector2& texScale);
-	void CreateSquare(float scale, Vector2& texScale);
+	void CreateSquare(float scale, Vector2& texScale, bool isMirror);
 	void CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale);
 	void CreateCylinder(float bottomRadius, float topRadius, float height, int numSlices);
 	void CreateBox(float scale);
@@ -74,6 +74,8 @@ protected:
 	shared_ptr<Model> m_mirror;
 	DirectX::SimpleMath::Plane m_mirrorPlane;
 	float m_mirrorAlpha = 1.0f; // opacity
+	Vector3 m_mirrorRotation = Vector3(0.0f, 0.0f, 0.0f);
+	Vector3 m_mirrorScale = Vector3(1.0f);
 
 	// 거울이 아닌 물체들의 리스트 (for문으로 그리기 위함)
 	vector<shared_ptr<Model>> m_basicList;

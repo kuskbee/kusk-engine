@@ -43,6 +43,7 @@ struct ModelCreationParams
 	float topRadius = 1.0f;
 	float height = 1.0f;
 	float radius = 1.0f;
+	bool isMirror = false;
 	MESH_TYPE type = MESH_TYPE_NONE;
 	std::string selectedFilePath;
 };

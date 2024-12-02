@@ -36,27 +36,7 @@ bool KuskApp::Initialize() {
 	// $tessellatedQuad
 	/*m_tessellatedQuad.Initialize(m_device);
 	m_tessellatedQuad.m_irradianceSRV = m_cubeMapping.m_irradianceSRV;
-	m_tessellatedQuad.m_specularResView = m_cubeMapping.m_specularResView;
-
-	// 배경 나무 텍스쳐
-	vector<Vector4> points;
-	Vector4 p = { -40.0f, 1.0f, 1.0f, 1.0f };
-	for (int i = 0; i < 100; i++) {
-		points.push_back(p);
-		p.x += 2.0f;
-	}
-	
-	std::vector<std::string> treeTextureFilenames = {
-	"./Assets/Textures/TreeBillboards/1.png",
-	"./Assets/Textures/TreeBillboards/2.png",
-	"./Assets/Textures/TreeBillboards/3.png",
-	"./Assets/Textures/TreeBillboards/4.png",
-	"./Assets/Textures/TreeBillboards/5.png" };
-
-	auto billboardPoints = make_shared<BillboardPoints>( );
-
-	billboardPoints->Initialize(m_device, m_context, points, 2.4f, treeTextureFilenames);
-	m_billboardPointsList.push_back(billboardPoints);*/
+	m_tessellatedQuad.m_specularResView = m_cubeMapping.m_specularResView;*/
 
 	// Shadertoy Media Files
 	// https://shadertoyunofficial.wordpress.com/2019/07/23/shadertoy-media-files/
@@ -79,6 +59,7 @@ bool KuskApp::Initialize() {
 	}
 
 	// 바닥(거울)
+	if(false)
 	{
 		auto mesh = GeometryGenerator::MakeSquare(5.0f);
 		//mesh.albedoTextureFilename = BLENDER_UV_GRID_2K_TEXTURE;
@@ -296,7 +277,8 @@ void KuskApp::Update(float dt) {
 	AppBase::UpdateGlobalConstants(eyeWorld, viewRow, projRow, reflectRow, m_mirrorPlane);
 	
 	// 거울은 따로 처리
-	m_mirror->UpdateConstantBuffers(m_device, m_context);
+	if(m_mirror)
+		m_mirror->UpdateConstantBuffers(m_device, m_context);
 
 	// 조명의 위치 반영
 	for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -357,7 +339,9 @@ void KuskApp::Render() {
 		i->Render(m_context);
 
 	m_skybox->Render(m_context);
-	m_mirror->Render(m_context);
+	if (m_mirror) {
+		m_mirror->Render(m_context);
+	}
 
 	// 그림자맵 만들기
 	AppBase::SetShadowViewport( ); // 그림자맵 해상도
@@ -374,7 +358,9 @@ void KuskApp::Render() {
 				}
 			}
 			m_skybox->Render(m_context);
-			m_mirror->Render(m_context);
+			if (m_mirror) {
+				m_mirror->Render(m_context);
+			}
 		}
 	}
 	
@@ -406,7 +392,7 @@ void KuskApp::Render() {
 	}
 
 	// 거울 반사를 그릴 필요가 없으면 불투명 거울만 그리기
-	if (m_mirrorAlpha == 1.0f) {
+	if (m_mirror && m_mirrorAlpha == 1.0f) {
 		m_mirror->Render(m_context);
 	}
 
@@ -428,7 +414,7 @@ void KuskApp::Render() {
 
 	//m_tessellatedQuad.Render(m_context);
 
-	if (m_mirrorAlpha < 1.0f) { // 거울을 그려야하는 상황
+	if (m_mirror && m_mirrorAlpha < 1.0f) { // 거울을 그려야하는 상황
 
 		/* 거울 2. 거울 위치만 StencilBuffer에 1로 표기 */
 		AppBase::SetPipelineState(Graphics::stencilMaskPSO);
@@ -465,7 +451,7 @@ void KuskApp::Render() {
 
 		m_mirror->Render(m_context);
 
-	} // end of if (m_mirrorAlpha < 1.0f)
+	} // end of if (m_mirror && m_mirrorAlpha < 1.0f)
 
 	// MSAA로 Texture2DMS에 렌더링된 결과를 Texture2D로 변환(Resolve)
 	m_context->ResolveSubresource(m_resolvedBuffer.Get( ), 0, m_floatBuffer.Get( ), 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
@@ -648,22 +634,45 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Mirror")) {
-		ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
-		const float blendColor[ 4 ] = { m_mirrorAlpha, m_mirrorAlpha,
-									 m_mirrorAlpha, 1.0f };
-		if (m_drawAsWire)
-			Graphics::mirrorBlendWirePSO.SetBlendFactor(blendColor);
-		else
-			Graphics::mirrorBlendSolidPSO.SetBlendFactor(blendColor);
+	// 거울 관련
+	if (m_mirror) {
+		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (ImGui::TreeNode("Mirror")) {
+			ImGui::SliderFloat("Alpha", &m_mirrorAlpha, 0.0f, 1.0f);
+			const float blendColor[ 4 ] = { m_mirrorAlpha, m_mirrorAlpha,
+										 m_mirrorAlpha, 1.0f };
+			if (m_drawAsWire)
+				Graphics::mirrorBlendWirePSO.SetBlendFactor(blendColor);
+			else
+				Graphics::mirrorBlendSolidPSO.SetBlendFactor(blendColor);
 
-		ImGui::SliderFloat("Metallic", &m_mirror->m_materialConstsCPU.metallicFactor, 0.0f, 1.0f);
-		ImGui::SliderFloat("Roughness", &m_mirror->m_materialConstsCPU.roughnessFactor, 0.0f, 1.0f);
+			ImGui::SliderFloat("Metallic", &m_mirror->m_materialConstsCPU.metallicFactor, 0.0f, 1.0f);
+			ImGui::SliderFloat("Roughness", &m_mirror->m_materialConstsCPU.roughnessFactor, 0.0f, 1.0f);
 
-		ImGui::TreePop( );
+			int flag = 0;
+			Vector3 position = m_mirror->m_worldRow.Translation( );
+			flag += ImGui::SliderFloat3("position", &position.x, -10.0f, 10.0f);
+			flag += ImGui::SliderFloat3("rotation", &m_mirrorRotation.x, -3.14f, 3.14f);
+			flag += ImGui::SliderFloat3("scale", &m_mirrorScale.x, 0.0f, 50.0f);
+
+			if (flag) {
+				m_mirror->UpdateWorldRow(
+					Matrix::CreateScale(Vector3(m_mirrorScale))*
+					Matrix::CreateRotationX(m_mirrorRotation.x)*
+					Matrix::CreateRotationY(m_mirrorRotation.y)*
+					Matrix::CreateRotationZ(m_mirrorRotation.z)*
+					Matrix::CreateTranslation(position));
+			}
+
+			// 삭제 버튼
+			if (ImGui::Button("Delete")) {
+				m_mirror.reset( );
+			}
+
+			ImGui::TreePop( );
+		}
 	}
-
+	
 	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 	if (ImGui::TreeNode("Light")) { 
 
@@ -892,37 +901,6 @@ void KuskApp::UpdateGUI() {
 		}
 	}
 
-	/*
-		
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-	if (ImGui::TreeNode("Ground")) {
-		bool temp = bool(m_ground.m_basicPixelConstData.useAlbedoMap);
-		if (ImGui::Checkbox("Use AlbedoTexture", &temp)) {
-			m_ground.m_basicPixelConstData.useAlbedoMap = int(temp);
-		}
-
-		temp = bool(m_ground.m_basicPixelConstData.useNormalMap);
-		if (ImGui::Checkbox("Use NormalMapping", &temp)) {
-			m_ground.m_basicPixelConstData.useNormalMap = int(temp);
-		}
-
-		temp = bool(m_ground.m_basicPixelConstData.useAOMap);
-		if (ImGui::Checkbox("Use AO", &temp)) {
-			m_ground.m_basicPixelConstData.useAOMap = int(temp);
-		}
-
-		temp = bool(m_ground.m_basicVertexConstData.useHeightMap);
-		if (ImGui::Checkbox("Use HeightMapping", &temp)) {
-			m_ground.m_basicVertexConstData.useHeightMap = int(temp);
-		}
-
-		ImGui::SliderFloat("HeightScale",
-						   &m_ground.m_basicVertexConstData.heightScale,
-						   0.0f, 0.1f);
-
-		ImGui::TreePop( );
-	}*/
-
 	// $m_tessellatedQuad
 	/*int flag = 0;
 	flag += ImGui::SliderFloat4(
@@ -981,12 +959,17 @@ void KuskApp::UpdateObjectCreationFrameGUI( ) {
 	}
 	else if (m_currentPopup == SQUARE_PARAMS) {
 		ShowPopup(SQUARE_PARAMS, [&]( ) {
-			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Scale", &m_modelParams.scale, 0.1f, 50.0f, "%.2f");
 			ImGui::SliderFloat2("Texture Scale", &m_modelParams.tex_scale.x, 1.0f, 10.0f);
+			if (!m_mirror) {
+				ImGui::Checkbox("isMirror", &m_modelParams.isMirror);
+			}
 		},
 		[&]( ) {
 			m_modelParams.type = MESH_TYPE_SQUARE;
-			CreateSquare(m_modelParams.scale, m_modelParams.tex_scale);
+			CreateSquare(m_modelParams.scale, m_modelParams.tex_scale, m_modelParams.isMirror);
+			
+			m_modelParams.isMirror = false; // 다음 모델 생성을 위해 초기화
 		});
 	}
 	else if (m_currentPopup == SQUARE_GRID_PARAMS) {
@@ -1129,7 +1112,7 @@ void KuskApp::UpdatePopupGUI( ) {
 				for (size_t i = 0; i < itemStrings.size( ); ++i) {
 					const bool isSelected = (selectedIndex == i);
 					if (ImGui::Selectable(itemStrings[ i ].c_str( ), isSelected)) {
-						selectedIndex = i;
+						selectedIndex = (int)i;
 					}
 
 					if (isSelected) {
@@ -1197,14 +1180,20 @@ void KuskApp::CreateSphere(float radius, int numSlices, int numStacks, Vector2& 
 	m_savedList.push_back(obj);
 }
 
-void KuskApp::CreateSquare(float scale, Vector2& texScale) {
+void KuskApp::CreateSquare(float scale, Vector2& texScale, bool isMirror) {
 
 	MeshData mesh = GeometryGenerator::MakeSquare(scale, texScale);
 	auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
 	obj->m_modelCreationParams = m_modelParams;
 
-	m_basicList.push_back(obj);
-	m_savedList.push_back(obj);
+	if (false == isMirror) {
+		m_basicList.push_back(obj);
+		m_savedList.push_back(obj);
+	}
+	else {
+		m_mirror = obj;
+		m_mirrorPlane = DirectX::SimpleMath::Plane(Vector3(0.0f), Vector3(0.0f, 0.0f, -1.0f));
+	}
 }
 
 void KuskApp::CreateSquareGrid(int numSlices, int numStacks, float scale, Vector2& texScale) {
@@ -1276,6 +1265,7 @@ void KuskApp::CreateBillboardPoints( ) {
 
 void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 
+	m_selectedModelIndex = -1;
 	// 장면 초기화
 	m_basicList.clear( );
 	m_savedList.clear( );
@@ -1298,8 +1288,7 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 				m_basicList.push_back(obj);
 				m_savedList.push_back(obj);
 			}
-			else {
-				//
+			else { // 거울
 				m_mirror = obj;
 				MirrorDataFromJSON(model);
 			}
@@ -1601,6 +1590,8 @@ void KuskApp::MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value
 	mirror.AddMember("position", JsonManager::Vector3ToJson(position, allocator), allocator);
 	mirror.AddMember("normal", JsonManager::Vector3ToJson(normal, allocator), allocator);
 	mirror.AddMember("alpha", m_mirrorAlpha, allocator);
+	mirror.AddMember("rotation", JsonManager::Vector3ToJson(m_mirrorRotation, allocator), allocator);
+	mirror.AddMember("scale", JsonManager::Vector3ToJson(m_mirrorScale, allocator), allocator);
 
 	value.AddMember("mirror_data", mirror, allocator);
 
@@ -1609,8 +1600,9 @@ void KuskApp::MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value
 void KuskApp::MirrorDataFromJSON(rapidjson::Value& value) {
 	if (value.HasMember("mirror_data")) {
 		rapidjson::Value& data = value[ "mirror_data" ];
+		Vector3 position = Vector3(0.0f);
 		if (data.HasMember("position") && data.HasMember("normal")) {
-			Vector3 position = JsonManager::ParseVector3(data[ "position" ]);
+			position = JsonManager::ParseVector3(data[ "position" ]);
 			Vector3 normal = JsonManager::ParseVector3(data[ "normal" ]);
 			m_mirrorPlane = SimpleMath::Plane(position, normal);
 		}
@@ -1618,6 +1610,21 @@ void KuskApp::MirrorDataFromJSON(rapidjson::Value& value) {
 		if (data.HasMember("alpha")) {
 			m_mirrorAlpha = data[ "alpha" ].GetFloat( );
 		}
+
+		if (data.HasMember("rotation")) {
+			m_mirrorRotation = JsonManager::ParseVector3(data[ "rotation" ]);
+		}
+
+		if (data.HasMember("scale")) {
+			m_mirrorScale = JsonManager::ParseVector3(data[ "scale" ]);
+		}
+
+		m_mirror->UpdateWorldRow(
+					Matrix::CreateScale(Vector3(m_mirrorScale)) *
+					Matrix::CreateRotationX(m_mirrorRotation.x) *
+					Matrix::CreateRotationY(m_mirrorRotation.y) *
+					Matrix::CreateRotationZ(m_mirrorRotation.z) *
+					Matrix::CreateTranslation(position));
 	}
 }
 
