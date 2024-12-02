@@ -51,20 +51,20 @@ public:
 	rapidjson::Value ScreenDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value PostEffectDataToJSON(rapidjson::Document::AllocatorType& allocator);
 	rapidjson::Value PostProcessingDataToJSON(rapidjson::Document::AllocatorType& allocator);
+	void MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator);
 
 	void LightFromJSON(rapidjson::Value& lightData, Light& l);
 	void EnvDataFromJSON(rapidjson::Value& value);
 	void PostEffectDataFromJSON(rapidjson::Value& value);
 	void PostProcessingDataFromJSON(rapidjson::Value& value);
 	void ScreenDataFromJSON(rapidjson::Value& value);
+	void MirrorDataFromJSON(rapidjson::Value& value);
 		
 
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	shared_ptr<Model> m_ground;
-	shared_ptr<Model> m_mainObj;
 	shared_ptr<Model> m_lightSphere[MAX_LIGHTS];
-	shared_ptr<Model> m_box;
 	shared_ptr<Model> m_skybox;
 	shared_ptr<Model> m_cursorSphere;
 	shared_ptr<Model> m_screenSquare;

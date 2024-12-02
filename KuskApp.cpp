@@ -89,6 +89,11 @@ bool KuskApp::Initialize() {
 		m_ground->m_materialConstsCPU.metallicFactor = 0.5f;
 		m_ground->m_materialConstsCPU.roughnessFactor = 0.3f;
 
+		//
+		m_ground->m_modelCreationParams.type = MESH_TYPE_SQUARE;
+		m_ground->m_modelCreationParams.scale = 5.0f;
+		m_ground->m_modelCreationParams.tex_scale = Vector2(1.0f);
+
 		Vector3 position = Vector3(0.0f, -0.5f, 2.0f);
 		m_ground->UpdateWorldRow(
 			Matrix::CreateRotationX(3.141592f * 0.5f) *
@@ -97,98 +102,6 @@ bool KuskApp::Initialize() {
 		m_mirrorPlane = SimpleMath::Plane(position, Vector3(0.0f, 1.0f, 0.0f));
 		m_mirror = m_ground; // 바닥에 거울처럼 반사 구현
 		// m_basicList.push_back(m_ground); // 거울은 리스트에 등록 X
-	}
-
-	if (false) {
-		// $box - test용
-		{
-			vector<MeshData> meshes = { GeometryGenerator::MakeBox(0.15f) };
-			Vector3 center(1.5f, 0.25f, 2.0f);
-			m_box = make_shared<Model>(m_device, m_context, meshes);
-			m_box->UpdateWorldRow(Matrix::CreateTranslation(center));
-			//
-			m_box->m_modelCreationParams.type = MESH_TYPE_BOX;
-			m_box->m_modelCreationParams.scale = 0.15f;
-
-			m_basicList.push_back(m_box); // 리스트에 등록
-			m_savedList.push_back(m_box);
-		}
-
-
-		// $mainObj
-		{
-			//auto meshes = GeometryGenerator::ReadFromFile(DAMAGED_HELMET_MODEL_DIR, DAMAGED_HELMAT_MODEL_FILENAME);
-
-			//auto meshes = GeometryGenerator::ReadFromFile(VAGRANT_KNIGHTS_MODEL_DIR, VAGRANT_KNIGHTS_MODEL_FILENAME, true);
-
-			vector<MeshData> meshes = { GeometryGenerator::MakeSphere(0.4f, 50, 50) };
-			/*auto meshes = GeometryGenerator::ReadFromFile(ARMORED_FEMALE_SOLDIER_MODEL_DIR, ARMORED_FEMALE_SOLDIER_MODEL_FILENAME, true);
-			meshes[ 0 ].albedoTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_albedo.jpg");
-			meshes[ 0 ].emissiveTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_e.jpg");
-			meshes[ 0 ].metallicTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_metalness.jpg");
-			meshes[ 0 ].normalTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_normal.jpg");
-			meshes[ 0 ].roughnessTextureFilename = ARMORED_FEMALE_SOLDIER_MODEL_DIR + string("angel_armor_roughness.jpg");*/
-
-			Vector3 center(0.0f, 0.0f, 2.0f);
-			m_mainObj = make_shared<Model>(m_device, m_context, meshes);
-			m_mainObj->m_materialConstsCPU.invertNormalMapY = true; // GLTF는 true로
-			m_mainObj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
-			m_mainObj->m_materialConstsCPU.roughnessFactor = 0.3f;
-			m_mainObj->m_materialConstsCPU.metallicFactor = 0.8f;
-			m_mainObj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-			m_mainObj->UpdateWorldRow(Matrix::CreateTranslation(center));
-
-			//
-			m_mainObj->m_modelCreationParams.type = MESH_TYPE_SPHERE;
-			m_mainObj->m_modelCreationParams.radius = 0.4f;
-			m_mainObj->m_modelCreationParams.numSlices = 50;
-			m_mainObj->m_modelCreationParams.numStacks = 50;
-
-			m_basicList.push_back(m_mainObj); // 리스트에 등록
-			m_savedList.push_back(m_mainObj);
-		}
-
-		// 추가 물체1 (파란 구)
-		{
-			MeshData mesh = GeometryGenerator::MakeSphere(0.2f, 200, 200);
-			Vector3 center(0.5f, 0.5f, 2.0f);
-			auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-			obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-			obj->m_materialConstsCPU.albedoFactor = Vector3(0.1f, 0.1f, 1.0f);
-			obj->m_materialConstsCPU.roughnessFactor = 0.2f;
-			obj->m_materialConstsCPU.metallicFactor = 0.6f;
-			obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-			obj->UpdateConstantBuffers(m_device, m_context);
-
-			//
-			obj->m_modelCreationParams.type = MESH_TYPE_SPHERE;
-			obj->m_modelCreationParams.radius = 0.2f;
-			obj->m_modelCreationParams.numSlices = 200;
-			obj->m_modelCreationParams.numStacks = 200;
-
-			m_basicList.push_back(obj);
-			m_savedList.push_back(obj);
-		}
-
-		// 추가 물체2 (빨간 박스)
-		{
-			MeshData mesh = GeometryGenerator::MakeBox(0.2f);
-			Vector3 center(0.0f, 0.5f, 2.5f);
-			auto obj = make_shared<Model>(m_device, m_context, vector{ mesh });
-			obj->UpdateWorldRow(Matrix::CreateTranslation(center));
-			obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f, 0.2f, 0.2f);
-			obj->m_materialConstsCPU.roughnessFactor = 0.5f;
-			obj->m_materialConstsCPU.metallicFactor = 0.9f;
-			obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
-			obj->UpdateConstantBuffers(m_device, m_context);
-
-			//
-			obj->m_modelCreationParams.type = MESH_TYPE_BOX;
-			obj->m_modelCreationParams.scale = 0.2f;
-
-			m_basicList.push_back(obj);
-			m_savedList.push_back(obj);
-		}
 	}
 
 	// 조명 설정
@@ -1381,8 +1294,15 @@ void KuskApp::LoadSceneDataFromJSON(std::string& filePath) {
 
 		for (rapidjson::Value& model : models) {
 			auto obj = make_shared<Model>(m_device, m_context, model);
-			m_basicList.push_back(obj);
-			m_savedList.push_back(obj);
+			if (false == obj->m_isMirror) {
+				m_basicList.push_back(obj);
+				m_savedList.push_back(obj);
+			}
+			else {
+				//
+				m_mirror = obj;
+				MirrorDataFromJSON(model);
+			}
 		}
 	}
 
@@ -1449,6 +1369,15 @@ void KuskApp::SaveSceneDataAsJSON(std::string& filePath) {
 		model = obj->ToJson(allocator);
 		models.PushBack(model, allocator);
 	}
+
+	// 거울 모델 정보 저장
+	if (m_mirror) {
+		rapidjson::Value model;
+		model = m_mirror->ToJson(allocator);
+		MirrorDataToJSON(m_mirror, model, allocator);
+		models.PushBack(model, allocator);
+	}
+	
 	doc.AddMember("Models", models, allocator);
 
 	// 조명 정보 저장
@@ -1662,5 +1591,35 @@ void KuskApp::ScreenDataFromJSON(rapidjson::Value& value) {
 
 	SetWindowPos(m_mainWindow, 0, 0, 0, m_screenWidth, m_screenHeight, SWP_NOZORDER | SWP_NOMOVE | SWP_SHOWWINDOW);
 }
+
+void KuskApp::MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator) {
+
+	rapidjson::Value mirror(rapidjson::kObjectType);
+
+	Vector3 normal = Vector3(m_mirrorPlane.x, m_mirrorPlane.y, m_mirrorPlane.z);
+	Vector3 position = model->m_worldRow.Translation( );
+	mirror.AddMember("position", JsonManager::Vector3ToJson(position, allocator), allocator);
+	mirror.AddMember("normal", JsonManager::Vector3ToJson(normal, allocator), allocator);
+	mirror.AddMember("alpha", m_mirrorAlpha, allocator);
+
+	value.AddMember("mirror_data", mirror, allocator);
+
+}
+
+void KuskApp::MirrorDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("mirror_data")) {
+		rapidjson::Value& data = value[ "mirror_data" ];
+		if (data.HasMember("position") && data.HasMember("normal")) {
+			Vector3 position = JsonManager::ParseVector3(data[ "position" ]);
+			Vector3 normal = JsonManager::ParseVector3(data[ "normal" ]);
+			m_mirrorPlane = SimpleMath::Plane(position, normal);
+		}
+		
+		if (data.HasMember("alpha")) {
+			m_mirrorAlpha = data[ "alpha" ].GetFloat( );
+		}
+	}
+}
+
 
 } // namespace kusk

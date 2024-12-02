@@ -60,6 +60,7 @@ public:
 	bool m_isVisible = true;
 	bool m_castShadow = true;
 	bool m_isPickable = true;
+	bool m_isMirror = false;
 
 	std::vector<shared_ptr<Mesh>> m_meshes;
 

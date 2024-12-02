@@ -397,6 +397,10 @@ void Model::InitializeDataFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11De
 	if (value.HasMember("height_scale")) {
 		m_meshConstsCPU.heightScale = value[ "height_scale" ].GetFloat( );
 	}
+	if (value.HasMember("mirror_data")) {
+		m_isMirror = true;
+		m_isPickable = false;
+	}
 }
 
 rapidjson::Value Model::ToJson(rapidjson::Document::AllocatorType& allocator) const {
