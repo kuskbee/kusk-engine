@@ -668,6 +668,15 @@ void KuskApp::UpdateGUI() {
 					Matrix::CreateRotationY(m_mirrorRotation.y)*
 					Matrix::CreateRotationZ(m_mirrorRotation.z)*
 					Matrix::CreateTranslation(position));
+
+				// Plane 갱신
+				Vector3 normal = Vector3(0.0f, 0.0f, -1.0f);
+				normal = Vector3::TransformNormal(normal, m_mirror->m_worldITRow);
+				normal.Normalize( );
+				Vector3 worldPosition = Vector3::Transform(Vector3(0.0f, 0.0f, 0.0f), m_mirror->m_worldRow);
+				float d = -normal.Dot(worldPosition); // -(Ax+By+Cz) = D
+				m_mirrorPlane = DirectX::SimpleMath::Plane(normal.x, normal.y, normal.z, d);
+
 			}
 
 			// 삭제 버튼
@@ -766,7 +775,14 @@ void KuskApp::UpdateGUI() {
 			if (ImGui::Button("Delete this object")) {
 				int idx = m_selectedModelIndex;
 				m_selectedModelIndex = -1;
+
+				auto target = m_basicList[ idx ];
 				m_basicList.erase(m_basicList.begin( ) + idx);
+				// m_savedList에서 동일한 객체 삭제
+				m_savedList.erase(
+					std::remove(m_savedList.begin( ), m_savedList.end( ), target),
+					m_savedList.end( )
+				);
 			}
 
 			ImGui::TreePop( );
