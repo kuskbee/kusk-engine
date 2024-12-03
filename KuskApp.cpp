@@ -232,12 +232,14 @@ void KuskApp::UpdateMousePicking( ) {
 
 		if (minModelIndex >= 0) {
 			auto& pickedModel = m_basicList[ minModelIndex ];
-			Vector3 translation = pickedModel->m_worldRow.Translation( );
-			pickedModel->m_worldRow.Translation(Vector3(0.0f));
-			pickedModel->UpdateWorldRow(
-				pickedModel->m_worldRow * Matrix::CreateFromQuaternion(finalQtnion) *
-				Matrix::CreateTranslation(finalDragTrsl + translation));
-
+			if (false == pickedModel->m_isFixed) {
+				Vector3 translation = pickedModel->m_worldRow.Translation( );
+				pickedModel->m_worldRow.Translation(Vector3(0.0f));
+				pickedModel->UpdateWorldRow(
+					pickedModel->m_worldRow * Matrix::CreateFromQuaternion(finalQtnion) *
+					Matrix::CreateTranslation(finalDragTrsl + translation));
+			}
+			
 			// 충돌 지점에 작은 구 그리기
 			m_cursorSphere->m_isVisible = true;
 			m_cursorSphere->UpdateWorldRow(Matrix::CreateTranslation(finalPickPoint));
@@ -483,6 +485,40 @@ void KuskApp::Render() {
 	m_postProcess.Render(m_context);
 }
 
+Vector3 ExtractScale(const Matrix& matrix) {
+	Vector3 scaleX(matrix._11, matrix._12, matrix._13);
+	Vector3 scaleY(matrix._21, matrix._22, matrix._23);
+	Vector3 scaleZ(matrix._31, matrix._32, matrix._33);
+
+	// 축 벡터의 길이를 스케일로 반환
+	return Vector3(scaleX.Length(), scaleY.Length(), scaleZ.Length());
+}
+
+Matrix RemoveScaleMatrix(const Matrix& matrix) {
+	Vector3 scaleX(matrix._11, matrix._12, matrix._13);
+	Vector3 scaleY(matrix._21, matrix._22, matrix._23);
+	Vector3 scaleZ(matrix._31, matrix._32, matrix._33);
+
+	// 각 축 벡터를 정규화하여 스케일 제거
+	scaleX.Normalize( );
+	scaleY.Normalize( );
+	scaleZ.Normalize( );
+
+	// 정규화된 회전 행렬 구성
+	Matrix rotationMatrix = Matrix::Identity;
+	rotationMatrix._11 = scaleX.x; rotationMatrix._12 = scaleX.y; rotationMatrix._13 = scaleX.z;
+	rotationMatrix._21 = scaleY.x; rotationMatrix._22 = scaleY.y; rotationMatrix._23 = scaleY.z;
+	rotationMatrix._31 = scaleZ.x; rotationMatrix._32 = scaleZ.y; rotationMatrix._33 = scaleZ.z;
+
+	// 이동 성분 복사
+	rotationMatrix._41 = matrix._41;
+	rotationMatrix._42 = matrix._42;
+	rotationMatrix._43 = matrix._43;
+
+	return rotationMatrix;
+}
+
+
 void KuskApp::UpdateGUI() {
 
 	// JSON LOAD / SAVE
@@ -521,7 +557,7 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("Skybox")) {
 		ImGui::SliderFloat("Strength", &m_globalConstsCPU.strengthIBL, 0.0f,
 						  5.0f);
@@ -596,7 +632,7 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("Billboard")) {
 		if (ImGui::Button("Billboard Edit")) {
 			m_showBillboardEditPopup = true;
@@ -605,7 +641,7 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("Post Effects")) {
 		int flag = 0;
 		flag += ImGui::RadioButton("Render", &m_postEffectsConstsCPU.mode, 1);
@@ -659,7 +695,7 @@ void KuskApp::UpdateGUI() {
 			Vector3 position = m_mirror->m_worldRow.Translation( );
 			flag += ImGui::SliderFloat3("position", &position.x, -10.0f, 10.0f);
 			flag += ImGui::SliderFloat3("rotation", &m_mirrorRotation.x, -3.14f, 3.14f);
-			flag += ImGui::SliderFloat3("scale", &m_mirrorScale.x, 0.0f, 50.0f);
+			flag += ImGui::SliderFloat3("scale", &m_mirrorScale.x, 0.01f, 50.0f);
 
 			if (flag) {
 				m_mirror->UpdateWorldRow(
@@ -688,7 +724,7 @@ void KuskApp::UpdateGUI() {
 		}
 	}
 	
-	ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 	if (ImGui::TreeNode("Light")) { 
 
 		for (int i = 0; i < MAX_LIGHTS; i++) {
@@ -741,8 +777,49 @@ void KuskApp::UpdateGUI() {
 		auto& selectedObj = m_basicList[ m_selectedModelIndex ];
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode("Selected Object's Material")) {
-			int flag = 0;
+			ImGui::Checkbox("isFixed", &selectedObj->m_isFixed);
 
+			int flag = 0;
+			Vector3 position = selectedObj->m_worldRow.Translation( );
+			flag += ImGui::SliderFloat3("position", &position.x, -10.0f, 10.0f);
+
+			Vector3 scale = ExtractScale(selectedObj->m_worldRow);
+			flag += ImGui::SliderFloat3("scale", &scale.x, 0.01f, 10.0f);
+			
+			Vector3 rotation = Vector3(0.0f);
+			if (ImGui::Button("X Axis +45")) {
+				flag++; rotation.x = XM_PIDIV4;
+			}
+			ImGui::SameLine( );
+			if (ImGui::Button("X Axis -45")) {
+				flag++; rotation.x = -XM_PIDIV4;
+			}
+			if (ImGui::Button("Y Axis +45")) {
+				flag++; rotation.y = XM_PIDIV4;
+			}
+			ImGui::SameLine( );
+			if (ImGui::Button("Y Axis -45")) {
+				flag++; rotation.y = -XM_PIDIV4;
+			}
+			if (ImGui::Button("Z Axis +45")) {
+				flag++; rotation.z = XM_PIDIV4;
+			}
+			ImGui::SameLine( );
+			if (ImGui::Button("Z Axis -45")) {
+				flag++; rotation.z = -XM_PIDIV4;
+			}
+			if (flag) {
+				selectedObj->m_worldRow.Translation(Vector3(0.0f));
+				Matrix normalized = RemoveScaleMatrix(selectedObj->m_worldRow);
+				selectedObj->UpdateWorldRow(Matrix::CreateScale(scale) * 
+					normalized *
+					Matrix::CreateRotationY(rotation.y)*
+					Matrix::CreateRotationX(rotation.x)*
+					Matrix::CreateRotationZ(rotation.z)*
+					Matrix::CreateTranslation(position));
+			}
+
+			flag = 0;
 			flag += ImGui::SliderFloat3(
 				"Albedo", &selectedObj->m_materialConstsCPU.albedoFactor.x, 0.0f, 1.0f);
 			flag += ImGui::SliderFloat(

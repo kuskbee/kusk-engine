@@ -49,6 +49,7 @@ public:
 
 public:
 
+	BoundingSphere m_originBoundingSphere;
 	BoundingSphere m_boundingSphere;
 
 	Matrix m_worldRow = Matrix( );		// Model(Object) To World 행렬
@@ -62,6 +63,7 @@ public:
 	bool m_castShadow = true;
 	bool m_isPickable = true;
 	bool m_isMirror = false;
+	bool m_isFixed = false;
 
 	std::vector<shared_ptr<Mesh>> m_meshes;
 

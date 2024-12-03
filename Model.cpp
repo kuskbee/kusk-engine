@@ -132,7 +132,8 @@ void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>
 			}
 		}
 	}
-	m_boundingSphere = BoundingSphere(center, radius);
+	m_originBoundingSphere = BoundingSphere(center, radius);
+	m_boundingSphere = m_originBoundingSphere;
 	cout << "center : (" << center.x << "," << center.y << "," << center.z << "), ";
 	cout << "radius : " << radius << endl;
 }
@@ -403,6 +404,9 @@ void Model::InitializeDataFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11De
 		m_isMirror = true;
 		m_isPickable = false;
 	}
+	if (value.HasMember("is_fixed")) {
+		m_isFixed = value[ "is_fixed" ].GetBool( );
+	}
 }
 
 rapidjson::Value Model::ToJson(rapidjson::Document::AllocatorType& allocator) const {
@@ -525,6 +529,7 @@ rapidjson::Value Model::ToJson(rapidjson::Document::AllocatorType& allocator) co
 		value.AddMember("emission_factor",
 						JsonManager::Vector3ToJson(m_materialConstsCPU.emissionFactor, allocator), allocator);
 		value.AddMember("height_scale", m_meshConstsCPU.heightScale, allocator);
+		value.AddMember("is_fixed", m_isFixed, allocator);
 	}
 
 	return value;
@@ -567,6 +572,25 @@ void Model::RenderNormals(ComPtr<ID3D11DeviceContext>& context) {
 	}
 }
 
+BoundingSphere TransformBoundingSphere(const BoundingSphere& original, const Matrix& matrix) {
+	Vector3 center = original.Center;
+	float radius = original.Radius;
+
+	// 중심 변환 (Translation 적용)
+	Vector3 transformedCenter = Vector3::Transform(center, matrix);
+
+	Vector3 scaleX(matrix._11, matrix._12, matrix._13);
+	Vector3 scaleY(matrix._21, matrix._22, matrix._23);
+	Vector3 scaleZ(matrix._31, matrix._32, matrix._33);
+
+	// 축 벡터의 길이를 스케일로 반환
+	Vector3 scale = Vector3(scaleX.Length( ), scaleY.Length( ), scaleZ.Length( ));
+	float maxScale = std::max({ scale.x, scale.y, scale.z });
+
+	float transformedRadius = radius * maxScale;
+	return BoundingSphere(transformedCenter, transformedRadius);
+}
+
 void Model::UpdateWorldRow(const Matrix& worldRow) {
 	this->m_worldRow = worldRow;
 	this->m_worldITRow = worldRow;
@@ -576,7 +600,9 @@ void Model::UpdateWorldRow(const Matrix& worldRow) {
 	m_meshConstsCPU.world =	worldRow.Transpose();
 	m_meshConstsCPU.worldIT = m_worldITRow.Transpose();
 
-	m_boundingSphere.Center = worldRow.Translation( );
+	//m_boundingSphere.Center = worldRow.Translation( );
+	if(m_isPickable)
+		m_boundingSphere = TransformBoundingSphere(m_originBoundingSphere, m_worldRow);
 }
 
 } // namespace kusk
