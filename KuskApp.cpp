@@ -1609,10 +1609,6 @@ void KuskApp::MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value
 
 	rapidjson::Value mirror(rapidjson::kObjectType);
 
-	Vector3 normal = Vector3(m_mirrorPlane.x, m_mirrorPlane.y, m_mirrorPlane.z);
-	Vector3 position = model->m_worldRow.Translation( );
-	mirror.AddMember("position", JsonManager::Vector3ToJson(position, allocator), allocator);
-	mirror.AddMember("normal", JsonManager::Vector3ToJson(normal, allocator), allocator);
 	mirror.AddMember("alpha", m_mirrorAlpha, allocator);
 	mirror.AddMember("rotation", JsonManager::Vector3ToJson(m_mirrorRotation, allocator), allocator);
 	mirror.AddMember("scale", JsonManager::Vector3ToJson(m_mirrorScale, allocator), allocator);
@@ -1624,13 +1620,7 @@ void KuskApp::MirrorDataToJSON(shared_ptr<Model>& model, rapidjson::Value& value
 void KuskApp::MirrorDataFromJSON(rapidjson::Value& value) {
 	if (value.HasMember("mirror_data")) {
 		rapidjson::Value& data = value[ "mirror_data" ];
-		Vector3 position = Vector3(0.0f);
-		if (data.HasMember("position") && data.HasMember("normal")) {
-			position = JsonManager::ParseVector3(data[ "position" ]);
-			Vector3 normal = JsonManager::ParseVector3(data[ "normal" ]);
-			m_mirrorPlane = SimpleMath::Plane(position, normal);
-		}
-		
+				
 		if (data.HasMember("alpha")) {
 			m_mirrorAlpha = data[ "alpha" ].GetFloat( );
 		}
@@ -1643,12 +1633,12 @@ void KuskApp::MirrorDataFromJSON(rapidjson::Value& value) {
 			m_mirrorScale = JsonManager::ParseVector3(data[ "scale" ]);
 		}
 
-		m_mirror->UpdateWorldRow(
-					Matrix::CreateScale(Vector3(m_mirrorScale)) *
-					Matrix::CreateRotationX(m_mirrorRotation.x) *
-					Matrix::CreateRotationY(m_mirrorRotation.y) *
-					Matrix::CreateRotationZ(m_mirrorRotation.z) *
-					Matrix::CreateTranslation(position));
+		Vector3 normal = Vector3(0.0f, 0.0f, -1.0f);
+		normal = Vector3::TransformNormal(normal, m_mirror->m_worldITRow);
+		normal.Normalize( );
+		Vector3 worldPosition = Vector3::Transform(Vector3(0.0f, 0.0f, 0.0f), m_mirror->m_worldRow);
+		float d = -normal.Dot(worldPosition); // -(Ax+By+Cz) = D
+		m_mirrorPlane = DirectX::SimpleMath::Plane(normal.x, normal.y, normal.z, d);
 	}
 }
 

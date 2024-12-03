@@ -380,6 +380,8 @@ void Model::InitializeDataFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11De
 
 		m_meshConstsCPU.world = m_worldRow.Transpose( );
 		m_meshConstsCPU.worldIT = m_worldITRow.Transpose( );
+
+		// Bounding Sphere 생성 전이라서 UpdateWorldRow() 호출하지 않음.
 	}
 
 	if (value.HasMember("albedo_factor")) {
