@@ -34,6 +34,43 @@ Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 	m_boundingSphere.Center = m_worldRow.Translation( );
 }
 
+Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, shared_ptr<Model> other)
+	: m_originBoundingSphere(other->m_originBoundingSphere),
+	m_boundingSphere(other->m_boundingSphere),
+	m_worldRow(other->m_worldRow),
+	m_worldITRow(other->m_worldITRow),
+	m_meshConstsCPU(other->m_meshConstsCPU),
+	m_materialConstsCPU(other->m_materialConstsCPU),
+	m_drawNormals(other->m_drawNormals),
+	m_isVisible(other->m_isVisible),
+	m_castShadow(other->m_castShadow),
+	m_isPickable(other->m_isPickable),
+	m_isMirror(other->m_isMirror),
+	m_isFixed(other->m_isFixed),
+	m_modelCreationParams(other->m_modelCreationParams),
+	m_modelingFilePath(other->m_modelingFilePath),
+	m_albedoTextureFilePath(other->m_albedoTextureFilePath),
+	m_emissiveTextureFilePath(other->m_emissiveTextureFilePath),
+	m_normalTextureFilePath(other->m_normalTextureFilePath),
+	m_heightTextureFilePath(other->m_heightTextureFilePath),
+	m_aoTextureFilePath(other->m_aoTextureFilePath),
+	m_metallicTextureFilePath(other->m_metallicTextureFilePath),
+	m_roughnessTextureFilePath(other->m_roughnessTextureFilePath),
+	m_mouseState(other->m_mouseState) {
+
+	// GPU constant buffers는 새로 생성
+	D3D11Utils::CreateConstBuffer(device, m_meshConstsCPU, m_meshConstsGPU);
+	D3D11Utils::CreateConstBuffer(device, m_materialConstsCPU, m_materialConstsGPU);
+
+	m_meshes.reserve(other->m_meshes.size( ));
+	for (const auto& mesh : other->m_meshes) {
+		auto copied = std::make_shared<Mesh>(*mesh);
+		copied->vertexConstBuffer = m_meshConstsGPU;
+		copied->pixelConstBuffer = m_materialConstsGPU;
+		m_meshes.push_back(copied);
+	}
+}
+
 void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 			 const std::string& basePath, const std::string& filename) {
 

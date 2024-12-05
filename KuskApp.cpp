@@ -862,6 +862,14 @@ void KuskApp::UpdateGUI() {
 				);
 			}
 
+			if (ImGui::Button("Copy this object")) {
+				int idx = m_selectedModelIndex;
+				auto target = m_basicList[ idx ];
+				auto copied = make_shared<Model>(m_device, m_context, target);
+				m_basicList.push_back(copied);
+				m_savedList.push_back(copied);
+			}
+
 			ImGui::TreePop( );
 		}
 
