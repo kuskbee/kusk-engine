@@ -226,12 +226,8 @@ PixelShaderOutput main(PixelShaderInput input) {
     
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
-    
-    float4 tempAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
-    if (tempAlbedo.a < 0.1f)
-        discard;
-    
-    float3 albedo = useAlbedoMap ? tempAlbedo.rgb * albedoFactor : albedoFactor;
+
+    float3 albedo = useAlbedoMap ? albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb * albedoFactor : albedoFactor;
     float ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
     float metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
     float roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;

@@ -45,7 +45,7 @@ __declspec(align(256)) struct MaterialConstants {
 	int useRoughnessMap = 0;
 	int useEmissiveMap = 0;
 	int isSelected = 0;
-};
+}; 
 
 // 조명
 struct Light { 
@@ -76,7 +76,7 @@ __declspec(align(256)) struct GlobalConstants {
 	Matrix viewProj;
 	Matrix invViewProj;	// Proj -> World
 	Vector3 eyeWorld;
-	float strengthIBL = 0.0f;
+	float strengthIBL = 0.3f;
 	int textureToDraw = 0;	// 0 : Env, 1 : Specular, 2 : Irradiance, 그외 : 검은색
 	float envLodBias = 0.0f;	// 환경맵 LodBias
 	float lodBias = 2.0f;		// 다른 물체들 LoadBias

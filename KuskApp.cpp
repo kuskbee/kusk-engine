@@ -774,7 +774,7 @@ void KuskApp::UpdateGUI() {
 	}
 
 	if (m_selectedModelIndex >= 0) {
-		auto& selectedObj = m_basicList[ m_selectedModelIndex ];
+		shared_ptr<Model> selectedObj = m_basicList.at(m_selectedModelIndex);
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode("Selected Object's Material")) {
 			ImGui::Checkbox("isFixed", &selectedObj->m_isFixed);
@@ -864,8 +864,7 @@ void KuskApp::UpdateGUI() {
 
 			if (ImGui::Button("Copy this object")) {
 				int idx = m_selectedModelIndex;
-				auto target = m_basicList[ idx ];
-				auto copied = make_shared<Model>(m_device, m_context, target);
+				auto copied = make_shared<Model>(m_device, m_context, m_basicList[ idx ]);
 				m_basicList.push_back(copied);
 				m_savedList.push_back(copied);
 			}

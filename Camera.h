@@ -42,7 +42,7 @@ private:
 	float m_pitch = -0.120477f;
 	float m_yaw = -0.019635f;
 
-	float m_speed = 3.0f;
+	float m_speed = 1.0f;
 
 	// 프로젝션 옵션 : 카메라 클래스로 이동
 	float m_projFovAngleY = 90.0f;

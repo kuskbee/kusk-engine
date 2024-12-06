@@ -34,7 +34,7 @@ Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 	m_boundingSphere.Center = m_worldRow.Translation( );
 }
 
-Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, shared_ptr<Model> other)
+Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, shared_ptr<Model>& other)
 	: m_originBoundingSphere(other->m_originBoundingSphere),
 	m_boundingSphere(other->m_boundingSphere),
 	m_worldRow(other->m_worldRow),
@@ -55,9 +55,8 @@ Model::Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 	m_heightTextureFilePath(other->m_heightTextureFilePath),
 	m_aoTextureFilePath(other->m_aoTextureFilePath),
 	m_metallicTextureFilePath(other->m_metallicTextureFilePath),
-	m_roughnessTextureFilePath(other->m_roughnessTextureFilePath),
-	m_mouseState(other->m_mouseState) {
-
+	m_roughnessTextureFilePath(other->m_roughnessTextureFilePath) {
+	m_materialConstsCPU.isSelected = false;
 	// GPU constant buffers는 새로 생성
 	D3D11Utils::CreateConstBuffer(device, m_meshConstsCPU, m_meshConstsGPU);
 	D3D11Utils::CreateConstBuffer(device, m_materialConstsCPU, m_materialConstsGPU);

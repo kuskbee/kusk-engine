@@ -25,7 +25,7 @@ public:
 		const std::vector<MeshData>& meshes);
 	Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 		const rapidjson::Value& value);
-	Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, shared_ptr<Model> other);
+	Model(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context, shared_ptr<Model>& other);
 
 	void Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context,
 		const std::string& basePath, const std::string& filename);
