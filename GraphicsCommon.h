@@ -57,6 +57,7 @@ extern ComPtr<ID3D11InputLayout> billboardPointsIL;
 
 // Blend States
 extern ComPtr<ID3D11BlendState> mirrorBS;
+extern ComPtr<ID3D11BlendState> originBS;
 
 // Graphics Pipeline States
 extern GraphicsPSO defaultSolidPSO;

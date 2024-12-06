@@ -25,6 +25,7 @@ ComPtr<ID3D11DepthStencilState> drawMaskedDSS;	// 스텐실 표시된 곳만 그
 
 // Blend States
 ComPtr<ID3D11BlendState> mirrorBS;
+ComPtr<ID3D11BlendState> originBS;
 
 // Shaders
 ComPtr<ID3D11VertexShader> basicVS;
@@ -170,25 +171,33 @@ void Graphics::InitBlendStates(ComPtr<ID3D11Device>& device) {
 	// Dest : 이미 그려져 있는 값들을 의미
 	// Src : 픽셀 쉐이더가 계산한 값들을 의미 (여기서는 마지막 거울)
 
-	D3D11_BLEND_DESC mirrorBlendDesc;
-	ZeroMemory(&mirrorBlendDesc, sizeof(mirrorBlendDesc));
-	mirrorBlendDesc.AlphaToCoverageEnable = true; // MSAA
-	mirrorBlendDesc.IndependentBlendEnable = false;
+	D3D11_BLEND_DESC blendDesc;
+	ZeroMemory(&blendDesc, sizeof(blendDesc));
+	blendDesc.AlphaToCoverageEnable = true; // MSAA
+	blendDesc.IndependentBlendEnable = false;
 	// 개별 RenderTarget에 대해서 설정 (최대 8개)
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendEnable = true;
-	mirrorBlendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
-	mirrorBlendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[ 0 ].BlendEnable = true;
+	blendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
+	blendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
+	blendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
 
-	mirrorBlendDesc.RenderTarget[ 0 ].SrcBlendAlpha = D3D11_BLEND_ONE;
-	mirrorBlendDesc.RenderTarget[ 0 ].DestBlendAlpha = D3D11_BLEND_ONE;
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[ 0 ].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[ 0 ].DestBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[ 0 ].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 
 	// 필요하면 RGBA 각각에 대해서도 조절 가능
-	mirrorBlendDesc.RenderTarget[ 0 ].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	blendDesc.RenderTarget[ 0 ].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 	ThrowIfFailed(
-		device->CreateBlendState(&mirrorBlendDesc, mirrorBS.GetAddressOf( )));
+		device->CreateBlendState(&blendDesc, mirrorBS.GetAddressOf( )));
+
+	blendDesc.RenderTarget[ 0 ].BlendEnable = true;
+	blendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
+	ThrowIfFailed(
+		device->CreateBlendState(&blendDesc, originBS.GetAddressOf( )));
+
 }
 
 void Graphics::InitDepthStencilStates(ComPtr<ID3D11Device>& device) {
@@ -315,6 +324,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	defaultSolidPSO.m_pixelShader = basicPS;
 	defaultSolidPSO.m_rasterizerState = solidRS;
 	defaultSolidPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	defaultSolidPSO.m_blendState = originBS;
 
 	// defaultWirePSO
 	defaultWirePSO = defaultSolidPSO;

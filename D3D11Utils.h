@@ -110,6 +110,7 @@ public:
 
 		if (!buffer) {
 			std::cout << "UpdateBuffer() buffer was not initialized." << std::endl;
+			return;
 		}
 
 		D3D11_MAPPED_SUBRESOURCE ms;

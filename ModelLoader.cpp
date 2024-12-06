@@ -22,6 +22,9 @@ void UpdateNormals(vector<MeshData>& meshes) {
 		vector<Vector3> normalsTemp(m.vertices.size( ), Vector3(0.0f));
 		vector<float> weightsTemp(m.vertices.size( ), 0.0f);
 
+		if (m.indices.size( ) < 3)
+			continue;
+
 		for (int i = 0; i < m.indices.size( ); i += 3) {
 			int idx0 = m.indices[ i ];
 			int idx1 = m.indices[ i + 1 ];
@@ -143,7 +146,7 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, const std::str
 }
 
 string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
-	if (material->GetTextureCount(type) > 0) {
+	if (material->GetTextureCount(type) > 0) { 
 		aiString filepath;
 		material->GetTexture(type, 0, &filepath);
 
@@ -171,22 +174,25 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 		vertex.position.y = mesh->mVertices[ i ].y;
 		vertex.position.z = mesh->mVertices[ i ].z;
 
-		vertex.normalModel.x = mesh->mNormals[ i ].x;
+		if (mesh->mNormals) {
+			vertex.normalModel.x = mesh->mNormals[ i ].x;
 
-		if (ext == ".gltf") {
-			vertex.normalModel.y = mesh->mNormals[ i ].z;
-			vertex.normalModel.z = -mesh->mNormals[ i ].y;
-		}
-		else {
-			vertex.normalModel.y = mesh->mNormals[ i ].y;
-			vertex.normalModel.z = mesh->mNormals[ i ].z;
-		}
+			if (ext == ".gltf") {
+				vertex.normalModel.y = mesh->mNormals[ i ].z;
+				vertex.normalModel.z = -mesh->mNormals[ i ].y;
+			}
+			else {
+				vertex.normalModel.y = mesh->mNormals[ i ].y;
+				vertex.normalModel.z = mesh->mNormals[ i ].z;
+			}
 
-		if (m_revertNormals) {
-			vertex.normalModel.y *= -1.0f;
-		}
+			if (m_revertNormals) {
+				vertex.normalModel.y *= -1.0f;
+			}
 
-		vertex.normalModel.Normalize( );
+			vertex.normalModel.Normalize( );
+		}
+		
 
 		if (mesh->mTextureCoords[ 0 ]) {
 			vertex.texcoord.x = ( float ) mesh->mTextureCoords[ 0 ][ i ].x;
@@ -208,6 +214,12 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 	if (mesh->mMaterialIndex >= 0) {
 		aiMaterial* material = scene->mMaterials[ mesh->mMaterialIndex ];
 		newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_BASE_COLOR);
+		if (newMesh.albedoTextureFilename.empty( )) {
+			newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_AMBIENT);
+		}
+		if (newMesh.albedoTextureFilename.empty( )) {
+			newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_DIFFUSE);
+		}
 		newMesh.emissiveTextureFilename = ReadFilename(material, aiTextureType_EMISSIVE);
 		newMesh.heightTextureFilename = ReadFilename(material, aiTextureType_HEIGHT);
 		newMesh.normalTextureFilename = ReadFilename(material, aiTextureType_NORMALS);
@@ -218,10 +230,12 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 			newMesh.aoTextureFilename = ReadFilename(material, aiTextureType_LIGHTMAP);
 		}
 
-		// 디버깅용
-	   // for (size_t i = 0; i < 22; i++) {
-	   //    cout << i << " " << ReadFilename(material, aiTextureType(i)) << endl;
-	   //}
+		//디버깅용
+	    for (size_t i = 0; i < 22; i++) {
+			std::string str = ReadFilename(material, aiTextureType(i));
+			if(!str.empty())
+				cout << i << " : " << str << endl;
+	    }
 	}
 
 	return newMesh;

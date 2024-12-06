@@ -1346,11 +1346,12 @@ void KuskApp::CreateModelFromFile(const std::string& fullPath) {
 	auto obj = make_shared<Model>(m_device, m_context, meshes);
 	obj->m_materialConstsCPU.invertNormalMapY = (ext == ".gltf") ? true : false;
 	obj->m_materialConstsCPU.albedoFactor = Vector3(1.0f);
-	obj->m_materialConstsCPU.roughnessFactor = 0.3f;
-	obj->m_materialConstsCPU.metallicFactor = 0.8f;
+	obj->m_materialConstsCPU.roughnessFactor = 1.0f;
+	obj->m_materialConstsCPU.metallicFactor = 1.0f;
 	obj->m_materialConstsCPU.emissionFactor = Vector3(0.0f);
 	obj->UpdateConstantBuffers(m_device, m_context);
 	obj->m_modelCreationParams = m_modelParams;
+	obj->m_modelingFilePath = fullPath;
 
 	m_basicList.push_back(obj);
 	m_savedList.push_back(obj);

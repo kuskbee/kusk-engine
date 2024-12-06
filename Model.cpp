@@ -555,19 +555,19 @@ rapidjson::Value Model::ToJson(rapidjson::Document::AllocatorType& allocator) co
 			strValue.SetString(m_roughnessTextureFilePath.c_str( ), allocator);
 			value.AddMember("texture_roughness", strValue, allocator);
 		}
-
-		// 공통
-		value.AddMember("world_row_matrix",
-						JsonManager::MatrixToJson(m_worldRow, allocator), allocator);
-		value.AddMember("albedo_factor",
-						JsonManager::Vector3ToJson(m_materialConstsCPU.albedoFactor, allocator), allocator);
-		value.AddMember("roughness_factor", m_materialConstsCPU.roughnessFactor, allocator);
-		value.AddMember("metallic_factor", m_materialConstsCPU.metallicFactor, allocator);
-		value.AddMember("emission_factor",
-						JsonManager::Vector3ToJson(m_materialConstsCPU.emissionFactor, allocator), allocator);
-		value.AddMember("height_scale", m_meshConstsCPU.heightScale, allocator);
-		value.AddMember("is_fixed", m_isFixed, allocator);
 	}
+
+	// 공통
+	value.AddMember("world_row_matrix",
+					JsonManager::MatrixToJson(m_worldRow, allocator), allocator);
+	value.AddMember("albedo_factor",
+					JsonManager::Vector3ToJson(m_materialConstsCPU.albedoFactor, allocator), allocator);
+	value.AddMember("roughness_factor", m_materialConstsCPU.roughnessFactor, allocator);
+	value.AddMember("metallic_factor", m_materialConstsCPU.metallicFactor, allocator);
+	value.AddMember("emission_factor",
+					JsonManager::Vector3ToJson(m_materialConstsCPU.emissionFactor, allocator), allocator);
+	value.AddMember("height_scale", m_meshConstsCPU.heightScale, allocator);
+	value.AddMember("is_fixed", m_isFixed, allocator);
 
 	return value;
 }
