@@ -59,8 +59,7 @@ public:
 	void PostProcessingDataFromJSON(rapidjson::Value& value);
 	void ScreenDataFromJSON(rapidjson::Value& value);
 	void MirrorDataFromJSON(rapidjson::Value& value);
-		
-
+	
 protected: 
 	//TessellatedQuad m_tessellatedQuad;
 	shared_ptr<Model> m_ground;

@@ -147,9 +147,12 @@ void KuskApp::UpdateLights(float dt) {
 	// 회전하는 light[1] 업데이트 (Dev=Deviation 편차)
 	static Vector3 lightDev = Vector3(1.0f, 0.0f, 0.0f);
 	if (m_lightRotate) {
-		lightDev = Vector3::Transform(lightDev, Matrix::CreateRotationY(dt * 3.141592f * 0.5f));
+		static Vector3 axis = Vector3::Transform(Vector3(1.0f, 0.0f, 0.0f)
+												, Matrix::CreateRotationY(DirectX::XM_PIDIV2));
+		Quaternion q = Quaternion::CreateFromAxisAngle(axis, dt * 3.141592f * 0.3f);
+		lightDev = Vector3::Transform(lightDev, Matrix::CreateFromQuaternion(q));
 	}
-	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.0f, 1.1f, 2.0f) + lightDev;
+	m_globalConstsCPU.lights[ 1 ].position = Vector3(0.08f, 0.02f, -0.338f) + lightDev;
 	Vector3 focusPosition = Vector3(0.0f, -0.5f, 1.7f);
 	m_globalConstsCPU.lights[ 1 ].direction = focusPosition - m_globalConstsCPU.lights[ 1 ].position;
 	m_globalConstsCPU.lights[ 1 ].direction.Normalize( );
@@ -773,6 +776,24 @@ void KuskApp::UpdateGUI() {
 		ImGui::TreePop( );
 	}
 
+	ImGui::SliderFloat("move Speed", &m_camera.m_speed, 0.01f, 1.0f);
+
+	if (ImGui::BeginCombo("Select Objects", std::to_string(m_selectedModelIndex).c_str())) {
+		for (size_t i = 0; i < m_basicList.size( ); ++i) {
+			if (m_basicList[i]->m_isPickable == false)
+				continue;
+			const bool isSelected = (m_selectedModelIndex == i);
+			if (ImGui::Selectable(std::to_string(i).c_str( ), isSelected)) {
+				m_selectedModelIndex = ( int ) i;
+			}
+
+			if (isSelected) {
+				ImGui::SetItemDefaultFocus( ); // 기본 포커스 설정
+			}
+		}
+		ImGui::EndCombo( );
+	}
+
 	if (m_selectedModelIndex >= 0) {
 		shared_ptr<Model> selectedObj = m_basicList.at(m_selectedModelIndex);
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -781,7 +802,30 @@ void KuskApp::UpdateGUI() {
 
 			int flag = 0;
 			Vector3 position = selectedObj->m_worldRow.Translation( );
-			flag += ImGui::SliderFloat3("position", &position.x, -10.0f, 10.0f);
+			//flag += ImGui::SliderFloat3("position", &position.x, -10.0f, 10.0f);
+			if (ImGui::InputFloat3("position", &position.x)) {
+				flag++;
+				position.x = std::clamp(position.x, -10.0f, 10.0f);
+				position.y = std::clamp(position.y, -10.0f, 10.0f);
+				position.z = std::clamp(position.z, -10.0f, 10.0f);
+			}
+			ImGuiIO& io = ImGui::GetIO( );
+			if (!io.WantCaptureKeyboard) { // 슬라이더가 활성화 상태일 때
+				flag++;
+				if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) position -= m_camera.GetRightDir( ) * 0.02f;
+				if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) position += m_camera.GetRightDir( ) * 0.02f;
+				if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) {
+					if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) position += m_camera.GetViewDir( ) * 0.02f;
+					if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) position -= m_camera.GetViewDir( ) * 0.02f;
+				}
+				else {
+					if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) position += m_camera.GetUpDir( ) * 0.02f;
+					if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) position -= m_camera.GetUpDir( ) * 0.02f;
+				}
+				position.x = std::clamp(position.x, -10.0f, 10.0f);
+				position.y = std::clamp(position.y, -10.0f, 10.0f);
+				position.z = std::clamp(position.z, -10.0f, 10.0f);
+			}
 
 			Vector3 scale = ExtractScale(selectedObj->m_worldRow);
 			flag += ImGui::SliderFloat3("scale", &scale.x, 0.01f, 10.0f);

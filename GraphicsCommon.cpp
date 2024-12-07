@@ -413,6 +413,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	billboardPointsSolidPSO.m_depthStencilState = drawDSS;
 	billboardPointsSolidPSO.m_rasterizerState = solidRS;
 	billboardPointsSolidPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+	billboardPointsSolidPSO.m_blendState = originBS;
 
 	// billboardPointsWirePSO
 	billboardPointsWirePSO = billboardPointsSolidPSO;

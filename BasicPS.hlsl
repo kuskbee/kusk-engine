@@ -226,8 +226,12 @@ PixelShaderOutput main(PixelShaderInput input) {
     
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
+    
+    float4 tmpAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
+    if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+        discard;
 
-    float3 albedo = useAlbedoMap ? albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb * albedoFactor : albedoFactor;
+    float3 albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
     float ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
     float metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
     float roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;
@@ -298,7 +302,7 @@ PixelShaderOutput main(PixelShaderInput input) {
     }*/
         
     PixelShaderOutput output;
-    output.pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
+    output.pixelColor = float4(ambientLighting + directLighting + emission, useAlbedoMap ? tmpAlbedo.a : 1.0);
         
     // Rim Lighting
     if (isSelected)
