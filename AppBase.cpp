@@ -197,9 +197,9 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // 키보드 키 눌림 갱신
         m_keyPressed[ wParam ] = true;
         
-        if (wParam == VK_ESCAPE) { // esc 키 종료
-            DestroyWindow(hWnd);
-        }
+        //if (wParam == VK_ESCAPE) { // esc 키 종료
+        //    DestroyWindow(hWnd);
+        //}
         
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
         break;

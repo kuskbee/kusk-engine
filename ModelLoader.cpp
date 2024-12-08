@@ -5,6 +5,10 @@
 #include <vector>
 #include <algorithm>
 
+//:DEBUG
+//#include <assimp/Logger.hpp>
+//#include <assimp/DefaultLogger.hpp>
+
 namespace kusk {
 
 using namespace std;
@@ -70,6 +74,10 @@ void ModelLoader::Load(std::string basePath, std::string filename, bool revertNo
 
 	Assimp::Importer importer;
 
+	//:DEBUG
+	//Assimp::DefaultLogger::create("AssimpLog.txt", Assimp::Logger::VERBOSE, aiDefaultLogStream_DEBUGGER);
+	//Assimp::DefaultLogger::get( )->info("Assimp logging system initialized!");
+	
 	const aiScene* pScene = importer.ReadFile(
 		this->basePath + filename,
 		aiProcess_Triangulate | 
@@ -92,6 +100,8 @@ void ModelLoader::Load(std::string basePath, std::string filename, bool revertNo
 	UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
 
 	UpdateTangents( );
+
+	//Assimp::DefaultLogger::kill( );
 }
 
 void ModelLoader::UpdateTangents( ) {
@@ -158,7 +168,9 @@ string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
 		material->GetTexture(type, 0, &filepath);
 
 		std::string fullpath = this->basePath + std::string(std::filesystem::path(filepath.C_Str( )).filename( ).string( ));
-		
+		if (!std::filesystem::exists(fullpath)) {
+			std::cerr << "Texture file not found: " << fullpath << std::endl;
+		}
 		//test
 		//cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
 		return fullpath;
@@ -205,6 +217,9 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 			vertex.texcoord.x = ( float ) mesh->mTextureCoords[ 0 ][ i ].x;
 			vertex.texcoord.y = ( float ) mesh->mTextureCoords[ 0 ][ i ].y;
 		}
+		else {
+			std::cerr << "Missing UV coordinates for mesh: " << mesh->mName.C_Str( ) << std::endl;
+		}
 		vertices.push_back(vertex);
 	}
 
@@ -243,6 +258,10 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 			if(!str.empty())
 				cout << i << " : " << str << endl;
 	    }
+
+		if (newMesh.albedoTextureFilename.empty( )) {
+			std::cerr << "Albedo texture missing for mesh." << std::endl;
+		}
 	}
 
 	return newMesh;

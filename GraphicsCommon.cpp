@@ -424,6 +424,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	reflectBillboardPointsSolidPSO.m_depthStencilState = drawMaskedDSS;
 	reflectBillboardPointsSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
 	reflectBillboardPointsSolidPSO.m_stencilRef = 1;
+	reflectBillboardPointsSolidPSO.m_blendState = originBS;
 
 	// reflectBillboardPointsWirePSO
 	reflectBillboardPointsWirePSO = reflectBillboardPointsSolidPSO;

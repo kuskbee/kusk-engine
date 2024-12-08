@@ -555,7 +555,7 @@ void KuskApp::UpdateGUI() {
 		if (ImGui::Checkbox("MSAA ON", &m_useMSAA)) {
 			CreateBuffers( );
 		}
-		ImGui::SliderFloat("LodBias", &m_globalConstsCPU.lodBias, 0.0f, 10.0f);
+		ImGui::SliderFloat("LodBias", &m_globalConstsCPU.lodBias, -1.0f, 10.0f);
 
 		ImGui::TreePop( );
 	}
@@ -917,7 +917,7 @@ void KuskApp::UpdateGUI() {
 		}
 
 		// 메쉬가 하나일 때만 texture 수정할 수 있도록 표시
-		if (selectedObj->m_meshes.size( ) == 1) {
+		if (selectedObj->m_modelCreationParams.type != MESH_TYPE_NONE) {
 			static const std::string filterName = "Image files";
 			static const std::string filterExts = "*.jpg;*.jpeg;*.png";
 

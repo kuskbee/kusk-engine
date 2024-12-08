@@ -227,15 +227,36 @@ PixelShaderOutput main(PixelShaderInput input) {
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
     
-    float4 tmpAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
-    if (useAlbedoMap && tmpAlbedo.a < 0.1f)
-        discard;
+   
 
-    float3 albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
-    float ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
-    float metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
-    float roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;
-    float3 emission = useEmissiveMap ? emissiveTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb : emissionFactor;
+    float4 tmpAlbedo;
+    float3 albedo, emission;
+    float ao, metallic, roughness;
+    if (lodBias >= 0.0)
+    {
+        tmpAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
+        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+            discard;
+        
+        albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
+        ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
+        metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
+        roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;
+        emission = useEmissiveMap ? emissiveTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb : emissionFactor;
+    }
+    else
+    {
+        tmpAlbedo = albedoTex.Sample(linearWrapSampler, input.texcoord);
+        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+            discard;
+        
+        albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
+        ao = useAOMap ? aoTex.Sample(linearWrapSampler, input.texcoord).r : 1.0f;
+        metallic = useMetallicMap ? metallicRoughnessTex.Sample(linearWrapSampler, input.texcoord).b * metallicFactor : metallicFactor;
+        roughness = useRoughnessMap ? metallicRoughnessTex.Sample(linearWrapSampler, input.texcoord).g * roughnessFactor : roughnessFactor;
+        emission = useEmissiveMap ? emissiveTex.Sample(linearWrapSampler, input.texcoord).rgb : emissionFactor;
+    }
+    
     
     // adjust 
     ao = 0.3 + 0.7 * ao;
@@ -310,7 +331,7 @@ PixelShaderOutput main(PixelShaderInput input) {
         float rim = 1.0 - dot(pixelToEye, normalWorld);
         rim = smoothstep(0.0, 1.0, rim);
         rim = pow(abs(rim), 10.0);
-        float3 rimEffect = rim * float3(0.0, 1.0, 1.0) * 1.0;
+        float3 rimEffect = rim * float3(0.0, 1.0, 1.0) * 5.0;
         output.pixelColor += float4(rimEffect, 1.0);
     }
     
