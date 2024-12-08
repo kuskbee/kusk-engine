@@ -109,19 +109,19 @@ void Model::Initialize(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>
 		}
 
 		if (!meshData.normalTextureFilename.empty( )) {
-			D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename, true,
+			D3D11Utils::CreateTexture(device, context, meshData.normalTextureFilename, false,
 				newMesh->normalTexture, newMesh->normalSRV);
 			m_materialConstsCPU.useNormalMap = true;
 		}
 
 		if (!meshData.heightTextureFilename.empty( )) {
-			D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename, true,
+			D3D11Utils::CreateTexture(device, context, meshData.heightTextureFilename, false,
 				newMesh->heightTexture, newMesh->heightSRV);
 			m_meshConstsCPU.useHeightMap = true;
 		}
 
 		if (!meshData.aoTextureFilename.empty( )) {
-			D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename, true,
+			D3D11Utils::CreateTexture(device, context, meshData.aoTextureFilename, false,
 				newMesh->aoTexture, newMesh->aoSRV);
 			m_materialConstsCPU.useAOMap = true;
 		}
@@ -348,19 +348,19 @@ void Model::InitializeFromJson(ComPtr<ID3D11Device>& device, ComPtr<ID3D11Device
 	}
 
 	if (!m_normalTextureFilePath.empty( )) {
-		D3D11Utils::CreateTexture(device, context, m_normalTextureFilePath, true,
+		D3D11Utils::CreateTexture(device, context, m_normalTextureFilePath, false,
 			m_meshes[ 0 ]->normalTexture, m_meshes[ 0 ]->normalSRV);
 		m_materialConstsCPU.useNormalMap = true;
 	}
 
 	if (!m_heightTextureFilePath.empty( )) {
-		D3D11Utils::CreateTexture(device, context, m_heightTextureFilePath, true,
+		D3D11Utils::CreateTexture(device, context, m_heightTextureFilePath, false,
 			m_meshes[ 0 ]->heightTexture, m_meshes[ 0 ]->heightSRV);
 		m_meshConstsCPU.useHeightMap = true;
 	}
 
 	if (!m_aoTextureFilePath.empty( )) {
-		D3D11Utils::CreateTexture(device, context, m_aoTextureFilePath, true,
+		D3D11Utils::CreateTexture(device, context, m_aoTextureFilePath, false,
 			m_meshes[ 0 ]->aoTexture, m_meshes[ 0 ]->aoSRV);
 		m_materialConstsCPU.useAOMap = true;
 	}

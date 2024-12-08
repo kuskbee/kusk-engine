@@ -971,7 +971,7 @@ void KuskApp::UpdateGUI() {
 					std::string filePath = OpenFileDialog(filterName, filterExts);
 					if (!filePath.empty( )) {
 						selectedObj->m_normalTextureFilePath = filePath;
-						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->normalTexture, mesh->normalSRV);
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, false, mesh->normalTexture, mesh->normalSRV);
 						selectedObj->m_materialConstsCPU.useNormalMap = true;
 					}
 				}
@@ -988,7 +988,7 @@ void KuskApp::UpdateGUI() {
 					std::string filePath = OpenFileDialog(filterName, filterExts);
 					if (!filePath.empty( )) {
 						selectedObj->m_heightTextureFilePath = filePath;
-						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->heightTexture, mesh->heightSRV);
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, false, mesh->heightTexture, mesh->heightSRV);
 						selectedObj->m_meshConstsCPU.useHeightMap = true;
 					}
 				}
@@ -1005,7 +1005,7 @@ void KuskApp::UpdateGUI() {
 					std::string filePath = OpenFileDialog(filterName, filterExts);
 					if (!filePath.empty( )) {
 						selectedObj->m_aoTextureFilePath = filePath;
-						D3D11Utils::CreateTexture(m_device, m_context, filePath, true, mesh->aoTexture, mesh->aoSRV);
+						D3D11Utils::CreateTexture(m_device, m_context, filePath, false, mesh->aoTexture, mesh->aoSRV);
 						selectedObj->m_materialConstsCPU.useAOMap = true;
 					}
 				}

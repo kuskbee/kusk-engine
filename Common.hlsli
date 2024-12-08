@@ -230,7 +230,7 @@ float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float m
     float2 specularBRDF = brdfTex.SampleLevel(linearClampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
     
     // 앞에서 사용했던 방법과 동일
-    float3 specularIrradiance = specularIBLTex.SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;    
+    float3 specularIrradiance = envIBLTex.SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
     float3 F0 = lerp(Fdielectric, albedo, metallic);
     
     return (F0 * specularBRDF.x + specularBRDF.y) * specularIrradiance; // Note (8)
