@@ -10,8 +10,6 @@ Texture2D aoTex : register(t2);
 Texture2D metallicRoughnessTex : register(t3);
 Texture2D emissiveTex : register(t4);
 
-static const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-
 cbuffer BasicPixelConstData : register(b0) 
 {
     float3 albedoFactor;
@@ -26,25 +24,13 @@ cbuffer BasicPixelConstData : register(b0)
     int useMetallicMap;
     int useRoughnessMap;
     int useEmissiveMap;
-    
-    // Rim 관련 데이터
-    float rimPower;
-    float3 rimColor;
-    float rimStrength;
-    bool useSmoothstep;
-    float3 dummy;
+    int isSelected;
 };
 
 struct PixelShaderOutput
 {
     float4 pixelColor : SV_Target0;
 };
-
-float3 SchlickFresnel(float3 F0, float VdotH)
-{
-    return float3(F0 + (1.0 - F0) * pow(2.0, (-5.55473 * VdotH - 6.98316) * VdotH)); // Note (5)
-    // return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
 
 float3 GetNormal(PixelShaderInput input)
 {
@@ -69,37 +55,6 @@ float3 GetNormal(PixelShaderInput input)
     return normalWorld;
 }
 
-float3 DiffuseIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic)
-{
-    float3 F0 = lerp(Fdielectric, albedo, metallic);
-    float3 F = SchlickFresnel(F0, max(0.0, dot(normalWorld, pixelToEye)));
-    float3 kd = lerp(1.0 - F, 0.0, metallic);
-    
-    // 앞에서 사용했던 방법과 동일
-    float3 irradiance = irradianceIBLTex.SampleLevel(linearWrapSampler, normalWorld, 0).rgb;
-    
-    return kd * albedo * irradiance;
-}
-
-float3 SpecularIBL(float3 albedo, float3 normalWorld, float3 pixelToEye, float metallic, float roughness)
-{
-    float2 specularBRDF = brdfTex.SampleLevel(linearClampSampler, float2(dot(normalWorld, pixelToEye), 1.0 - roughness), 0.0).rg;
-    
-    // 앞에서 사용했던 방법과 동일
-    float3 specularIrradiance = specularIBLTex.SampleLevel(linearWrapSampler, reflect(-pixelToEye, normalWorld), 2 + roughness * 5.0f).rgb;
-    const float3 Fdielectric = 0.04; // 비금속(Dielectric) 재질의 F0
-    float3 F0 = lerp(Fdielectric, albedo, metallic);
-    
-    return (F0 * specularBRDF.x + specularBRDF.y) * specularIrradiance; // Note (8)
-}
-
-float3 AmbientLightingByIBL(float3 albedo, float3 normalW, float3 pixelToEye, float ao, float metallic, float roughness)
-{
-    float3 diffuseIBL = DiffuseIBL(albedo, normalW, pixelToEye, metallic);
-    float3 specularIBL = SpecularIBL(albedo, normalW, pixelToEye, metallic, roughness);
-    
-    return (diffuseIBL + specularIBL) * ao;
-}
 
 // GGX / Towbridge-Reitz normal distribution function
 // Uses Disney's reparametrization of alpha = roughness^2.
@@ -272,11 +227,36 @@ PixelShaderOutput main(PixelShaderInput input) {
     float3 pixelToEye = normalize(eyeWorld - input.posWorld);
     float3 normalWorld = GetNormal(input);
     
-    float3 albedo = useAlbedoMap ? albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb * albedoFactor : albedoFactor;
-    float ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
-    float metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
-    float roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;
-    float3 emission = useEmissiveMap ? emissiveTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb : emissionFactor;
+   
+
+    float4 tmpAlbedo;
+    float3 albedo, emission;
+    float ao, metallic, roughness;
+    if (lodBias >= 0.0)
+    {
+        tmpAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
+        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+            discard;
+        
+        albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
+        ao = useAOMap ? aoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).r : 1.0f;
+        metallic = useMetallicMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).b * metallicFactor : metallicFactor;
+        roughness = useRoughnessMap ? metallicRoughnessTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).g * roughnessFactor : roughnessFactor;
+        emission = useEmissiveMap ? emissiveTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias).rgb : emissionFactor;
+    }
+    else
+    {
+        tmpAlbedo = albedoTex.Sample(linearWrapSampler, input.texcoord);
+        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+            discard;
+        
+        albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
+        ao = useAOMap ? aoTex.Sample(linearWrapSampler, input.texcoord).r : 1.0f;
+        metallic = useMetallicMap ? metallicRoughnessTex.Sample(linearWrapSampler, input.texcoord).b * metallicFactor : metallicFactor;
+        roughness = useRoughnessMap ? metallicRoughnessTex.Sample(linearWrapSampler, input.texcoord).g * roughnessFactor : roughnessFactor;
+        emission = useEmissiveMap ? emissiveTex.Sample(linearWrapSampler, input.texcoord).rgb : emissionFactor;
+    }
+    
     
     // adjust 
     ao = 0.3 + 0.7 * ao;
@@ -343,15 +323,17 @@ PixelShaderOutput main(PixelShaderInput input) {
     }*/
         
     PixelShaderOutput output;
-    output.pixelColor = float4(ambientLighting + directLighting + emission, 1.0);
+    output.pixelColor = float4(ambientLighting + directLighting + emission, useAlbedoMap ? tmpAlbedo.a : 1.0);
         
     // Rim Lighting
-    float rim = 1.0 - dot(pixelToEye, normalWorld);
-    if (useSmoothstep)
+    if (isSelected)
+    {
+        float rim = 1.0 - dot(pixelToEye, normalWorld);
         rim = smoothstep(0.0, 1.0, rim);
-    rim = pow(abs(rim), rimPower);
-    float3 rimEffect = rim * rimColor * rimStrength;
-    output.pixelColor += float4(rimEffect, 1.0);
+        rim = pow(abs(rim), 10.0);
+        float3 rimEffect = rim * float3(0.0, 1.0, 1.0) * 5.0;
+        output.pixelColor += float4(rimEffect, 1.0);
+    }
     
     output.pixelColor = clamp(output.pixelColor, 0.0, 1000.0);
     

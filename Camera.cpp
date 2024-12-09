@@ -67,4 +67,44 @@ Matrix Camera::GetProjRow( ) {
 		: XMMatrixOrthographicOffCenterLH(-m_aspect, m_aspect, -1.0f, 1.0f, m_nearZ, m_farZ);
 }
 
+rapidjson::Value Camera::CameraDataToJSON(rapidjson::Document::AllocatorType& allocator) {
+	rapidjson::Value value(rapidjson::kObjectType);
+
+	value.AddMember("position", JsonManager::Vector3ToJson(m_position, allocator), allocator);
+	value.AddMember("pitch", m_pitch, allocator);
+	value.AddMember("yaw", m_yaw, allocator);
+	value.AddMember("speed", m_speed, allocator);
+	value.AddMember("proj_fov_angle_y", m_projFovAngleY, allocator);
+	value.AddMember("near_z", m_nearZ, allocator);
+	value.AddMember("far_z", m_farZ, allocator);
+
+	return value;
+}
+
+void Camera::CameraDataFromJSON(rapidjson::Value& value) {
+	if (value.HasMember("position")) {
+		m_position = JsonManager::ParseVector3(value[ "position" ]);
+	}
+	if (value.HasMember("pitch")) {
+		m_pitch = value[ "pitch" ].GetFloat( );
+	}
+	if (value.HasMember("yaw")) {
+		m_yaw = value[ "yaw" ].GetFloat( );
+	}
+	if (value.HasMember("speed")) {
+		m_speed = value[ "speed" ].GetFloat( );
+	}
+	if (value.HasMember("proj_fov_angle_y")) {
+		m_projFovAngleY = value[ "proj_fov_angle_y" ].GetFloat( );
+	}
+	if (value.HasMember("near_z")) {
+		m_nearZ = value[ "near_z" ].GetFloat( );
+	}
+	if (value.HasMember("far_z")) {
+		m_farZ = value[ "far_z" ].GetFloat( );
+	}
+
+	UpdateViewDir( );
+}
+
 } // namespace kusk

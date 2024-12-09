@@ -62,13 +62,13 @@ int RaySphereIntersection(in float3 start, in float3 dir, in float3 center, in f
     }
 }
 
-float HaloEmission(float3 posView, float radius)
+float HaloEmission(float3 posView, float radius, float3 lightPos)
 {
     // Halo
     float3 rayStart = float3(0, 0, 0); // View space
     
     float3 dir = normalize(posView - rayStart);
-    float3 center = mul(float4(lights[1].position, 1.0), view).xyz; // View 공간으로 변환
+    float3 center = mul(float4(lightPos, 1.0), view).xyz; // View 공간으로 변환
     
     float t1 = 0.0;
     float t2 = 0.0;
@@ -104,15 +104,23 @@ float4 main(SamplingPixelShaderInput input) : SV_Target
         
         // Halo
         float3 haloColor = float3(0.96, 0.94, 0.82);
-        float radius = lights[1].haloRadius;
-        color += HaloEmission(posView.xyz, radius) * haloColor * lights[1].haloStrength;
+        for (int i = 0; i < MAX_LIGHTS; i++)
+        {
+            if(!lights[i].type)
+                continue;
+            if (lights[i].haloStrength <= 0.0)
+                continue;
+            float radius = lights[i].haloRadius;
+            color += HaloEmission(posView.xyz, radius, lights[i].position) * haloColor * lights[i].haloStrength;
+        }
+        
         
         // Beer-Lambert Law
         // fogStrength : exinction coefficient
         // Fog
         float dist = length(posView.xyz); // 눈의 위치가 원점인 좌표계
         float3 fogColor = float3(1, 1, 1);
-        float fogMin = 1.0;
+        float fogMin = 0.1;
         float fogMax = 10.0;
         
         float distFog = saturate((dist - fogMin) / (fogMax - fogMin));

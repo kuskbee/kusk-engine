@@ -2,6 +2,8 @@
 
 #include <directxtk/SimpleMath.h>
 
+#include "JsonManager.h"
+
 namespace kusk {
 using DirectX::SimpleMath::Matrix;
 using DirectX::SimpleMath::Vector3;
@@ -23,8 +25,17 @@ public:
 	void MoveUp(float dt);
 	void SetAspectRatio(float aspect);
 
+	Vector3 GetViewDir( ) { return m_viewDir; }
+	Vector3 GetUpDir( ) { return m_upDir; }
+	Vector3 GetRightDir( ) { return m_rightDir; }
+
+	// Json
+	rapidjson::Value CameraDataToJSON(rapidjson::Document::AllocatorType& allocator);
+	void CameraDataFromJSON(rapidjson::Value& value);
+
 public:
 	bool m_useFirstPersonView = false;
+	float m_speed = 1.0f;
 
 private:
 	Vector3 m_position = Vector3(0.275514f, 0.461257f, 0.0855238f);
@@ -35,8 +46,6 @@ private:
 	// roll, pitch, yaw
 	float m_pitch = -0.120477f;
 	float m_yaw = -0.019635f;
-
-	float m_speed = 3.0f;
 
 	// 프로젝션 옵션 : 카메라 클래스로 이동
 	float m_projFovAngleY = 90.0f;

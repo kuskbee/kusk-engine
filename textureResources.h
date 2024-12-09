@@ -23,11 +23,10 @@
 #define SKYBOX_DIFF_DDS L"./Assets/Textures/Cubemaps/skybox/cubemap_diffuse.dds"
 #define SKYBOX_SPEC_DDS L"./Assets/Textures/Cubemaps/skybox/cubemap_specular.dds"
 
-#define OUTDOOR_BASE_PATH L"./Assets/Textures/Cubemaps/HDRI/"
-#define OUTDOOR_ORGN_DDS L"OutdoorEnvHDR.dds"
-#define OUTDOOR_SPEC_DDS L"OutdoorSpecularHDR.dds"
-#define OUTDOOR_DIFF_DDS L"OutdoorDiffuseHDR.dds"
-#define OUTDOOR_BRDF_DDS L"OutdoorBrdf.dds"
+#define OUTDOOR_ORGN_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorEnvHDR.dds"
+#define OUTDOOR_SPEC_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorSpecularHDR.dds"
+#define OUTDOOR_DIFF_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorDiffuseHDR.dds"
+#define OUTDOOR_BRDF_DDS L"./Assets/Textures/Cubemaps/HDRI/OutdoorBrdf.dds"
  
 // Textures
 #define BLENDER_UV_GRID_2K_TEXTURE "./Assets/Textures/blender_uv_grid_2k.png"

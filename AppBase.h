@@ -12,11 +12,13 @@
 #include "D3D11Utils.h"
 #include "GraphicsPSO.h"
 #include "PostProcess.h"
+#include "MouseControlState.h"
 
 namespace kusk {
 
 using DirectX::BoundingSphere;
 using DirectX::SimpleMath::Quaternion;
+using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 using DirectX::SimpleMath::Plane;
 using Microsoft::WRL::ComPtr;
@@ -34,14 +36,14 @@ public:
 
 	virtual bool Initialize( );
 	virtual void UpdateGUI( ) = 0;
+	virtual void UpdatePopupGUI( ) = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Render( ) = 0;
 	virtual void OnMouseMove(int mouseX, int mouseY);
 	virtual LRESULT MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	void InitCubemaps(wstring basePath, wstring envFilename,
-					  wstring specularFilename, wstring irradianceFilename,
-					  wstring brdfFilename);
+	void InitCubemaps(wstring envFilePath, wstring specularFilePath,
+					  wstring irradianceFilePath, wstring brdfFilePath);
 	void UpdateGlobalConstants(const Vector3& eyeWorld, const Matrix& viewRow,
 							   const Matrix& projRow, const Matrix& refl, const Plane& mirrorPlane);
 	void SetGlobalConsts(ComPtr<ID3D11Buffer>& globalConstsGPU);
@@ -49,7 +51,15 @@ public:
 	void CreateDepthBuffers( );
 	void SetPipelineState(const GraphicsPSO& pso);
 	bool UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
-							Vector3& dragTranslation, Vector3& pickPoint);
+							Vector3& dragTranslation, Vector3& pickPoint, float& distance,
+							MouseControlState& mcs);
+
+	// ImGui Popup 관련
+	virtual void UpdateObjectCreationFrameGUI() = 0;
+
+	void ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode=nullptr);
+	std::string OpenFileDialog(std::string filterName, std::string exts);
+	std::string SaveFileDialog(std::string filterName, std::string exts, std::string defaultExt);
 
 protected:
 	bool InitMainWindow( );
@@ -103,7 +113,7 @@ public:
 	bool m_keyPressed[ 256 ] = { false };
 	bool m_leftButton = false;
 	bool m_rightButton = false;
-	bool m_dragStartFlag = false;
+	int m_selectedModelIndex = -1;
 
 	D3D11_VIEWPORT m_screenViewport;
 
@@ -131,9 +141,18 @@ public:
 	ComPtr<ID3D11ShaderResourceView> m_specularSRV;
 	ComPtr<ID3D11ShaderResourceView> m_brdfSRV;
 
+	// IBL 텍스쳐 정보
+	std::string m_cubemapTextureEnvFilePath;
+	std::string m_cubemapTextureSpecularFilePath;
+	std::string m_cubemapTextureIrradianceFilePath;
+	std::string m_cubemapTextureBrdfFilePath;
+
 	bool m_lightRotate = false;
+protected:
+	//ImGui Popup 관련
+	std::string m_currentPopup;
+
+	ModelCreationParams m_modelParams;
 };
 
 } // namespace kusk
-
-

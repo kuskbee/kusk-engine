@@ -5,12 +5,16 @@
 #include <vector>
 #include <algorithm>
 
+//:DEBUG
+//#include <assimp/Logger.hpp>
+//#include <assimp/DefaultLogger.hpp>
+
 namespace kusk {
 
 using namespace std;
 using namespace DirectX::SimpleMath;
 
-void UpdateNormal(vector<MeshData>& meshes) {
+void UpdateNormals(vector<MeshData>& meshes) {
 
 	// 노멀 벡터가 없는 경우만 대비하여 다시 계산
 	// 한 위치에는 한 버텍스만 있어야 연결 관계를 찾을 수 있음.
@@ -21,6 +25,9 @@ void UpdateNormal(vector<MeshData>& meshes) {
 	for (auto& m : meshes) {
 		vector<Vector3> normalsTemp(m.vertices.size( ), Vector3(0.0f));
 		vector<float> weightsTemp(m.vertices.size( ), 0.0f);
+
+		if (m.indices.size( ) < 3)
+			continue;
 
 		for (int i = 0; i < m.indices.size( ); i += 3) {
 			int idx0 = m.indices[ i ];
@@ -67,9 +74,20 @@ void ModelLoader::Load(std::string basePath, std::string filename, bool revertNo
 
 	Assimp::Importer importer;
 
+	//:DEBUG
+	//Assimp::DefaultLogger::create("AssimpLog.txt", Assimp::Logger::VERBOSE, aiDefaultLogStream_DEBUGGER);
+	//Assimp::DefaultLogger::get( )->info("Assimp logging system initialized!");
+	
 	const aiScene* pScene = importer.ReadFile(
 		this->basePath + filename,
-		aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_GenSmoothNormals);
+		aiProcess_Triangulate | 
+		aiProcess_ConvertToLeftHanded | 
+		aiProcess_GenSmoothNormals |
+		aiProcess_FlipUVs |           // UV 좌표 반전
+		aiProcess_CalcTangentSpace | // Tangent 계산
+		aiProcess_OptimizeMeshes |   // 메시 최적화
+		aiProcess_ImproveCacheLocality // GPU 성능 최적화
+	);
 
 	if (!pScene) {
 		std::cout << "Failed to read file: " << this->basePath + filename << std::endl;
@@ -79,9 +97,11 @@ void ModelLoader::Load(std::string basePath, std::string filename, bool revertNo
 		ProcessNode(pScene->mRootNode, pScene, ext, tr);
 	}
 
-	// UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
+	UpdateNormals(this->meshes); // Vertex Normal을 직접 계산 (참고용)
 
 	UpdateTangents( );
+
+	//Assimp::DefaultLogger::kill( );
 }
 
 void ModelLoader::UpdateTangents( ) {
@@ -143,14 +163,16 @@ void ModelLoader::ProcessNode(aiNode* node, const aiScene* scene, const std::str
 }
 
 string ModelLoader::ReadFilename(aiMaterial* material, aiTextureType type) {
-	if (material->GetTextureCount(type) > 0) {
+	if (material->GetTextureCount(type) > 0) { 
 		aiString filepath;
 		material->GetTexture(type, 0, &filepath);
 
 		std::string fullpath = this->basePath + std::string(std::filesystem::path(filepath.C_Str( )).filename( ).string( ));
-		
+		if (!std::filesystem::exists(fullpath)) {
+			std::cerr << "Texture file not found: " << fullpath << std::endl;
+		}
 		//test
-		cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
+		//cout << std::filesystem::path(filepath.C_Str( )).extension( ).string( ) << endl;
 		return fullpath;
 	}
 	else {
@@ -171,26 +193,32 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 		vertex.position.y = mesh->mVertices[ i ].y;
 		vertex.position.z = mesh->mVertices[ i ].z;
 
-		vertex.normalModel.x = mesh->mNormals[ i ].x;
+		if (mesh->mNormals) {
+			vertex.normalModel.x = mesh->mNormals[ i ].x;
 
-		if (ext == ".gltf") {
-			vertex.normalModel.y = mesh->mNormals[ i ].z;
-			vertex.normalModel.z = -mesh->mNormals[ i ].y;
-		}
-		else {
-			vertex.normalModel.y = mesh->mNormals[ i ].y;
-			vertex.normalModel.z = mesh->mNormals[ i ].z;
-		}
+			if (ext == ".gltf") {
+				vertex.normalModel.y = mesh->mNormals[ i ].z;
+				vertex.normalModel.z = -mesh->mNormals[ i ].y;
+			}
+			else {
+				vertex.normalModel.y = mesh->mNormals[ i ].y;
+				vertex.normalModel.z = mesh->mNormals[ i ].z;
+			}
 
-		if (m_revertNormals) {
-			vertex.normalModel.y *= -1.0f;
-		}
+			if (m_revertNormals) {
+				vertex.normalModel.y *= -1.0f;
+			}
 
-		vertex.normalModel.Normalize( );
+			vertex.normalModel.Normalize( );
+		}
+		
 
 		if (mesh->mTextureCoords[ 0 ]) {
 			vertex.texcoord.x = ( float ) mesh->mTextureCoords[ 0 ][ i ].x;
 			vertex.texcoord.y = ( float ) mesh->mTextureCoords[ 0 ][ i ].y;
+		}
+		else {
+			std::cerr << "Missing UV coordinates for mesh: " << mesh->mName.C_Str( ) << std::endl;
 		}
 		vertices.push_back(vertex);
 	}
@@ -208,6 +236,12 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 	if (mesh->mMaterialIndex >= 0) {
 		aiMaterial* material = scene->mMaterials[ mesh->mMaterialIndex ];
 		newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_BASE_COLOR);
+		if (newMesh.albedoTextureFilename.empty( )) {
+			newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_AMBIENT);
+		}
+		if (newMesh.albedoTextureFilename.empty( )) {
+			newMesh.albedoTextureFilename = ReadFilename(material, aiTextureType_DIFFUSE);
+		}
 		newMesh.emissiveTextureFilename = ReadFilename(material, aiTextureType_EMISSIVE);
 		newMesh.heightTextureFilename = ReadFilename(material, aiTextureType_HEIGHT);
 		newMesh.normalTextureFilename = ReadFilename(material, aiTextureType_NORMALS);
@@ -218,10 +252,16 @@ MeshData ModelLoader::ProcessMesh(aiMesh* mesh, const aiScene* scene, const std:
 			newMesh.aoTextureFilename = ReadFilename(material, aiTextureType_LIGHTMAP);
 		}
 
-		// 디버깅용
-	   // for (size_t i = 0; i < 22; i++) {
-	   //    cout << i << " " << ReadFilename(material, aiTextureType(i)) << endl;
-	   //}
+		//디버깅용
+	    for (size_t i = 0; i < 22; i++) {
+			std::string str = ReadFilename(material, aiTextureType(i));
+			if(!str.empty())
+				cout << i << " : " << str << endl;
+	    }
+
+		if (newMesh.albedoTextureFilename.empty( )) {
+			std::cerr << "Albedo texture missing for mesh." << std::endl;
+		}
 	}
 
 	return newMesh;

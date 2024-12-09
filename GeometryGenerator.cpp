@@ -265,7 +265,7 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 
 	vector<Vertex>& vertices = meshData.vertices;
 	Vector3 center = Vector3(0.0f, -0.5f * height, 0.0f);
-	Vector3 startPoint = Vector3(-bottomRadius, -0.5 * height, 0.0f);
+	Vector3 startPoint = Vector3(-bottomRadius, -0.5f * height, 0.0f);
 	// 바닥 Vertex들 (index 가 0 이상 sliceCount 미만)
 	for (int i = 0; i <= numSlices; i++) {
 		Vertex v;
@@ -279,7 +279,7 @@ MeshData GeometryGenerator::MakeCylinder(const float bottomRadius,
 	}
 
 	// 천장 Vertex들 (index가 sliceCount 이상 sliceCount * 2 미만)
-	startPoint = Vector3(-topRadius, 0.5 * height, 0.0f);
+	startPoint = Vector3(-topRadius, 0.5f * height, 0.0f);
 	center = Vector3(0.0f, 0.5f * height, 0.0f);
 	for (int i = 0; i <= numSlices; i++) {
 		Vertex v;

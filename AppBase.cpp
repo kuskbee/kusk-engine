@@ -5,6 +5,7 @@
 
 #include "D3D11Utils.h"
 #include "GraphicsCommon.h"
+#include "JsonManager.h"
 
 // imgui_impl_win32.cpp에 정의된 메시지 처리 함수에 대한 전방 선언
 // VCPKG를 통해 IMGUI를 사용할 경우 빨간줄로 경고가 뜰 수 있음
@@ -87,6 +88,11 @@ int AppBase::Run() {
             UpdateGUI(); // 추가적으로 사용할 GUI
 
             ImGui::End();
+
+            UpdatePopupGUI( );
+
+            UpdateObjectCreationFrameGUI( );
+
             ImGui::Render();
             
             Update(ImGui::GetIO().DeltaTime);
@@ -173,16 +179,10 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         break;
     case WM_LBUTTONDOWN:
         // cout << "WM_LBUTTONDOWN Left mouse button" << endl;
-        if (!m_leftButton && !m_rightButton) {
-            m_dragStartFlag = true;
-        }
         m_leftButton = true;
         break;
     case WM_RBUTTONDOWN:
         // cout << "WM_RBUTTONDOWN Right mouse button" << endl;
-        if (!m_rightButton && !m_leftButton) {
-            m_dragStartFlag = true;
-        }
         m_rightButton = true;
         break;
     case WM_LBUTTONUP:
@@ -197,9 +197,9 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         // 키보드 키 눌림 갱신
         m_keyPressed[ wParam ] = true;
         
-        if (wParam == VK_ESCAPE) { // esc 키 종료
-            DestroyWindow(hWnd);
-        }
+        //if (wParam == VK_ESCAPE) { // esc 키 종료
+        //    DestroyWindow(hWnd);
+        //}
         
         // cout << "WM_KEYDOWN " << (int)wParam << endl;
         break;
@@ -229,15 +229,21 @@ LRESULT AppBase::MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void AppBase::InitCubemaps(wstring basePath, wstring envFilename,
-                           wstring specularFilename, wstring irradianceFilename,
-                           wstring brdfFilename) {
+void AppBase::InitCubemaps(wstring envFilePath,
+                           wstring specularFilePath, wstring irradianceFilePath,
+                           wstring brdfFilePath) {
+
+    m_cubemapTextureEnvFilePath = JsonManager::WStringToUTF8(envFilePath);
+    m_cubemapTextureSpecularFilePath = JsonManager::WStringToUTF8(specularFilePath);
+    m_cubemapTextureIrradianceFilePath = JsonManager::WStringToUTF8(irradianceFilePath);
+    m_cubemapTextureBrdfFilePath = JsonManager::WStringToUTF8(brdfFilePath);
+
 
     // BRDF LookUp Table은 CubeMap이 아니라 2D 텍스쳐
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + envFilename).c_str( ), true, m_envSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + specularFilename).c_str( ), true, m_specularSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + irradianceFilename).c_str( ), true, m_irradianceSRV);
-    D3D11Utils::CreateDDSTexture(m_device, (basePath + brdfFilename).c_str( ), false, m_brdfSRV);
+    D3D11Utils::CreateDDSTexture(m_device, envFilePath.c_str( ), true, m_envSRV);
+    D3D11Utils::CreateDDSTexture(m_device, specularFilePath.c_str( ), true, m_specularSRV);
+    D3D11Utils::CreateDDSTexture(m_device, irradianceFilePath.c_str( ), true, m_irradianceSRV);
+    D3D11Utils::CreateDDSTexture(m_device, brdfFilePath.c_str( ), false, m_brdfSRV);
 }
  
 // 여러 물체들이 공통적으로 사용하는 Const 업데이트
@@ -363,14 +369,10 @@ void AppBase::SetPipelineState(const GraphicsPSO& pso) {
 }
 
 bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
-                                 Vector3& dragTranslation, Vector3& pickPoint) {
+                                 Vector3& dragTranslation, Vector3& pickPoint, float& distance,
+                                 MouseControlState& mcs) {
     const Matrix viewRow = m_camera.GetViewRow( );
     const Matrix projRow = m_camera.GetProjRow( );
-
-    // mainSphere의 회전 계산용
-    static float prevRatio = 0.0f;
-    static Vector3 prevPos(0.0f);
-    static Vector3 prevVector(0.0f);
 
     // 회전과 이동 초기화
     q = Quaternion::CreateFromAxisAngle(Vector3(1.0f, 0.0f, 0.0f), 0.0f);
@@ -400,27 +402,27 @@ bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
         SimpleMath::Ray curRay = SimpleMath::Ray(cursorWorldNear, dir);
         float dist = 0.0f;
         if (curRay.Intersects(bs, dist)) {
+            distance = dist;
             pickPoint = cursorWorldNear + dist * dir;
 
             // mainSphere를 어떻게 회전시킬지 결정
             if (m_leftButton)
             {
-                if (m_dragStartFlag) { // 드래그를 시작하는 경우
-                    m_dragStartFlag = false;
-
-                    prevVector = pickPoint - Vector3(bs.Center);
-                    prevVector.Normalize( );
+                if (false == mcs.isDragging) { // 드래그를 시작하는 경우
+                    mcs.isDragging = true;
+                    mcs.prevVector = pickPoint - Vector3(bs.Center);
+                    mcs.prevVector.Normalize( );
                 }
                 else {
                     Vector3 currentVector = pickPoint - Vector3(bs.Center);
                     currentVector.Normalize( );
-                    float theta = acos(prevVector.Dot(currentVector));
+                    float theta = acos(mcs.prevVector.Dot(currentVector));
                     // 마우스가 조금이라도 움직였을 경우에만 회전시키기
                     if (theta > 3.141592f / 180.0f * 3.0f) {
-                        Vector3 axis = prevVector.Cross(currentVector);
+                        Vector3 axis = mcs.prevVector.Cross(currentVector);
                         axis.Normalize( );
                         q = SimpleMath::Quaternion::CreateFromAxisAngle(axis, theta);
-                        prevVector = currentVector;
+                        mcs.prevVector = currentVector;
                     }
                 }
                 return true; // selected
@@ -428,22 +430,22 @@ bool AppBase::UpdateMouseControl(const BoundingSphere& bs, Quaternion& q,
             // mainSphere를 어떻게 이동시킬지 결정
             else if (m_rightButton)
             {
-                if (m_dragStartFlag) { // 드래그를 시작하는 경우
-                    m_dragStartFlag = false;
-
-                    prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
-                    prevPos = pickPoint;
+                if (false == mcs.isDragging) { // 드래그를 시작하는 경우
+                    mcs.isDragging = true;
+                    mcs.prevRatio = dist / (cursorWorldFar - cursorWorldNear).Length( );
+                    mcs.prevPos = pickPoint;
                 }
                 else {
-                    Vector3 newPos = cursorWorldNear + prevRatio * (cursorWorldFar - cursorWorldNear);
-                    dragTranslation = newPos - prevPos;
-                    prevPos = newPos;
+                    Vector3 newPos = cursorWorldNear + mcs.prevRatio * (cursorWorldFar - cursorWorldNear);
+                    dragTranslation = newPos - mcs.prevPos;
+                    mcs.prevPos = newPos;
                 }
                 return true; // selected
             }
         }
     }
 
+    mcs.isDragging = false;
     return false;
 }
 
@@ -666,5 +668,85 @@ void AppBase::CreateBuffers( ) {
     m_postProcess.Initialize(m_device, m_context, { m_postEffectsSRV }, { m_backBufferRTV }, m_screenWidth, m_screenHeight, 4);
 }
 
+void AppBase::ShowPopup(const char* name, std::function<void( )> uiCode, std::function<void( )> confirmCode) {
+
+    ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO( ).DisplaySize.x * 0.5f,
+        ImGui::GetIO( ).DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal(name, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        uiCode( );
+
+        if (confirmCode) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.1f, 0.4f, 0.1f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+            if (ImGui::Button("Confirm")) {
+                confirmCode( );
+                m_currentPopup.clear( );
+                ImGui::CloseCurrentPopup( );
+            }
+            ImGui::PopStyleColor(4);
+            ImGui::SameLine( );
+
+            if (ImGui::Button("Close")) {
+                m_currentPopup.clear( );
+                ImGui::CloseCurrentPopup( );
+            }
+        }
+
+        ImGui::EndPopup( );
+    }
+}
+
+std::string AppBase::OpenFileDialog(std::string filterName, std::string exts) {
+    char filePath[ MAX_PATH ] = "";
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    std::vector<char> combinedFilter;
+    combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
+    combinedFilter.push_back('\0');
+    combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
+    combinedFilter.push_back('\0');
+    ofn.lpstrFilter = combinedFilter.data( );
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        return std::string(filePath);
+    }
+
+    return "";
+}
+
+std::string AppBase::SaveFileDialog(std::string filterName, std::string exts, std::string defaultExt) {
+    char filePath[ MAX_PATH ] = "";
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    std::vector<char> combinedFilter;
+    combinedFilter.insert(combinedFilter.end( ), filterName.begin( ), filterName.end( ));
+    combinedFilter.push_back('\0');
+    combinedFilter.insert(combinedFilter.end( ), exts.begin( ), exts.end( ));
+    combinedFilter.push_back('\0');
+    ofn.lpstrFilter = combinedFilter.data( );
+    ofn.lpstrFile = filePath;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_OVERWRITEPROMPT; // 덮어쓰기 경고
+    ofn.lpstrDefExt = defaultExt.c_str( );
+
+    if (GetSaveFileNameA(&ofn)) {
+        return std::string(filePath); // 선택된 파일 경로 반환
+    }
+
+    return "";
+}
 
 } // namespace kusk

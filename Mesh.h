@@ -18,7 +18,7 @@ struct Mesh {
 	ComPtr<ID3D11Buffer> pixelConstBuffer;
 
 	ComPtr<ID3D11Texture2D> albedoTexture;
-	ComPtr<ID3D11Texture2D> emissiveTexture;	// 빛을 내는 텍스쳐 추가
+	ComPtr<ID3D11Texture2D> emissiveTexture;
 	ComPtr<ID3D11Texture2D> normalTexture;
 	ComPtr<ID3D11Texture2D> heightTexture;
 	ComPtr<ID3D11Texture2D> aoTexture;

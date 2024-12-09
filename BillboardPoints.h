@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "D3D11Utils.h"
+#include "JsonManager.h"
 
 namespace kusk{
 using DirectX::SimpleMath::Matrix;
@@ -12,13 +13,12 @@ using DirectX::SimpleMath::Vector4;
 using std::vector;
 
 struct BillboardPointsConstantData {
-	Vector3 eyeWorld;
+	Vector3 albedoFactor = Vector3(0.1f);
+	float roughnessFactor = 0.5f;
+	float metallicFactor = 0.3f;
 	float width;
-	Matrix modelWorld;
-	Matrix view;
-	Matrix proj;
+	int textureCnt;
 	float time = 0.0f;
-	Vector3 padding;
 };
 
 class BillboardPoints
@@ -28,22 +28,25 @@ public:
 					ComPtr<ID3D11DeviceContext>& context,
 					const std::vector<Vector4>& points,
 					const float width,
-					const std::wstring pixelShaderFilename = L"BillboardPointsPS.hlsl",
 					std::vector<std::string> filenames = {});
 	void Render(ComPtr<ID3D11DeviceContext>& context);
+	void UpdateVertexBuffer(ComPtr<ID3D11Device>& device);
+	void UpdateConstBuffer(ComPtr<ID3D11Device>& device, ComPtr<ID3D11DeviceContext>& context);
+
+	rapidjson::Value BillboardToJSON(rapidjson::Document::AllocatorType& allocator);
+	void InitializeFromJSON(ComPtr<ID3D11Device>& device,
+							ComPtr<ID3D11DeviceContext>& context,
+							rapidjson::Value& value);
 public:
 	BillboardPointsConstantData m_constantData;
 
 	// 편의상 ConstantBuffer를 하나만 사용
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 
+	vector<Vector4> m_points;
+	vector<std::string> m_filenames;
 protected:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11SamplerState> m_samplerState;
-	ComPtr<ID3D11VertexShader> m_vertexShader;
-	ComPtr<ID3D11GeometryShader> m_normalGeometryShader;
-	ComPtr<ID3D11PixelShader> m_pixelShader;
-	ComPtr<ID3D11InputLayout> m_inputLayout;
 
 	uint32_t m_indexCount = 0;
 

@@ -102,7 +102,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -119,7 +119,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -141,6 +141,7 @@
     <ClCompile Include="GraphicsCommon.cpp" />
     <ClCompile Include="GraphicsPSO.cpp" />
     <ClCompile Include="ImageFilter.cpp" />
+    <ClCompile Include="JsonManager.cpp" />
     <ClCompile Include="KuskApp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
@@ -158,12 +159,14 @@
     <ClInclude Include="GraphicsCommon.h" />
     <ClInclude Include="GraphicsPSO.h" />
     <ClInclude Include="ImageFilter.h" />
+    <ClInclude Include="JsonManager.h" />
     <ClInclude Include="KuskApp.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshData.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelInstance.h" />
     <ClInclude Include="ModelLoader.h" />
+    <ClInclude Include="MouseControlState.h" />
     <ClInclude Include="PostProcess.h" />
     <ClInclude Include="TessellatedQuad.h" />
     <ClInclude Include="textureResources.h" />

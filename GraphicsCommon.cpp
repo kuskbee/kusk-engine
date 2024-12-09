@@ -25,6 +25,7 @@ ComPtr<ID3D11DepthStencilState> drawMaskedDSS;	// 스텐실 표시된 곳만 그
 
 // Blend States
 ComPtr<ID3D11BlendState> mirrorBS;
+ComPtr<ID3D11BlendState> originBS;
 
 // Shaders
 ComPtr<ID3D11VertexShader> basicVS;
@@ -32,6 +33,7 @@ ComPtr<ID3D11VertexShader> skyboxVS;
 ComPtr<ID3D11VertexShader> samplingVS;
 ComPtr<ID3D11VertexShader> normalVS;
 ComPtr<ID3D11VertexShader> depthOnlyVS;
+ComPtr<ID3D11VertexShader> billboardPointsVS;
 
 ComPtr<ID3D11PixelShader> basicPS;
 ComPtr<ID3D11PixelShader> skyboxPS;
@@ -41,14 +43,17 @@ ComPtr<ID3D11PixelShader> bloomUpPS;
 ComPtr<ID3D11PixelShader> normalPS;
 ComPtr<ID3D11PixelShader> depthOnlyPS;
 ComPtr<ID3D11PixelShader> postEffectsPS;
+ComPtr<ID3D11PixelShader> billboardPointsPS;
 
 ComPtr<ID3D11GeometryShader> normalGS;
+ComPtr<ID3D11GeometryShader> billboardPointsGS;
 
 // Input Layouts
 ComPtr<ID3D11InputLayout> basicIL;
 ComPtr<ID3D11InputLayout> samplingIL;
 ComPtr<ID3D11InputLayout> skyboxIL;
 ComPtr<ID3D11InputLayout> postProcessingIL;
+ComPtr<ID3D11InputLayout> billboardPointsIL;
 
 // Graphics Pipeline States
 GraphicsPSO defaultSolidPSO;
@@ -66,6 +71,10 @@ GraphicsPSO normalsPSO;
 GraphicsPSO depthOnlyPSO;
 GraphicsPSO postEffectsPSO;
 GraphicsPSO postProcessingPSO;
+GraphicsPSO billboardPointsSolidPSO;
+GraphicsPSO billboardPointsWirePSO;
+GraphicsPSO reflectBillboardPointsSolidPSO;
+GraphicsPSO reflectBillboardPointsWirePSO;
 
 } // namespace Graphics
 
@@ -127,6 +136,7 @@ void Graphics::InitRasterizerStates(ComPtr<ID3D11Device>& device) {
 	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+	//rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
 	rastDesc.FrontCounterClockwise = false;
 	rastDesc.DepthClipEnable = true;
 	rastDesc.MultisampleEnable = true;
@@ -161,25 +171,33 @@ void Graphics::InitBlendStates(ComPtr<ID3D11Device>& device) {
 	// Dest : 이미 그려져 있는 값들을 의미
 	// Src : 픽셀 쉐이더가 계산한 값들을 의미 (여기서는 마지막 거울)
 
-	D3D11_BLEND_DESC mirrorBlendDesc;
-	ZeroMemory(&mirrorBlendDesc, sizeof(mirrorBlendDesc));
-	mirrorBlendDesc.AlphaToCoverageEnable = true; // MSAA
-	mirrorBlendDesc.IndependentBlendEnable = false;
+	D3D11_BLEND_DESC blendDesc;
+	ZeroMemory(&blendDesc, sizeof(blendDesc));
+	blendDesc.AlphaToCoverageEnable = true; // MSAA
+	blendDesc.IndependentBlendEnable = false;
 	// 개별 RenderTarget에 대해서 설정 (최대 8개)
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendEnable = true;
-	mirrorBlendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
-	mirrorBlendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[ 0 ].BlendEnable = true;
+	blendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_BLEND_FACTOR;
+	blendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_BLEND_FACTOR;
+	blendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
 
-	mirrorBlendDesc.RenderTarget[ 0 ].SrcBlendAlpha = D3D11_BLEND_ONE;
-	mirrorBlendDesc.RenderTarget[ 0 ].DestBlendAlpha = D3D11_BLEND_ONE;
-	mirrorBlendDesc.RenderTarget[ 0 ].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[ 0 ].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[ 0 ].DestBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[ 0 ].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 
 	// 필요하면 RGBA 각각에 대해서도 조절 가능
-	mirrorBlendDesc.RenderTarget[ 0 ].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	blendDesc.RenderTarget[ 0 ].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 	ThrowIfFailed(
-		device->CreateBlendState(&mirrorBlendDesc, mirrorBS.GetAddressOf( )));
+		device->CreateBlendState(&blendDesc, mirrorBS.GetAddressOf( )));
+
+	blendDesc.RenderTarget[ 0 ].BlendEnable = true;
+	blendDesc.RenderTarget[ 0 ].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[ 0 ].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[ 0 ].BlendOp = D3D11_BLEND_OP_ADD;
+	ThrowIfFailed(
+		device->CreateBlendState(&blendDesc, originBS.GetAddressOf( )));
+
 }
 
 void Graphics::InitDepthStencilStates(ComPtr<ID3D11Device>& device) {
@@ -274,11 +292,15 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
+	vector<D3D11_INPUT_ELEMENT_DESC> billboardPointsIEs = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0} };
+
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BasicVS.hlsl", basicIEs, basicVS, basicIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"NormalVS.hlsl", basicIEs, normalVS, basicIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SamplingVS.hlsl", samplingIEs, samplingVS, samplingIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"SkyboxVS.hlsl", skyboxIEs, skyboxVS, skyboxIL);
 	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"DepthOnlyVS.hlsl", skyboxIEs, depthOnlyVS, skyboxIL);
+	D3D11Utils::CreateVertexShaderAndInputLayout(device, L"BillboardPointsVS.hlsl", billboardPointsIEs, billboardPointsVS, billboardPointsIL);
 
 	D3D11Utils::CreatePixelShader(device, L"BasicPS.hlsl", basicPS);
 	D3D11Utils::CreatePixelShader(device, L"NormalPS.hlsl", normalPS);
@@ -288,8 +310,10 @@ void Graphics::InitShaders(ComPtr<ID3D11Device>& device) {
 	D3D11Utils::CreatePixelShader(device, L"BloomUpPS.hlsl", bloomUpPS);
 	D3D11Utils::CreatePixelShader(device, L"DepthOnlyPS.hlsl", depthOnlyPS);
 	D3D11Utils::CreatePixelShader(device, L"PostEffectsPS.hlsl", postEffectsPS);
+	D3D11Utils::CreatePixelShader(device, L"BillboardPointsPS.hlsl", billboardPointsPS);
 
 	D3D11Utils::CreateGeometryShader(device, L"NormalGS.hlsl", normalGS);
+	D3D11Utils::CreateGeometryShader(device, L"BillboardPointsGS.hlsl", billboardPointsGS);
 }
 
 void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
@@ -300,6 +324,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	defaultSolidPSO.m_pixelShader = basicPS;
 	defaultSolidPSO.m_rasterizerState = solidRS;
 	defaultSolidPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	defaultSolidPSO.m_blendState = originBS;
 
 	// defaultWirePSO
 	defaultWirePSO = defaultSolidPSO;
@@ -317,6 +342,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	reflectSolidPSO.m_depthStencilState = drawMaskedDSS;
 	reflectSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
 	reflectSolidPSO.m_stencilRef = 1;
+	reflectSolidPSO.m_blendState = originBS;
 
 	// reflectWirePSO: 반사되면 Winding 반대
 	reflectWirePSO = reflectSolidPSO;
@@ -379,6 +405,32 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	postProcessingPSO.m_pixelShader = depthOnlyPS; // dummy
 	postProcessingPSO.m_inputLayout = samplingIL;
 	postProcessingPSO.m_rasterizerState = postProcessingRS;
+
+	// billboardPointsSolidPSO
+	billboardPointsSolidPSO.m_vertexShader = billboardPointsVS;
+	billboardPointsSolidPSO.m_inputLayout = billboardPointsIL;
+	billboardPointsSolidPSO.m_pixelShader = billboardPointsPS;
+	billboardPointsSolidPSO.m_geometryShader = billboardPointsGS;
+	billboardPointsSolidPSO.m_depthStencilState = drawDSS;
+	billboardPointsSolidPSO.m_rasterizerState = solidRS;
+	billboardPointsSolidPSO.m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+	billboardPointsSolidPSO.m_blendState = originBS;
+
+	// billboardPointsWirePSO
+	billboardPointsWirePSO = billboardPointsSolidPSO;
+	billboardPointsWirePSO.m_rasterizerState = wireRS;
+
+	// reflectBillboardPointsSolidPSO
+	reflectBillboardPointsSolidPSO = billboardPointsSolidPSO;
+	reflectBillboardPointsSolidPSO.m_depthStencilState = drawMaskedDSS;
+	reflectBillboardPointsSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
+	reflectBillboardPointsSolidPSO.m_stencilRef = 1;
+	reflectBillboardPointsSolidPSO.m_blendState = originBS;
+
+	// reflectBillboardPointsWirePSO
+	reflectBillboardPointsWirePSO = reflectBillboardPointsSolidPSO;
+	reflectBillboardPointsWirePSO.m_rasterizerState = wireCCWRS; // 반시계
+	reflectBillboardPointsWirePSO.m_stencilRef = 1;
 }
 
 } // namespace kusk
