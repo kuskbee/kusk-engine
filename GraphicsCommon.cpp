@@ -342,6 +342,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	reflectSolidPSO.m_depthStencilState = drawMaskedDSS;
 	reflectSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
 	reflectSolidPSO.m_stencilRef = 1;
+	reflectSolidPSO.m_blendState = originBS;
 
 	// reflectWirePSO: 반사되면 Winding 반대
 	reflectWirePSO = reflectSolidPSO;
