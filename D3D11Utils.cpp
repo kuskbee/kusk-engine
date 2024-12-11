@@ -372,16 +372,19 @@ void D3D11Utils::CreateMetallicRoughnessTexture(
             assert(mHeight == rHeight);
         }
 
-        vector<uint8_t> combinedImage(size_t(mWidth * mHeight) * 4);
+        int width = mWidth ? mWidth : rWidth;
+        int height = mHeight ? mHeight : rHeight;
+
+        vector<uint8_t> combinedImage(size_t(width * height) * 4);
         fill(combinedImage.begin( ), combinedImage.end( ), 0);
-        for (size_t i = 0; i < size_t(mWidth * mHeight); i++) {
+        for (size_t i = 0; i < size_t(width * height); i++) {
             if (rImage.size( ))
                 combinedImage[ 4 * i + 1 ] = rImage[ 4 * i ]; // Green = Roughness
             if (mImage.size( ))
                 combinedImage[ 4 * i + 2 ] = mImage[ 4 * i ]; // Blue = Metalness
         }
 
-        CreateTextureHelper(device, context, mWidth, mHeight, combinedImage, DXGI_FORMAT_R8G8B8A8_UNORM, texture, srv);
+        CreateTextureHelper(device, context, width, height, combinedImage, DXGI_FORMAT_R8G8B8A8_UNORM, texture, srv);
     }
 }
 

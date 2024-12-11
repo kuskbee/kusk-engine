@@ -32,6 +32,8 @@ PixelShaderOutput main(SkyboxPixelShaderInput input) : SV_Target
     }
     
     output.pixelColor *= strengthIBL;
+    output.pixelColor = float4(output.pixelColor.xyz, 1.0);
+    output.pixelColor = clamp(output.pixelColor, 0.0, 1000.0);
     
     return output;
 }

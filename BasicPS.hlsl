@@ -235,7 +235,7 @@ PixelShaderOutput main(PixelShaderInput input) {
     if (lodBias >= 0.0)
     {
         tmpAlbedo = albedoTex.SampleLevel(linearWrapSampler, input.texcoord, lodBias);
-        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+        if (useAlbedoMap && tmpAlbedo.a < 0.01f)
             discard;
         
         albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;
@@ -247,7 +247,7 @@ PixelShaderOutput main(PixelShaderInput input) {
     else
     {
         tmpAlbedo = albedoTex.Sample(linearWrapSampler, input.texcoord);
-        if (useAlbedoMap && tmpAlbedo.a < 0.1f)
+        if (useAlbedoMap && tmpAlbedo.a < 0.01f)
             discard;
         
         albedo = useAlbedoMap ? tmpAlbedo.rgb * albedoFactor : albedoFactor;

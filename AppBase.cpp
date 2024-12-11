@@ -564,6 +564,14 @@ bool AppBase::InitDirect3D() {
     return true;
 }
 
+void SetWindowTransparency(float transparency) {
+    ImGuiStyle& style = ImGui::GetStyle( );
+    ImVec4& windowBg = style.Colors[ ImGuiCol_WindowBg ];
+
+    // 기존 색상 유지, 알파(투명도)만 조정
+    windowBg.w = transparency;
+}
+
 bool AppBase::InitGUI() {
 
     IMGUI_CHECKVERSION();
@@ -581,6 +589,9 @@ bool AppBase::InitGUI() {
     if (!ImGui_ImplWin32_Init(m_mainWindow)) {
         return false;
     }
+
+    ImGui::StyleColorsClassic( );
+    SetWindowTransparency(0.5f);
 
     return true;
 }

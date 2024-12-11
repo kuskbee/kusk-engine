@@ -433,13 +433,19 @@ void KuskApp::Render() {
 		m_mirror->Render(m_context);
 
 		/* 거울 3. 거울 위치에 반사된 물체들을 렌더링 */
-		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectWirePSO
-											   : Graphics::reflectSolidPSO);
-		AppBase::SetGlobalConsts(m_reflectGlobalConstsGPU);
 
+		AppBase::SetGlobalConsts(m_reflectGlobalConstsGPU);
 		m_context->ClearDepthStencilView(m_depthStencilView.Get( ), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		// 반사된 위치에 그리기
+		// Skybox 먼저 그리기
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectSkyboxWirePSO
+									   : Graphics::reflectSkyboxSolidPSO);
+		m_skybox->Render(m_context);
+
+		// alpha값을 가진 모델링 블렌딩을 위해 나중에 렌더링
+		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectWirePSO
+									   : Graphics::reflectSolidPSO);
 		for (auto& i : m_basicList) {
 			i->Render(m_context);
 		}
@@ -449,10 +455,7 @@ void KuskApp::Render() {
 		for (auto& b : m_billboardPointsList)
 			b->Render(m_context); //
 
-		AppBase::SetPipelineState(m_drawAsWire ? Graphics::reflectSkyboxWirePSO
-											   : Graphics::reflectSkyboxSolidPSO);
 
-		m_skybox->Render(m_context);
 
 
 		/* 거울 4. 거울 자체의 재질을 "Blend"로 그림 */

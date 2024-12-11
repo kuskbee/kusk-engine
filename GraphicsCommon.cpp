@@ -366,6 +366,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	skyboxSolidPSO.m_vertexShader = skyboxVS;
 	skyboxSolidPSO.m_pixelShader = skyboxPS;
 	skyboxSolidPSO.m_inputLayout = skyboxIL;
+	reflectSkyboxSolidPSO.m_blendState = originBS;
 
 	// skyboxWirePSO
 	skyboxWirePSO = skyboxSolidPSO;
@@ -376,6 +377,7 @@ void Graphics::InitPipelineStates(ComPtr<ID3D11Device>& device) {
 	reflectSkyboxSolidPSO.m_depthStencilState = drawMaskedDSS;
 	reflectSkyboxSolidPSO.m_rasterizerState = solidCCWRS; // 반시계
 	reflectSkyboxSolidPSO.m_stencilRef = 1;
+	reflectSkyboxSolidPSO.m_blendState = originBS;
 
 	// reflectSkyboxWirePSO
 	reflectSkyboxWirePSO = reflectSkyboxSolidPSO;
