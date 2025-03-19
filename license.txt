@@ -1,0 +1,51 @@
+### Attribution for 3D Assets Used in Portfolio
+
+1. Model: Simple grass chunks
+   - Author: 3dhdscan
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/simple-grass-chunks-eb4f6dc9d4e3455ea3435385faf58b60
+
+2. Model: Madrona Invasives
+   - Author: dipietron
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/madrona-invasives-6e1e4cf5c6d74da286cbf425a939c9ce
+
+3. Model: Tree Animate
+   - Author: Node_λrt
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/tree-animate-f0f9eb5e6c104bbb8e1f41c97019e6f2
+
+4. Model: Tree GN
+   - Author: Node_λrt
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/tree-gn-40da979cb23f492583ec89c4196cff4e
+
+5. Model: Grass
+   - Author: Epic_Tree_Store
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/grass-e58b89ba5b5047338210dbcf730f7b05
+
+6. Model: Death Valley - Terrain
+   - Author: artfromheath
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/death-valley-terrain-9f57bca156e14cff9e4e316a9ccc3e0d
+
+7. Model: Dusty path in the fields
+   - Author: 3dhdscan
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/dusty-path-in-the-fields-1386c844619e4006a916383158f7ade5
+
+8. Model: Mountain terrain - Haytor Dartmoor National Park
+   - Author: Chris Bibb
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/mountain-terrain-haytor-dartmoor-national-park-6d15587128a5451d9e29d6b50061045e
+
+9. Model: Leaves in the garden
+   - Author: 3dhdscan
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/leaves-in-the-garden-d80ccca6a8304d898a5932c7d1b0e595
+
+10. Model: Rathalos Simple Rig
+   - Author: Msassasa
+   - License: CC-BY-4.0
+   - Source: https://sketchfab.com/3d-models/rathalos-simple-rig-057bfb72918843859316c2795db76739
